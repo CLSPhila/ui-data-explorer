@@ -52,7 +52,7 @@ ui <- fluidPage(
                   choices = c("Timeliness of Referee Decisions", "Timeliness of UCSC Payments", "Timeliness of UCBR Decisions"),
                   selected = "Timeliness of Referee Decisions")
       
-    ),
+    , width=3),
     # Show something
     mainPanel(
       plotOutput("uiplot"),
@@ -97,10 +97,11 @@ server <- function(input, output) {
     
     uiTable <- melt(subset(uiTable, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=plotCols) ,id.vars="rptdate")
 
+    # loess smoothing; .3 chosen arbitrarily to make the line a bit more responsive to data points.  
     uPlot <- ggplot(uiTable, aes(rptdate, value, col=variable)) +
       geom_point() +
       reportTheme + 
-      stat_smooth() + 
+      stat_smooth(span=.3) + 
       labs(x="Date") + 
       geom_hline(aes(yintercept=as.numeric(line1[1])), linetype="dashed") +
       geom_text(aes(x=as.Date(input$range[1]),y=as.numeric(line1[1]),label = line1[2], vjust = -1, hjust=0), color="black") +
@@ -135,7 +136,7 @@ server <- function(input, output) {
     # only return the data from the requested state and within the selected input range
     uiDT <- DT::datatable(uiTable[uiTable$st==input$state & uiTable$rptdate > input$range[1]-1 & uiTable$rptdate < input$range[2]+1,],
                           options=list(
-                                        pageLength = 24,
+                                        pageLength = 12,
                                         lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
                                         order = list(1,'desc'),
                                         searching=FALSE,

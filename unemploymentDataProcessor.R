@@ -138,6 +138,7 @@ paymentAvg$Within15Days <- paymentAvg$shortAvg
 paymentAvg$Within35Days <- paymentAvg$longAvg
 paymentAvg$Total <- NA
 paymentTimeliness <- rbind(paymentTimeliness,paymentAvg)
+paymentTimeliness <- paymentTimeliness[,c("st","rptdate","Within15Days","Within35Days", "Total", "shortAvg", "longAvg")]
 
 #uiTable <- melt(subset(refereeTimeliness, st=="PA", select=c("rptdate", "Within30Days", "Within45Days")) ,id.vars="rptdate")
 
