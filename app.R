@@ -98,16 +98,18 @@ server <- function(input, output) {
     uiTable <- melt(subset(uiTable, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=plotCols) ,id.vars="rptdate")
 
     # loess smoothing; .3 chosen arbitrarily to make the line a bit more responsive to data points.  
-    uPlot <- ggplot(uiTable, aes(rptdate, value, col=variable)) +
-      geom_point() +
+    uPlot <- ggplot(uiTable) +
+      geom_point(aes(rptdate, value, col=variable)) +
       reportTheme + 
-      stat_smooth(span=.3) + 
+      stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
       labs(x="Date") + 
       geom_hline(aes(yintercept=as.numeric(line1[1])), linetype="dashed") +
       geom_text(aes(x=as.Date(input$range[1]),y=as.numeric(line1[1]),label = line1[2], vjust = -1, hjust=0), color="black") +
       geom_hline(aes(yintercept=as.numeric(line2[1])), linetype="dashed") +
       geom_text(aes(x=as.Date(input$range[1]),y=as.numeric(line2[1]),label = line2[2], vjust = -1, hjust=0), color="black") +
+      geom_rect(data=recessions.df[recessions.df$Peak > as.Date(input$range[1]),], aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.2) +
       ggtitle(paste(input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m")))
+
     
     
     return(uPlot)

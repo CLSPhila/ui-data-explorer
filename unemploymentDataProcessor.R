@@ -2,25 +2,10 @@
 # THe downloads can be found here: http://ows.doleta.gov/unemploy/DataDownloads.asp
 # For each download below, there is a data definition pdf that explains what each field is that is being sought
 
-#library(data.table)
 library(ggplot2)
 library(data.table)
-#library(curl)
-#library(RCurl)
-#library(httr)
-#library(openssl)
 
 downloadUCData <- function (URL) {
-  #mydata = read.csv(text=getURL(URL, ssl.verifyhost=FALSE, ssl.verifypeer=FALSE))
-  
-  #bar = RCurl::getURLContent(URL)
-  #foo = textConnection(bar)
-  #mydata = read.csv(foo)
-  #close(foo)
-
-  #doc <- content(GET(URL), as="text")
-  #mydata <- read.csv(text=doc)
-  
   # convert dates to a date type
   mydata <- fread(URL)
   mydata$rptdate <- as.Date(mydata$rptdate,("%m/%d/%Y"))
@@ -60,6 +45,14 @@ ucBenefitAppealsExtended <- downloadUCData("https://ows.doleta.gov/unemploy/csv/
 ucBenefitAppealsEUC91x94 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ac5130.csv") # 5130 report
 ucBenefitAppealsEUC02x04 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at5130.csv") # 5130 report
 ucBenefitAppealsEUC08x13 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au5130.csv") # 5130 report
+
+# this is to calculate recipiency rates
+# ucClaimsPaymentsRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar5159.csv") #5159 report
+# ucClaimsPaymentsExtended <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ae5159.csv") #5159 report
+# ucClaimsPaymentsEUC91 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ac5159.csv") #5159 report
+# ucClaimsPaymentsTEUC02 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at5159.csv") #5159 report
+# ucClaimsPaymentsEUC08 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au5159.csv") #5159 report
+# ucClaimsPaymentsRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/aw5159.csv") #5159 report
 
 # set the column names for the data that we're interested in
 setBenefitAppealNames(ucBenefitAppealsRegular)
@@ -139,6 +132,21 @@ paymentAvg$Within35Days <- paymentAvg$longAvg
 paymentAvg$Total <- NA
 paymentTimeliness <- rbind(paymentTimeliness,paymentAvg)
 paymentTimeliness <- paymentTimeliness[,c("st","rptdate","Within15Days","Within35Days", "Total", "shortAvg", "longAvg")]
+
+
+# recession data; not implemented in the charting yet
+recessions.df = read.table(textConnection(
+  "Peak, Trough
+  1969-12-01, 1970-11-01
+  1973-11-01, 1975-03-01
+  1980-01-01, 1980-07-01
+  1981-07-01, 1982-11-01
+  1990-07-01, 1991-03-01
+  2001-03-01, 2001-11-01
+  2007-12-01, 2009-06-01"), sep=',',
+  colClasses=c('Date', 'Date'), header=TRUE)
+
+
 
 #uiTable <- melt(subset(refereeTimeliness, st=="PA", select=c("rptdate", "Within30Days", "Within45Days")) ,id.vars="rptdate")
 
