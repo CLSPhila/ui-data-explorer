@@ -2,8 +2,13 @@
 # THe downloads can be found here: http://ows.doleta.gov/unemploy/DataDownloads.asp
 # For each download below, there is a data definition pdf that explains what each field is that is being sought
 
+library(RCurl)
 library(ggplot2)
 library(data.table)
+library(lubridate)
+library(dplyr)
+library(zoo)
+require(bit64)
 
 downloadUCData <- function (URL) {
   # convert dates to a date type
@@ -32,6 +37,145 @@ getMinYear <- function (df) {
   return(as.integer(format(min(unique(df$rptdate)), "%Y")))
 }  
 
+
+
+# get unemployment information from the BLS website and convert to a datatable.  This function takes a long
+# time to run
+get_bls_employment_data <- function() {
+  ststdnsadata <- getURL("https://www.bls.gov/web/laus/ststdnsadata.txt")
+  tf <- tempfile()
+  fp <- file(tf)
+  write(ststdnsadata, fp)
+  close(fp)
+  doc <- readLines(tf)
+  doc <- sub('^ +', '', doc, perl=TRUE)
+  doc <- gsub(',', '', doc, perl=TRUE)
+  doc <- gsub(' [.][.]+', '', doc, perl=TRUE)
+  cols <- strsplit(doc, '  +', perl=TRUE)
+  
+  month.name <- format(ISOdate(1900, 1:12, 1), "%B")
+  results <- NULL
+  curdate <- NULL
+  n <- length(cols)
+  i <- 1L
+  for (d in cols){
+    if (length(d) == 1){
+      e = strsplit(d[1], ' ')[[1]]
+      if (e[1] %in% month.name){
+        curdate <- as.Date(paste(e[1], '1', e[2], sep=' '), "%B %d %Y")
+      }
+    }
+    else if (d[1] %in% state.name){
+      if (is.null(results)){
+        results <- data.frame(state=rep(d[1], n),
+                              pop=rep(as.integer(d[2]), n),
+                              total=rep(as.integer(d[3]), n),
+                              perc_pop=rep(as.numeric(d[4]), n),
+                              total_employed=rep(as.integer(d[5]), n),
+                              perc_employed=rep(as.numeric(d[6]), n),
+                              total_unemployed=rep(as.integer(d[7]), n),
+                              perc_unemployed=rep(as.numeric(d[8]), n),
+                              month=rep(curdate, n))
+      }
+      else{
+        i <- i + 1L
+        set(results, i, 1L, d[1])
+        set(results, i, 2L, as.integer(d[2]))
+        set(results, i, 3L, as.integer(d[3]))
+        set(results, i, 4L, as.numeric(d[4]))
+        set(results, i, 5L, as.integer(d[5]))
+        set(results, i, 6L, as.numeric(d[6]))
+        set(results, i, 7L, as.integer(d[7]))
+        set(results, i, 8L, as.numeric(d[8]))
+        set(results, i, 9L, curdate)
+      }
+    }
+  }
+  results <- results[-seq(i+1L, n), ]
+}
+
+
+# combine bls unemployed info with general unemployment continuing claims numbers to get a recipiency rate
+# generally speaking, recipiency rate is total continued claims in an average week / total unemployed over that week
+# the function below returns a df with a recipiency rate that is smoothed with 12 month moving averages.
+# it also calculates state, fed, and total recipiency rates separately so that you can see how much of the recipiency
+# rate is from federal programs like EB and EUC
+getRecipiency <- function ()
+{
+  
+  # start by downloading the bls employment data to get unemployed per month
+  bls_unemployed <- get_bls_employment_data()
+  
+  # add in the state abbreviations and make a new column with the last date of the month to match with DOL data
+  bls_unemployed$st <- state.abb[match(bls_unemployed$st,state.name)]
+  bls_unemployed$rptdate <- bls_unemployed$month+months(1)-days(1)
+  
+  
+  #arrange the BLS data by state then month and then do 12 month moving averages of the unemployed number
+  bls_unemployed <- arrange(bls_unemployed,state,month)
+  bls_unemployed$unemployed_avg<- ave(bls_unemployed$total_unemployed, bls_unemployed$state, FUN = function(x) rollmean(x, k=12, align="right", na.pad=T))
+  
+  
+  ucClaimsPaymentsRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar5159.csv") #5159 report
+  ucClaimsPaymentsExtended <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ae5159.csv") #5159 report
+  ucClaimsPaymentsEUC91 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ac5159.csv") #5159 report
+  ucClaimsPaymentsTEUC02 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at5159.csv") #5159 report
+  ucClaimsPaymentsEUC08 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au5159.csv") #5159 report
+  
+  # name the columns that we care about for later code readability
+  all_cols <- c("st","rptdate")
+  reg_cols <- c("state_intrastate", "state_liable", "ucfe_instrastate", "ufce_liable", "ucx_intrastate", "ucx_liable")
+  ext_cols <- c("ext_state_intrastate", "ext_state_liable", "ext_ucfe_instrastate", "ext_ufce_liable", "ext_ucx_intrastate", "ext_ucx_liable")
+  euc91_cols <- c("euc91_state_intrastate", "euc91_state_liable", "euc91_ucfe_instrastate", "euc91_ufce_liable", "euc91_ucx_intrastate", "euc91_ucx_liable")
+  euc08_cols <- c("euc08_state_intrastate", "euc08_state_liable", "euc08_ucfe_instrastate", "euc08_ufce_liable", "euc08_ucx_intrastate", "euc08_ucx_liable")
+  teuc_cols <-  c("teuc02_state_intrastate", "teuc02_state_liable", "teuc02_ucfe_instrastate", "teuc02_ufce_liable", "teuc02_ucx_intrastate", "teuc02_ucx_liable")
+  setnames(ucClaimsPaymentsRegular, c("c21", "c24", "c27", "c30", "c33", "c36"), reg_cols)
+  setnames(ucClaimsPaymentsExtended, c("c12", "c15", "c18", "c21", "c24", "c27"), ext_cols)
+  setnames(ucClaimsPaymentsEUC91, c("c19", "c22", "c23", "c26", "c27", "c30"), euc91_cols)
+  
+  # hmmm... I can't seem to set names on these two because we don't have a datamap to explain the csv file; need to get in touch with NELP
+  setnames(ucClaimsPaymentsTEUC02, c("c12", "c15", "c18", "c21", "c24", "c27"),teuc_cols)
+  setnames(ucClaimsPaymentsEUC08, c("c12", "c15", "c18", "c21", "c24", "c27"), euc08_cols)
+  
+  
+  # merge the different datasets together and backfill with 0 if there is no data for a month
+  ucRecipiency <- merge(subset(ucClaimsPaymentsRegular,select=c(all_cols,reg_cols)), subset(ucClaimsPaymentsExtended,select=c(all_cols,ext_cols)), by=all_cols, all.x=TRUE)
+  ucRecipiency <- merge(ucRecipiency,subset(ucClaimsPaymentsEUC91,select=c(all_cols,euc91_cols)),by=all_cols, all.x=TRUE)
+  ucRecipiency <- merge(ucRecipiency,subset(ucClaimsPaymentsTEUC02,select=c(all_cols,teuc_cols)), by=all_cols, all.x=TRUE)
+  ucRecipiency <- merge(ucRecipiency,subset(ucClaimsPaymentsEUC08,select=c(all_cols,euc08_cols)), by=all_cols, all.x=TRUE)
+  ucRecipiency[is.na(ucRecipiency)] <- 0
+  
+  
+  # sum the various numbers that we care about and then divide by the number of weeks in the month to get a weekly number rather than a monthly number
+  ucRecipiency$reg_total <- ucRecipiency$state_intrastate+ucRecipiency$state_liable+ucRecipiency$ucfe_instrastate+ucRecipiency$ufce_liable+ucRecipiency$ucx_intrastate+ucRecipiency$ucx_liable
+  ucRecipiency$fed_total <- ucRecipiency$ext_state_intrastate+ucRecipiency$ext_state_liable+ucRecipiency$ext_ucfe_instrastate+ucRecipiency$ext_ufce_liable+ucRecipiency$ext_ucx_intrastate+ucRecipiency$ext_ucx_liable+ucRecipiency$euc91_state_intrastate+ucRecipiency$euc91_state_liable+ucRecipiency$euc91_ucfe_instrastate+ucRecipiency$euc91_ufce_liable+ucRecipiency$euc91_ucx_intrastate+ucRecipiency$euc91_ucx_liable+ucRecipiency$euc08_state_intrastate+ucRecipiency$euc08_state_liable+ucRecipiency$euc08_ucfe_instrastate+ucRecipiency$euc08_ufce_liable+ucRecipiency$euc08_ucx_intrastate+ucRecipiency$euc08_ucx_liable+ucRecipiency$teuc02_state_intrastate+ucRecipiency$teuc02_state_liable+ucRecipiency$teuc02_ucfe_instrastate+ucRecipiency$teuc02_ufce_liable+ucRecipiency$teuc02_ucx_intrastate+ucRecipiency$teuc02_ucx_liable
+  ucRecipiency$total <- ucRecipiency$reg_total+ucRecipiency$fed_total 
+  ucRecipiency$reg_total_week <- ucRecipiency$reg_total / (days_in_month(ucRecipiency$rptdate) / 7)
+  ucRecipiency$fed_total_week <- ucRecipiency$fed_total / (days_in_month(ucRecipiency$rptdate) / 7)
+  ucRecipiency$total_week <- ucRecipiency$total / (days_in_month(ucRecipiency$rptdate) / 7)
+  
+  # also do the same as above, but come up with 12month moving averages
+  ucRecipiency$reg_total_week_mov_avg <- ave(ucRecipiency$reg_total_week, ucRecipiency$st, FUN = function(x) rollmean(x, k=12, align="right", na.pad=T))
+  ucRecipiency$fed_total_week_mov_avg <- ave(ucRecipiency$fed_total_week, ucRecipiency$st, FUN = function(x) rollmean(x, k=12, align="right", na.pad=T))
+  ucRecipiency$total_week_mov_avg <- ave(ucRecipiency$total_week, ucRecipiency$st, FUN = function(x) rollmean(x, k=12, align="right", na.pad=T))
+  
+  # now combine with the BLS unemployed data
+  ucRecipiency <- merge(ucRecipiency,bls_unemployed[,c("st","rptdate","total_unemployed", "unemployed_avg")], by=c("st","rptdate"))
+  
+  # compute US averages for each time period and merge back
+  usAvg <- aggregate(cbind(total_unemployed, unemployed_avg, reg_total_week_mov_avg,fed_total_week_mov_avg,total_week_mov_avg) ~ rptdate, ucRecipiency, FUN=mean)
+  usAvg$st <- "US"
+  
+  ucRecipiency <- bind_rows(ucRecipiency,usAvg)
+  
+  # get recipiency rates
+  ucRecipiency$recipiency_annual_reg <- round(ucRecipiency$reg_total_week_mov_avg / ucRecipiency$unemployed_avg,3)
+  ucRecipiency$recipiency_annual_total <- round(ucRecipiency$total_week_mov_avg / ucRecipiency$unemployed_avg, 3)
+  ucRecipiency[is.na(ucRecipiency)] <- 0
+  return(ucRecipiency)
+}
+
+
 ucFirstTimePaymentLapse <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9050.csv") # 9050 report
 
 ucAppealsTimeLapseLower <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9054l.csv") # 9054 report
@@ -52,7 +196,6 @@ ucBenefitAppealsEUC08x13 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/
 # ucClaimsPaymentsEUC91 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ac5159.csv") #5159 report
 # ucClaimsPaymentsTEUC02 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at5159.csv") #5159 report
 # ucClaimsPaymentsEUC08 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au5159.csv") #5159 report
-# ucClaimsPaymentsRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/aw5159.csv") #5159 report
 
 # set the column names for the data that we're interested in
 setBenefitAppealNames(ucBenefitAppealsRegular)
@@ -147,7 +290,11 @@ recessions.df = read.table(textConnection(
   colClasses=c('Date', 'Date'), header=TRUE)
 
 
+# get the UC recipiency table
+ucRecipiency <- getRecipiency()
 
+
+# timeliness plot
 #uiTable <- melt(subset(refereeTimeliness, st=="PA", select=c("rptdate", "Within30Days", "Within45Days")) ,id.vars="rptdate")
 
 
@@ -162,3 +309,16 @@ recessions.df = read.table(textConnection(
 #   geom_text(aes(x=as.Date("2000-01-01"), y=.9,label = "the line", vjust = -1), color="black")
 # 
 # ?geom_hline
+
+
+#recipiency plot
+# 
+# ucMelt <- melt(subset(ucRecipiency, st=="US", select=c("rptdate","recipiency_annual_reg","recipiency_annual_total")) ,id.vars="rptdate")
+# 
+# 
+# 
+# ggplot(ucMelt, aes(rptdate, value, col=variable)) +
+#   geom_ribbon(data=ucMelt[ucMelt$variable=="recipiency_annual_total",],aes(ymin=0, ymax=value, fill=variable))+
+#   geom_ribbon(data=ucMelt[ucMelt$variable=="recipiency_annual_reg",], aes(ymin=0, ymax=value, fill=variable))+
+#   geom_line()
+#   
