@@ -24,14 +24,14 @@ reportTheme <- theme_minimal() +
         legend.position="top",
         legend.title = element_blank(),
         axis.title = element_text(size=17, face="bold"),
-        axis.text = element_text(size=17)) 
+        axis.text = element_text(size=17))
+
 
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-  
   # Application title
-  titlePanel("Unemployment Insurance Administration Explorer"),
+  titlePanel("Unemployment Insurance Data Explorer"),
   
   # Sidebar with a file input 
   sidebarLayout(
@@ -48,7 +48,13 @@ ui <- fluidPage(
       selectInput("viewData",
                   label = 'Select Data to View',
                   choices = c("Timeliness of Referee Decisions", "Timeliness of UCSC Payments", "Timeliness of UCBR Decisions", "Recipiency Rates"),
-                  selected = "Timeliness of Referee Decisions")
+                  selected = "Timeliness of Referee Decisions"),
+      
+      checkboxInput("constant_y_axis", 
+                    label="Constant y axis? (makes comparisons easier)",
+                    value=TRUE),
+      
+      tags$img(src="https://clsphila.org/sites/all/themes/clsphila_base/images/logo-50.svg")
       
     , width=3),
     # Show something
@@ -59,7 +65,7 @@ ui <- fluidPage(
   ),
   fluidRow(
     hr(),
-    HTML("This page is maintained by <a href=mailto:mhollander@clsphila.org>Michael Hollander</a> of <a href='clsphila.org' target=_blank>Community Legal Services</a>.  You can find the code for this page on github here: .  All of the data for this website comes from <a href=https://ows.doleta.gov/unemploy/DataDownloads.asp target=_blank>the US Department of Labor</a>.")
+    HTML("This page is maintained by <a href=mailto:mhollander@clsphila.org>Michael Hollander</a> of <a href='clsphila.org' target=_blank>Community Legal Services</a>.  You can find the code for this page on github here:<a href='https://github.com/CLSPhila/ui-data-explorer' target=_blank>Github</a>.  All of the data for this website comes from <a href=https://ows.doleta.gov/unemploy/DataDownloads.asp target=_blank>the US Department of Labor</a>.")
     
   )
 )
@@ -80,16 +86,18 @@ server <- function(input, output) {
        
        
       uPlot = ggplot(ucMelt) +
-         geom_ribbon(data=ucMelt[ucMelt$variable=="recipiency_annual_total",],aes(x=rptdate, ymin=0, ymax=value, fill=variable))+
-         geom_ribbon(data=ucMelt[ucMelt$variable=="recipiency_annual_reg",], aes(x=rptdate, ymin=0, ymax=value, fill=variable))+
+        geom_rect(data=recessions.df[recessions.df$Peak > as.Date(input$range[1]),], aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+        geom_ribbon(data=ucMelt[ucMelt$variable=="recipiency_annual_total",],aes(x=rptdate, ymin=0, ymax=value, fill=variable), alpha=.9)+
+         geom_ribbon(data=ucMelt[ucMelt$variable=="recipiency_annual_reg",], aes(x=rptdate, ymin=0, ymax=value, fill=variable), alpha=.9)+
          geom_line(aes(rptdate, value, col=variable)) +
          scale_fill_discrete(breaks=c("recipiency_annual_reg","recipiency_annual_total"),
                               labels=c("Regular Programs","Federal Programs")) +
          scale_color_discrete(guide=FALSE) +
          reportTheme + 
-         labs(x="Date", y="Recipiency Rate") + 
-         geom_rect(data=recessions.df[recessions.df$Peak > as.Date(input$range[1]),], aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.2) +
-         ggtitle(paste(input$state, input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m")))
+         labs(x="Date", y="Recipiency Rate",
+              caption="Recipiency rate calculated by dividing 12 month moving average of unemployment continuing claims divided by 12 month moving average of total unemployed.\nData not seasonally adjusted.  \nSource: Continuing claims can be found in ETA report 5159, found here: https://ows.doleta.gov/unemploy/DataDownloads.asp.\nUnemployed numbers courtesy the BLS: https://www.bls.gov/web/laus/ststdnsadata.txt.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.") + 
+         ggtitle(paste(input$state, input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) +
+         scale_fill_brewer(palette="Set1")
       
     }
     
@@ -121,17 +129,26 @@ server <- function(input, output) {
   
       # loess smoothing; .3 chosen arbitrarily to make the line a bit more responsive to data points.  
       uPlot <- ggplot(uiTable) +
-        geom_point(aes(rptdate, value, col=variable)) +
+        geom_rect(data=recessions.df[recessions.df$Peak > as.Date(input$range[1]),], aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+        geom_point(aes(rptdate, value, col=variable), alpha=.9) +
         reportTheme + 
         stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
-        labs(x="Date") + 
+        labs(x="Date", 
+             caption="Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
         geom_hline(aes(yintercept=as.numeric(line1[1])), linetype="dashed") +
         geom_text(aes(x=as.Date(input$range[1]),y=as.numeric(line1[1]),label = line1[2], vjust = -1, hjust=0), color="black") +
         geom_hline(aes(yintercept=as.numeric(line2[1])), linetype="dashed") +
         geom_text(aes(x=as.Date(input$range[1]),y=as.numeric(line2[1]),label = line2[2], vjust = -1, hjust=0), color="black") +
-        geom_rect(data=recessions.df[recessions.df$Peak > as.Date(input$range[1]),], aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.2) +
-        ggtitle(paste(input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m")))
+        ggtitle(paste(input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+        scale_fill_brewer(palette="Set1")
+      
 
+    }
+    
+    # constant scaling on the y axis for easier state comparison
+    if (input$constant_y_axis)
+    {
+      uPlot <- uPlot + coord_cartesian(ylim=c(0,1))
     }
     
     return(uPlot)
