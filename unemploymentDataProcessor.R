@@ -122,6 +122,10 @@ getRecipiency <- function ()
   ucClaimsPaymentsTEUC02 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at5159.csv") #5159 report
   ucClaimsPaymentsEUC08 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au5159.csv") #5159 report
   
+  # EUC data from the 80s isn't available on the DOL website, but DOL provided a copy of those claims
+  ucClaimsPaymentsEUC80s <- read.csv("EUC-1982-1987-USDOLData.csv")
+  ucClaimsPaymentsEUC80s$rptdate <- as.Date(ucClaimsPaymentsEUC80s$rptdate)
+  
   # name the columns that we care about for later code readability
   all_cols <- c("st","rptdate")
   reg_cols <- c("state_intrastate", "state_liable", "ucfe_instrastate", "ufce_liable", "ucx_intrastate", "ucx_liable")
@@ -132,23 +136,21 @@ getRecipiency <- function ()
   setnames(ucClaimsPaymentsRegular, c("c21", "c24", "c27", "c30", "c33", "c36"), reg_cols)
   setnames(ucClaimsPaymentsExtended, c("c12", "c15", "c18", "c21", "c24", "c27"), ext_cols)
   setnames(ucClaimsPaymentsEUC91, c("c19", "c22", "c23", "c26", "c27", "c30"), euc91_cols)
-  
-  # hmmm... I can't seem to set names on these two because we don't have a datamap to explain the csv file; need to get in touch with NELP
   setnames(ucClaimsPaymentsTEUC02, c("c12", "c15", "c18", "c21", "c24", "c27"),teuc_cols)
   setnames(ucClaimsPaymentsEUC08, c("c12", "c15", "c18", "c21", "c24", "c27"), euc08_cols)
-  
   
   # merge the different datasets together and backfill with 0 if there is no data for a month
   ucRecipiency <- merge(subset(ucClaimsPaymentsRegular,select=c(all_cols,reg_cols)), subset(ucClaimsPaymentsExtended,select=c(all_cols,ext_cols)), by=all_cols, all.x=TRUE)
   ucRecipiency <- merge(ucRecipiency,subset(ucClaimsPaymentsEUC91,select=c(all_cols,euc91_cols)),by=all_cols, all.x=TRUE)
   ucRecipiency <- merge(ucRecipiency,subset(ucClaimsPaymentsTEUC02,select=c(all_cols,teuc_cols)), by=all_cols, all.x=TRUE)
   ucRecipiency <- merge(ucRecipiency,subset(ucClaimsPaymentsEUC08,select=c(all_cols,euc08_cols)), by=all_cols, all.x=TRUE)
+  ucRecipiency <- merge(ucRecipiency,subset(ucClaimsPaymentsEUC80s,select=c(all_cols,c("euc80s"))), by=all_cols, all.x=TRUE)
   ucRecipiency[is.na(ucRecipiency)] <- 0
   
   
   # sum the various numbers that we care about and then divide by the number of weeks in the month to get a weekly number rather than a monthly number
   ucRecipiency$reg_total <- ucRecipiency$state_intrastate+ucRecipiency$state_liable+ucRecipiency$ucfe_instrastate+ucRecipiency$ufce_liable+ucRecipiency$ucx_intrastate+ucRecipiency$ucx_liable
-  ucRecipiency$fed_total <- ucRecipiency$ext_state_intrastate+ucRecipiency$ext_state_liable+ucRecipiency$ext_ucfe_instrastate+ucRecipiency$ext_ufce_liable+ucRecipiency$ext_ucx_intrastate+ucRecipiency$ext_ucx_liable+ucRecipiency$euc91_state_intrastate+ucRecipiency$euc91_state_liable+ucRecipiency$euc91_ucfe_instrastate+ucRecipiency$euc91_ufce_liable+ucRecipiency$euc91_ucx_intrastate+ucRecipiency$euc91_ucx_liable+ucRecipiency$euc08_state_intrastate+ucRecipiency$euc08_state_liable+ucRecipiency$euc08_ucfe_instrastate+ucRecipiency$euc08_ufce_liable+ucRecipiency$euc08_ucx_intrastate+ucRecipiency$euc08_ucx_liable+ucRecipiency$teuc02_state_intrastate+ucRecipiency$teuc02_state_liable+ucRecipiency$teuc02_ucfe_instrastate+ucRecipiency$teuc02_ufce_liable+ucRecipiency$teuc02_ucx_intrastate+ucRecipiency$teuc02_ucx_liable
+  ucRecipiency$fed_total <- ucRecipiency$ext_state_intrastate+ucRecipiency$ext_state_liable+ucRecipiency$ext_ucfe_instrastate+ucRecipiency$ext_ufce_liable+ucRecipiency$ext_ucx_intrastate+ucRecipiency$ext_ucx_liable+ucRecipiency$euc91_state_intrastate+ucRecipiency$euc91_state_liable+ucRecipiency$euc91_ucfe_instrastate+ucRecipiency$euc91_ufce_liable+ucRecipiency$euc91_ucx_intrastate+ucRecipiency$euc91_ucx_liable+ucRecipiency$euc08_state_intrastate+ucRecipiency$euc08_state_liable+ucRecipiency$euc08_ucfe_instrastate+ucRecipiency$euc08_ufce_liable+ucRecipiency$euc08_ucx_intrastate+ucRecipiency$euc08_ucx_liable+ucRecipiency$teuc02_state_intrastate+ucRecipiency$teuc02_state_liable+ucRecipiency$teuc02_ucfe_instrastate+ucRecipiency$teuc02_ufce_liable+ucRecipiency$teuc02_ucx_intrastate+ucRecipiency$teuc02_ucx_liable+ucRecipiency$euc80s
   ucRecipiency$total <- ucRecipiency$reg_total+ucRecipiency$fed_total 
   ucRecipiency$reg_total_week <- ucRecipiency$reg_total / (days_in_month(ucRecipiency$rptdate) / 7)
   ucRecipiency$fed_total_week <- ucRecipiency$fed_total / (days_in_month(ucRecipiency$rptdate) / 7)
