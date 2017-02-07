@@ -186,11 +186,15 @@ server <- function(input, output) {
 
     }
     
-    # constant scaling on the y axis for easier state comparison
+    # constant scaling on the y axis for easier state comparison; scaling on x axis so we can scale to ranges with no recession
     if (input$constant_y_axis)
     {
       uPlot <- uPlot + coord_cartesian(ylim=c(0,maxPlot),
                                        xlim=c(as.Date(input$range[1]),as.Date(input$range[2])))
+    }
+    else
+    {
+      uPlot <- uPlot + coord_cartesian(xlim=c(as.Date(input$range[1]),as.Date(input$range[2])))
     }
     
     return(uPlot)
