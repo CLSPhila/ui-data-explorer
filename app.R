@@ -47,7 +47,7 @@ ui <- fluidPage(
       
       selectInput("viewData",
                   label = 'Select Data to View',
-                  choices = c("Timeliness of Referee Decisions", "Timeliness of UCSC Payments", "Timeliness of UCBR Decisions", "Recipiency Rates"),
+                  choices = c("Timeliness of Referee Decisions", "Timeliness of UCSC Payments", "Timeliness of UCBR Decisions", "Recipiency Rates", "Fraud vs Non Fraud Overpayents", "Tax Program Overpayment Recoveries"),
                   selected = "Timeliness of Referee Decisions"),
       
       checkboxInput("constant_y_axis", 
@@ -77,7 +77,46 @@ server <- function(input, output) {
   
   # render the plot
   output$uiplot <- renderPlot({
-    if (input$viewData == "Recipiency Rates")
+
+    if (input$viewData == "Fraud vs Non Fraud Overpayents")
+    {
+      ucMelt <- melt(subset(ucOverpayments, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","fraud_num_percent")) ,id.vars="rptdate")
+      
+      
+      
+      uPlot = ggplot(ucMelt) +
+        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+        geom_point(aes(rptdate, value, col=variable), alpha=.9) +
+        reportTheme + 
+        stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
+        labs(x="Date", 
+             caption="Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
+        ggtitle(paste(input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+        scale_fill_brewer(palette="Set1")
+      
+      maxPlot <- 1
+    }
+    
+    else if (input$viewData == "Tax Program Overpayment Recoveries")
+    {
+      ucMelt <- melt(subset(ucOverpayments, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","state_tax_recovery", "federal_tax_recovery")) ,id.vars="rptdate")
+      
+        uPlot = ggplot(ucMelt) +
+        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+        geom_point(aes(rptdate, value/1000000, col=variable), alpha=.9) +
+        reportTheme + 
+        stat_smooth(span=.3, aes(rptdate, value/1000000, col=variable)) + 
+        labs(x="Date", 
+             y="Total Overpayment Recovery (millions of $)",
+             caption="Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
+        scale_y_continuous(labels=scales::dollar) + 
+        ggtitle(paste(input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+        scale_fill_brewer(palette="Set1")
+      
+      maxPlot <- maxOverpaymentDollars/1000000
+      
+    }
+    else if (input$viewData == "Recipiency Rates")
     {
      
      
@@ -86,7 +125,7 @@ server <- function(input, output) {
        
        
       uPlot = ggplot(ucMelt) +
-        geom_rect(data=recessions.df[recessions.df$Peak > as.Date(input$range[1]),], aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
         geom_ribbon(data=ucMelt[ucMelt$variable=="recipiency_annual_total",],aes(x=rptdate, ymin=0, ymax=value, fill=variable), alpha=.9)+
          geom_ribbon(data=ucMelt[ucMelt$variable=="recipiency_annual_reg",], aes(x=rptdate, ymin=0, ymax=value, fill=variable), alpha=.9)+
          geom_line(aes(rptdate, value, col=variable)) +
@@ -99,6 +138,7 @@ server <- function(input, output) {
          ggtitle(paste(input$state, input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) +
          scale_fill_brewer(palette="Set1")
       
+      maxPlot <- 1
     }
     
     else
@@ -129,7 +169,7 @@ server <- function(input, output) {
   
       # loess smoothing; .3 chosen arbitrarily to make the line a bit more responsive to data points.  
       uPlot <- ggplot(uiTable) +
-        geom_rect(data=recessions.df[recessions.df$Peak > as.Date(input$range[1]),], aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
         geom_point(aes(rptdate, value, col=variable), alpha=.9) +
         reportTheme + 
         stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
@@ -142,13 +182,15 @@ server <- function(input, output) {
         ggtitle(paste(input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_fill_brewer(palette="Set1")
       
+      maxPlot <- 1
 
     }
     
     # constant scaling on the y axis for easier state comparison
     if (input$constant_y_axis)
     {
-      uPlot <- uPlot + coord_cartesian(ylim=c(0,1))
+      uPlot <- uPlot + coord_cartesian(ylim=c(0,maxPlot),
+                                       xlim=c(as.Date(input$range[1]),as.Date(input$range[2])))
     }
     
     return(uPlot)
@@ -157,7 +199,41 @@ server <- function(input, output) {
   # render the data table
   output$uidata <- renderDataTable({
     
-    if (input$viewData == "Recipiency Rates")
+    
+    if (input$viewData == "Fraud vs Non Fraud Overpayents")
+    {
+      uiDT <- DT::datatable(ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
+                                         c("st","rptdate", "fraud_num_percent", "regular_fraud_num", "federal_fraud_num","regular_nonfraud_num","federal_nonfraud_num")],
+                            options=list(
+                              pageLength = 12,
+                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
+                              order = list(1,'desc'),
+                              searching=FALSE
+                            ), 
+                            colnames=c("State","Report Date", "Fraud as % of Total Overpayments", "Regular UI Fraud", "Federal UI Fraud", "Regular UI Non-Fraud", "Federal UI Non-Fraud"),
+                            class="nowrap stripe",
+                            rownames=FALSE
+      )
+      
+    }
+
+    else if (input$viewData == "Tax Program Overpayment Recoveries")
+    {
+      uiDT <- DT::datatable(ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
+                                           c("st","rptdate", "state_tax_recovery", "federal_tax_recovery")],
+                            options=list(
+                              pageLength = 12,
+                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
+                              order = list(1,'desc'),
+                              searching=FALSE
+                            ), 
+                            colnames=c("State","Report Date", "State Tax Recovery", "Federal Tax Recovery"),
+                            class="nowrap stripe",
+                            rownames=FALSE
+      ) %>% formatCurrency(3:4, '$')
+    }
+    
+    else if (input$viewData == "Recipiency Rates")
     {
         uiDT <- DT::datatable(ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1,
                                            c("st","rptdate","recipiency_annual_reg","recipiency_annual_total")],

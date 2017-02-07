@@ -38,6 +38,96 @@ getMinYear <- function (df) {
 }  
 
 
+# get data on overpayments and process them
+getOverpayments <- function() {
+
+  ucOverpaymentsRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar227.csv") #227 report
+  ucOverpaymentsEUC91 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ac227.csv") #227 report
+  ucOverpaymentsTEUC02 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at227.csv") #227 report
+  ucOverpaymentsEUC08 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au227.csv") #227 report
+  
+  # just pull out the columns that we care about
+  ucOverpaymentsRegular$regular_fraud_num <- ucOverpaymentsRegular$c1+ucOverpaymentsRegular$c2
+  ucOverpaymentsRegular$federal_fraud_num <- ucOverpaymentsRegular$c234
+  ucOverpaymentsRegular$regular_fraud_dol <- ucOverpaymentsRegular$c3+ucOverpaymentsRegular$c4
+  ucOverpaymentsRegular$federal_fraud_dol <- ucOverpaymentsRegular$c235
+  ucOverpaymentsRegular$regular_nonfraud_num <- ucOverpaymentsRegular$c27+ucOverpaymentsRegular$c28
+  ucOverpaymentsRegular$federal_nonfraud_num <- ucOverpaymentsRegular$c250
+  ucOverpaymentsRegular$regular_nonfraud_dol <- ucOverpaymentsRegular$c29+ucOverpaymentsRegular$c30
+  ucOverpaymentsRegular$federal_nonfraud_dol <- ucOverpaymentsRegular$c251
+  ucOverpaymentsRegular$state_tax_recovery <- ucOverpaymentsRegular$c210+ucOverpaymentsRegular$c211+ucOverpaymentsRegular$c212+ucOverpaymentsRegular$c213+ucOverpaymentsRegular$c284 + ucOverpaymentsRegular$c285
+  ucOverpaymentsRegular$federal_tax_recovery <- ucOverpaymentsRegular$c286+ucOverpaymentsRegular$c287+ucOverpaymentsRegular$c289+ucOverpaymentsRegular$c290+ ucOverpaymentsRegular$c288 + ucOverpaymentsRegular$c291
+
+  ucOverpaymentsEUC91$yfederal_fraud_num <- ucOverpaymentsEUC91$c1+ucOverpaymentsEUC91$c2
+  ucOverpaymentsEUC91$yfederal_fraud_dol <- ucOverpaymentsEUC91$c3+ucOverpaymentsEUC91$c4
+  ucOverpaymentsEUC91$yfederal_nonfraud_num <- ucOverpaymentsEUC91$c5+ucOverpaymentsEUC91$c6
+  ucOverpaymentsEUC91$yfederal_nonfraud_dol <- ucOverpaymentsEUC91$c7+ucOverpaymentsEUC91$c8
+  
+  ucOverpaymentsTEUC02$yfederal_fraud_num <- ucOverpaymentsTEUC02$c1+ucOverpaymentsTEUC02$c2
+  ucOverpaymentsTEUC02$yfederal_fraud_dol <- ucOverpaymentsTEUC02$c3+ucOverpaymentsTEUC02$c4
+  ucOverpaymentsTEUC02$yfederal_nonfraud_num <- ucOverpaymentsTEUC02$c27+ucOverpaymentsTEUC02$c28
+  ucOverpaymentsTEUC02$yfederal_nonfraud_dol <- ucOverpaymentsTEUC02$c29+ucOverpaymentsTEUC02$c30
+  ucOverpaymentsTEUC02$ystate_tax_recovery <- ucOverpaymentsTEUC02$c210+ucOverpaymentsTEUC02$c211+ucOverpaymentsTEUC02$c212+ucOverpaymentsTEUC02$c213
+  ucOverpaymentsTEUC02$yfederal_tax_recovery <- ucOverpaymentsTEUC02$c214+ucOverpaymentsTEUC02$c215+ucOverpaymentsTEUC02$c216+ucOverpaymentsTEUC02$c217
+
+  ucOverpaymentsEUC08$yfederal_fraud_num <- ucOverpaymentsEUC08$c1+ucOverpaymentsEUC08$c2
+  ucOverpaymentsEUC08$yfederal_fraud_dol <- ucOverpaymentsEUC08$c3+ucOverpaymentsEUC08$c4
+  ucOverpaymentsEUC08$yfederal_nonfraud_num <- ucOverpaymentsEUC08$c27+ucOverpaymentsEUC08$c28
+  ucOverpaymentsEUC08$yfederal_nonfraud_dol <- ucOverpaymentsEUC08$c29+ucOverpaymentsEUC08$c30
+  ucOverpaymentsEUC08$ystate_tax_recovery <- ucOverpaymentsEUC08$c210+ucOverpaymentsEUC08$c211+ucOverpaymentsEUC08$c212+ucOverpaymentsEUC08$c213
+  ucOverpaymentsEUC08$yfederal_tax_recovery <- ucOverpaymentsEUC08$c214+ucOverpaymentsEUC08$c215+ucOverpaymentsEUC08$c216+ucOverpaymentsEUC08$c217
+  
+  # subsetout only the fields that we want and then merge and combine everything
+  overpayment_cols <- c("st","rptdate","regular_fraud_num","federal_fraud_num","regular_fraud_dol","federal_fraud_dol","regular_nonfraud_num","federal_nonfraud_num","regular_nonfraud_dol","federal_nonfraud_dol","state_tax_recovery","federal_tax_recovery")
+  ucOverpayments <- subset(ucOverpaymentsRegular,select=overpayment_cols)
+  
+  all_cols <- c("st","rptdate")
+  detection_cols <- c("yfederal_fraud_num","yfederal_fraud_dol","yfederal_nonfraud_num","yfederal_nonfraud_dol")
+  recovery_cols <- c("ystate_tax_recovery","yfederal_tax_recovery")
+  
+  # and now add in all of the federal programs
+  ucOverpayments <- merge(ucOverpayments,subset(ucOverpaymentsEUC91,select=c(all_cols,detection_cols)),by=all_cols,all.x=TRUE)
+  ucOverpayments [is.na(ucOverpayments)] <- 0
+  ucOverpayments$federal_fraud_num <- ucOverpayments$federal_fraud_num+ucOverpayments$yfederal_fraud_num
+  ucOverpayments$federal_fraud_dol <- ucOverpayments$federal_fraud_dol+ucOverpayments$yfederal_fraud_dol
+  ucOverpayments$federal_nonfraud_num <- ucOverpayments$federal_nonfraud_num+ucOverpayments$yfederal_nonfraud_num
+  ucOverpayments$federal_nonfraud_dol <- ucOverpayments$federal_nonfraud_dol+ucOverpayments$yfederal_nonfraud_dol
+  ucOverpayments <- subset(ucOverpayments,select=overpayment_cols)
+
+  ucOverpayments <- merge(ucOverpayments,subset(ucOverpaymentsTEUC02,select=c(all_cols,detection_cols,recovery_cols)),by=all_cols,all.x=TRUE)
+  ucOverpayments [is.na(ucOverpayments)] <- 0
+  ucOverpayments$federal_fraud_num <- ucOverpayments$federal_fraud_num+ucOverpayments$yfederal_fraud_num
+  ucOverpayments$federal_fraud_dol <- ucOverpayments$federal_fraud_dol+ucOverpayments$yfederal_fraud_dol
+  ucOverpayments$federal_nonfraud_num <- ucOverpayments$federal_nonfraud_num+ucOverpayments$yfederal_nonfraud_num
+  ucOverpayments$federal_nonfraud_dol <- ucOverpayments$federal_nonfraud_dol+ucOverpayments$yfederal_nonfraud_dol
+  ucOverpayments$state_tax_recovery <- ucOverpayments$state_tax_recovery+ucOverpayments$state_tax_recovery
+  ucOverpayments$federal_tax_recovery <- ucOverpayments$federal_tax_recovery+ucOverpayments$federal_tax_recovery
+  ucOverpayments <- subset(ucOverpayments,select=overpayment_cols)
+  
+  ucOverpayments <- merge(ucOverpayments,subset(ucOverpaymentsEUC08,select=c(all_cols,detection_cols,recovery_cols)),by=all_cols,all.x=TRUE)
+  ucOverpayments [is.na(ucOverpayments)] <- 0
+  ucOverpayments$federal_fraud_num <- ucOverpayments$federal_fraud_num+ucOverpayments$yfederal_fraud_num
+  ucOverpayments$federal_fraud_dol <- ucOverpayments$federal_fraud_dol+ucOverpayments$yfederal_fraud_dol
+  ucOverpayments$federal_nonfraud_num <- ucOverpayments$federal_nonfraud_num+ucOverpayments$yfederal_nonfraud_num
+  ucOverpayments$federal_nonfraud_dol <- ucOverpayments$federal_nonfraud_dol+ucOverpayments$yfederal_nonfraud_dol
+  ucOverpayments$state_tax_recovery <- ucOverpayments$state_tax_recovery+ucOverpayments$state_tax_recovery
+  ucOverpayments$federal_tax_recovery <- ucOverpayments$federal_tax_recovery+ucOverpayments$federal_tax_recovery
+  ucOverpayments <- subset(ucOverpayments,select=overpayment_cols)
+
+  
+  # compute US Averages
+  usAvg <- aggregate(cbind(regular_fraud_num, regular_fraud_dol, federal_fraud_num, federal_fraud_dol,regular_nonfraud_num, regular_nonfraud_dol, federal_nonfraud_num, federal_nonfraud_dol, state_tax_recovery, federal_tax_recovery) ~ rptdate, ucOverpayments, FUN= function(x) round(mean(x),1))
+  # then merge in the same data, but as a separate "state" for US Avg
+  usAvg$st <- "US"
+  ucOverpayments <- rbind(ucOverpayments,usAvg)
+  
+  # compute rates
+  ucOverpayments$fraud_num_percent <- round((ucOverpayments$regular_fraud_num + ucOverpayments$federal_fraud_num)/(ucOverpayments$regular_fraud_num+ucOverpayments$federal_fraud_num+ucOverpayments$regular_nonfraud_num+ucOverpayments$federal_nonfraud_num),3)
+  
+  
+  return(ucOverpayments)
+}
+
 
 # get unemployment information from the BLS website and convert to a datatable.  This function takes a long
 # time to run
@@ -288,6 +378,9 @@ recessions.df = read.table(textConnection(
 # get the UC recipiency table
 ucRecipiency <- getRecipiency()
 
+ucOverpayments <- getOverpayments()
+#get the max dollars; use for scale of the graph
+maxOverpaymentDollars <- max(c(ucOverpayments$state_tax_recovery,ucOverpayments$federal_tax_recovery))
 
 # timeliness plot
 #uiTable <- melt(subset(refereeTimeliness, st=="PA", select=c("rptdate", "Within30Days", "Within45Days")) ,id.vars="rptdate")
