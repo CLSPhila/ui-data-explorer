@@ -282,6 +282,7 @@ ucBenefitAppealsEUC91x94 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/
 ucBenefitAppealsEUC02x04 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at5130.csv") # 5130 report
 ucBenefitAppealsEUC08x13 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au5130.csv") # 5130 report
 
+
 # set the column names for the data that we're interested in
 setBenefitAppealNames(ucBenefitAppealsRegular)
 setBenefitAppealNames(ucBenefitAppealsExtended)

@@ -15,7 +15,7 @@ library(ggplot2)
 library(reshape2)
 source("unemploymentDataProcessor.R")
 
-maxDate <- max(ucRecipiency$rptdate)
+maxDate <- max(ucFirstTimePaymentLapse$rptdate)
 minDate <- min(ucRecipiency$rptdate)
 states <- getStates(ucbrTimeliness)
 
