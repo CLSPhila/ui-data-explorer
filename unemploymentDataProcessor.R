@@ -8,6 +8,8 @@ library(data.table)
 library(lubridate)
 library(dplyr)
 library(zoo)
+library(rgdal)
+library(leaflet)
 require(bit64)
 
 downloadUCData <- function (URL) {
@@ -382,6 +384,84 @@ ucRecipiency <- getRecipiency()
 ucOverpayments <- getOverpayments()
 #get the max dollars; use for scale of the graph
 maxOverpaymentDollars <- max(c(ucOverpayments$state_tax_recovery,ucOverpayments$federal_tax_recovery))
+
+tmp <- tempdir()
+unzip("cb_2015_us_state_20m.zip", exdir = tmp)
+ 
+usa <- readOGR(dsn=tmp, layer="cb_2015_us_state_20m")
+# 
+# #add data to the usa dataframe
+# maxDate = max(ucRecipiency$rptdate)
+# # use a left join b/c there is no data for DC and PR in most cases
+# usa@data = usa@data %>%
+#   left_join(ucRecipiency[ucRecipiency$rptdate==maxDate,c("st","rptdate","recipiency_annual_total")], by=c("STUSPS"="st"))
+# 
+# # this creates the color mapping
+#pal <- colorBin("Reds", NULL, bins = 7)
+pal <- colorNumeric("Reds",NULL)
+
+getUIMap <- function(usa,df,uiDate,dfColumn, stateText, reverseLevels) 
+{
+  # the dates that come in can be anywhere in the month b/c of the way the date slider works, so we have to 
+  # get the end of the month
+  uiDate <- ceiling_date(uiDate,"month") - days(1)
+  # this is b/c the stats are on different release cycles--some release earlier and later in the month, some release quarterly
+  # so this allows us to pick a date that doesn't exist, but fall back to something that does
+  if(!(uiDate %in% df$rptdate))
+    uiDate <- max(df$rptdate)
+  
+  df <- subset(df, rptdate==uiDate, select=c("st","rptdate",dfColumn))
+  
+  # flop the measure col if reverse is true so that we can do the shading correctly when high is good
+  if (reverseLevels)
+    df$measureCol <- 1/df[[dfColumn]]
+  else
+    df$measureCol <- df[[dfColumn]]
+  
+  # use a left join b/c there is no data for DC and PR in most cases
+  usa@data = usa@data %>%
+    left_join(df, by=c("STUSPS"="st"), copy=TRUE)
+
+  
+  state_popup <- paste0(stateText,
+                        "<br><strong>", 
+                        usa$NAME, 
+                        "</strong>: ",
+                        usa[[dfColumn]])
+  
+
+  # print out the map.  The problem here is that the palettes are white->red as you go from bad->good, which
+  # means that we often will want to resort everything 
+  uiMap <- leaflet(data = usa) %>%
+    addProviderTiles("CartoDB.Positron") %>%
+    addPolygons(fillColor = ~pal(measureCol), 
+                fillOpacity = 0.8, 
+                color = "#BDBDC3", 
+                weight = 1, 
+                popup = state_popup) %>%
+    setView(lng = -93.85, lat = 37.45, zoom = 4)
+  
+
+  return(uiMap)
+}
+
+# 
+# 
+# state_popup <- paste0("<strong>State: </strong>", 
+#                       usa$NAME, 
+#                       "<br><strong>Recipiency Rate: </strong>", 
+#                       usa$recipiency_annual_total)
+# 
+# # print out the map.  The problem here is that the palettes are white->red as you go from bad->good, which
+# # means that we often will want to resort everything 
+# leaflet(data = usa) %>%
+#   addProviderTiles("CartoDB.Positron") %>%
+#   addPolygons(fillColor = ~pal(recipiency_annual_total), 
+#               fillOpacity = 0.8, 
+#               color = "#BDBDC3", 
+#               weight = 1, 
+#               popup = state_popup)
+# 
 
 # timeliness plot
 #uiTable <- melt(subset(refereeTimeliness, st=="PA", select=c("rptdate", "Within30Days", "Within45Days")) ,id.vars="rptdate")

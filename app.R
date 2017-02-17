@@ -59,8 +59,13 @@ ui <- fluidPage(
     , width=3),
     # Show something
     mainPanel(
-      plotOutput("uiplot"),
-      dataTableOutput("uidata")
+      tabsetPanel(
+        tabPanel("Data",
+          plotOutput("uiplot"),
+          dataTableOutput("uidata")
+        ),
+        tabPanel("Map",leafletOutput("uimap"))
+      )
     )
   ),
   fluidRow(
@@ -291,6 +296,20 @@ server <- function(input, output) {
       )
     }
     return(uiDT)
+  })
+
+  # render the proper leaflet map
+  output$uimap <- renderLeaflet({
+    
+    uiMap <- switch(input$viewData,
+                    "Fraud vs Non Fraud Overpayents" = getUIMap(usa,ucOverpayments,input$range[2],"fraud_num_percent", paste("Fraud vs Non-Fraud Overpayments in ",input$range[2]),FALSE),
+                    "Tax Program Overpayment Recoveries" = getUIMap(usa,ucOverpayments,input$range[2],"federal_tax_recovery", paste("Federal Tax Intercepts in Quarter ending ",input$range[2]), FALSE),
+                    "Recipiency Rates" = getUIMap(usa,ucRecipiency,input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
+                    "Timeliness of Referee Decisions" = getUIMap(usa,refereeTimeliness,input$range[2],"Within45Days", paste("Percent of Referee Decisions within 45 days, ",input$range[2]), TRUE),
+                    "Timeliness of UCSC Payments" = getUIMap(usa,paymentTimeliness,input$range[2],"Within35Days", paste("Percent of First Payments within 35 days, ",input$range[2]), TRUE),
+                    "Timeliness of UCBR Decisions" = getUIMap(usa,ucbrTimeliness,input$range[2],"Within75Days", paste("Percent of Board of Review Decisions within 75 days, ",input$range[2]), TRUE))
+      
+    return(uiMap)
   })
   
   
