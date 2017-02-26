@@ -62,6 +62,7 @@ ui <- fluidPage(
       tabsetPanel(
         tabPanel("Data",
           plotOutput("uiplot"),
+          downloadButton('data.csv', 'Download Data'),
           dataTableOutput("uidata")
         ),
         tabPanel("Map",leafletOutput("uimap"))
@@ -298,6 +299,31 @@ server <- function(input, output) {
     return(uiDT)
   })
 
+  output$data.csv = downloadHandler('data.csv', content = function(file) { 
+        df <- switch(input$viewData,
+                        "Timeliness of Referee Decisions" = refereeTimeliness[refereeTimeliness$st==input$state & refereeTimeliness$rptdate > input$range[1]-1 & refereeTimeliness$rptdate < input$range[2]+1,],
+                        "Timeliness of UCSC Payments" = paymentTimeliness[paymentTimeliness$st==input$state & paymentTimeliness$rptdate > input$range[1]-1 & paymentTimeliness$rptdate < input$range[2]+1,],
+                        "Timeliness of UCBR Decisions" = ucbrTimeliness[ucbrTimeliness$st==input$state & ucbrTimeliness$rptdate > input$range[1]-1 & ucbrTimeliness$rptdate < input$range[2]+1,], 
+                        "Fraud vs Non Fraud Overpayents" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
+                                                                          c("st","rptdate", "fraud_num_percent", "regular_fraud_num", "federal_fraud_num","regular_nonfraud_num","federal_nonfraud_num")],
+                        "Tax Program Overpayment Recoveries" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1, c("st","rptdate", "state_tax_recovery", "federal_tax_recovery")],
+                        "Recipiency Rates" = ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1, c("st","rptdate","recipiency_annual_reg","recipiency_annual_total")]
+                    ) 
+        
+        # uiTable <- switch(input$viewData,
+        #                   "Timeliness of Referee Decisions" = refereeTimeliness,
+        #                   "Timeliness of UCSC Payments" = paymentTimeliness,
+        #                   "Timeliness of UCBR Decisions" = ucbrTimeliness)
+        # 
+        # uiCols <- switch(input$viewData,
+        #                  "Timeliness of Referee Decisions" = c("State", "Date", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending", "US 30 Day Avg" ,"US 45 Day Avg"),
+        #                  "Timeliness of UCSC Payments" = c("State", "Date", "Within 15 Days", "Within 35 Days", "Total Paid", "US 15 Day Avg", "US 35 Day Avg"),
+        #                  "Timeliness of UCBR Decisions" = c("State", "Date", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending", "US 45 Day Avg", "US 75 Day Avg"))
+        # 
+                              
+        write.csv(df[order(-rptdate),], file)
+  })
+    
   # render the proper leaflet map
   output$uimap <- renderLeaflet({
     
