@@ -47,7 +47,7 @@ ui <- fluidPage(
       
       selectInput("viewData",
                   label = 'Select Data to View',
-                  choices = c("Timeliness of Referee Decisions", "Timeliness of UCSC Payments", "Timeliness of UCBR Decisions", "Recipiency Rates", "Fraud vs Non Fraud Overpayents", "Tax Program Overpayment Recoveries"),
+                  choices = c("Timeliness of Referee Decisions", "Timeliness of UCSC Payments", "Timeliness of UCBR Decisions", "Recipiency Rates", "Overpayment vs Recovery", "Fraud vs Non Fraud Overpayents", "Tax Program Overpayment Recoveries"),
                   selected = "Timeliness of Referee Decisions"),
       
       checkboxInput("constant_y_axis", 
@@ -147,6 +147,25 @@ server <- function(input, output) {
       maxPlot <- 1
     }
     
+    else if (input$viewData == "Overpayment vs Recovery")
+    {
+      
+      ucMelt <- melt(subset(ucOverpayments, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","outstanding", "recovered")) ,id.vars="rptdate")
+      
+      uPlot = ggplot(ucMelt) +
+        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+        geom_point(aes(rptdate, value/1000000, col=variable), alpha=.9) +
+        reportTheme + 
+        stat_smooth(span=.3, aes(rptdate, value/1000000, col=variable)) + 
+        labs(x="Date", 
+             y="Millions of $",
+             caption="Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
+        ggtitle(paste("Outstanding Overpayments vs $ Recovered from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+        scale_fill_brewer(palette="Set1")
+      
+      maxPlot <- maxOutstandingOverpayment/1000000
+      
+    }
     else
     {
       uiTable <- switch(input$viewData,
@@ -243,6 +262,23 @@ server <- function(input, output) {
       ) %>% formatCurrency(3:4, '$')
     }
     
+    else if (input$viewData == "Overpayment vs Recovery")
+    {
+      
+      uiDT <- DT::datatable(ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
+                                           c("st","rptdate", "outstanding", "recovered")],
+                            options=list(
+                              pageLength = 12,
+                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
+                              order = list(1,'desc'),
+                              searching=FALSE
+                            ), 
+                            colnames=c("State","Report Date", "Outstanding Owed", "Recovered"),
+                            class="nowrap stripe",
+                            rownames=FALSE
+      ) %>% formatCurrency(3:4, '$')
+      
+    }
     else if (input$viewData == "Recipiency Rates")
     {
         uiDT <- DT::datatable(ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1,
@@ -307,6 +343,7 @@ server <- function(input, output) {
                         "Fraud vs Non Fraud Overpayents" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
                                                                           c("st","rptdate", "fraud_num_percent", "regular_fraud_num", "federal_fraud_num","regular_nonfraud_num","federal_nonfraud_num")],
                         "Tax Program Overpayment Recoveries" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1, c("st","rptdate", "state_tax_recovery", "federal_tax_recovery")],
+                        "Overpayment vs Recovery" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1, c("st","rptdate", "outstanding", "recovered")],
                         "Recipiency Rates" = ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1, c("st","rptdate","recipiency_annual_reg","recipiency_annual_total")]
                     ) 
         
@@ -329,6 +366,7 @@ server <- function(input, output) {
     
     uiMap <- switch(input$viewData,
                     "Fraud vs Non Fraud Overpayents" = getUIMap(usa,ucOverpayments,input$range[2],"fraud_num_percent", paste("Fraud vs Non-Fraud Overpayments in ",input$range[2]),FALSE),
+                    "Overpayment vs Recovery" = getUIMap(usa,ucOverpayments,input$range[2],"outstanding", paste("Outstanding Overpayments Balance in ",input$range[2]),FALSE),
                     "Tax Program Overpayment Recoveries" = getUIMap(usa,ucOverpayments,input$range[2],"federal_tax_recovery", paste("Federal Tax Intercepts in Quarter ending ",input$range[2]), FALSE),
                     "Recipiency Rates" = getUIMap(usa,ucRecipiency,input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
                     "Timeliness of Referee Decisions" = getUIMap(usa,refereeTimeliness,input$range[2],"Within45Days", paste("Percent of Referee Decisions within 45 days, ",input$range[2]), TRUE),
