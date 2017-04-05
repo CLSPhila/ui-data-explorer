@@ -47,8 +47,9 @@ ui <- fluidPage(
       
       selectInput("viewData",
                   label = 'Select Data to View',
-                  choices = c("Timeliness of Referee Decisions", "Timeliness of UCSC Payments", "Timeliness of UCBR Decisions", "Recipiency Rates", "Overpayment vs Recovery", "Fraud vs Non Fraud Overpayents", "Tax Program Overpayment Recoveries"),
-                  selected = "Timeliness of Referee Decisions"),
+                  size=10, selectize=FALSE,
+                  choices = c("Monthly UI Payments", "Timeliness of Referee Decisions", "Timeliness of UCSC Payments", "Timeliness of UCBR Decisions", "Recipiency Rates", "Overpayment vs Recovery", "Overpayment Balance/Annual UI Payments", "Fraud vs Non Fraud Overpayents", "Tax Program Overpayment Recoveries"),
+                  selected = "Monthly UI Payments"),
       
       checkboxInput("constant_y_axis", 
                     label="Constant y axis? (makes comparisons easier)",
@@ -84,7 +85,50 @@ server <- function(input, output) {
   # render the plot
   output$uiplot <- renderPlot({
 
-    if (input$viewData == "Fraud vs Non Fraud Overpayents")
+    if (input$viewData == "Monthly UI Payments")
+    {
+      
+      ucMelt <- melt(subset(ucRecipiency, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","total_compensated_mov_avg", "total_state_compensated_mov_avg")) ,id.vars="rptdate")
+                                                                                                                                  
+      
+      uPlot = ggplot(ucMelt) +
+        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+        geom_ribbon(data=ucMelt[ucMelt$variable=="total_compensated_mov_avg",],aes(x=rptdate, ymin=0, ymax=value/1000000, fill=variable), alpha=.9)+
+        geom_ribbon(data=ucMelt[ucMelt$variable=="total_state_compensated_mov_avg",], aes(x=rptdate, ymin=0, ymax=value/1000000, fill=variable), alpha=.9)+
+        geom_line(aes(rptdate, value/1000000, col=variable)) +
+        scale_color_discrete(guide=FALSE) +
+        reportTheme + 
+        labs(x="Date", y="Total Paid (Millions of $)",
+             caption="12-month moving average of UI paid per month in both regular and federal UI programs.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.") + 
+        ggtitle(paste(input$state, input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) +
+        scale_fill_brewer(palette="Set1",
+                          breaks=c("total_state_compensated_mov_avg","total_compensated_mov_avg"),
+                          labels=c("Regular Programs","Federal Programs"))
+      
+      maxPlot <- maxUIPayments/1000000
+      
+    }
+    
+    else if (input$viewData == "Overpayment Balance/Annual UI Payments")
+    {
+      ucMelt <- melt(subset(ucOverpayments, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","outstanding_proportion")) ,id.vars="rptdate")
+      
+      
+      uPlot = ggplot(ucMelt) +
+        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+        geom_point(aes(rptdate, value, col=variable), alpha=.9) +
+        reportTheme + 
+        stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
+        labs(x="Date", 
+             caption="Outstanding overpayment balance divided by the total benefits paid in all federal and state programs over the last 12 months.\n Data courtesy of the USDOL.  Reports used are ETA 227 and 5159, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
+        ggtitle(paste(input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+        scale_fill_brewer(palette="Set1")
+      
+      maxPlot <- maxOutstandingProportion
+      
+    }
+
+    else if (input$viewData == "Fraud vs Non Fraud Overpayents")
     {
       ucMelt <- melt(subset(ucOverpayments, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","fraud_num_percent")) ,id.vars="rptdate")
       
@@ -135,14 +179,14 @@ server <- function(input, output) {
         geom_ribbon(data=ucMelt[ucMelt$variable=="recipiency_annual_total",],aes(x=rptdate, ymin=0, ymax=value, fill=variable), alpha=.9)+
          geom_ribbon(data=ucMelt[ucMelt$variable=="recipiency_annual_reg",], aes(x=rptdate, ymin=0, ymax=value, fill=variable), alpha=.9)+
          geom_line(aes(rptdate, value, col=variable)) +
-         scale_fill_discrete(breaks=c("recipiency_annual_reg","recipiency_annual_total"),
-                              labels=c("Regular Programs","Federal Programs")) +
          scale_color_discrete(guide=FALSE) +
          reportTheme + 
          labs(x="Date", y="Recipiency Rate",
               caption="Recipiency rate calculated by dividing 12 month moving average of unemployment continuing claims divided by 12 month moving average of total unemployed.\nData not seasonally adjusted.  \nSource: Continuing claims can be found in ETA report 5159, found here: https://ows.doleta.gov/unemploy/DataDownloads.asp.\nUnemployed numbers courtesy the BLS: https://www.bls.gov/web/laus/ststdnsadata.txt.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.") + 
          ggtitle(paste(input$state, input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) +
-         scale_fill_brewer(palette="Set1")
+         scale_fill_brewer(palette="Set1",
+                           breaks=c("recipiency_annual_reg","recipiency_annual_total"),
+                           labels=c("Regular Programs","Federal Programs"))
       
       maxPlot <- 1
     }
@@ -229,7 +273,41 @@ server <- function(input, output) {
   output$uidata <- renderDataTable({
     
     
-    if (input$viewData == "Fraud vs Non Fraud Overpayents")
+    if (input$viewData == "Monthly UI Payments")
+    {
+      uiDT <- DT::datatable(ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1,
+                                           c("st","rptdate", "total_state_compensated_mov_avg", "total_federal_compensated_mov_avg", "total_state_compensated", "total_federal_compensated", "total_paid_annual_mov_avg")], 
+                            options=list(
+                              pageLength = 12,
+                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
+                              order = list(1,'desc'),
+                              searching=FALSE
+                            ), 
+                            colnames=c("State","Report Date", "State UI Payments (Monthly, mov avg)", "Federal UI Payments (Monthly, mov avg)", "State UI Payments (Monthly)", "Federal UI Payments (Monthly)", "Annual UI Payments (mov avg)"),
+                            class="stripe",
+                            rownames=FALSE
+      )%>% formatCurrency(3:7, '$')
+      
+    }
+    
+    else if (input$viewData == "Overpayment Balance/Annual UI Payments")
+    {
+      
+      uiDT <- DT::datatable(ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
+                                         c("st","rptdate", "outstanding_proportion", "outstanding", "total_paid_annual_mov_avg")], 
+                            options=list(
+                              pageLength = 12,
+                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
+                              order = list(1,'desc'),
+                              searching=FALSE
+                            ), 
+                            colnames=c("State","Report Date", "Outstanding balance / Annual UI Payments", "Outstanding Overpayment Balance", "Annual UI Payments"),
+                            class="stripe",
+                            rownames=FALSE
+      )%>% formatCurrency(4:5, '$')
+    }
+    
+    else if (input$viewData == "Fraud vs Non Fraud Overpayents")
     {
       uiDT <- DT::datatable(ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
                                          c("st","rptdate", "fraud_num_percent", "regular_fraud_num", "federal_fraud_num","regular_nonfraud_num","federal_nonfraud_num")],
@@ -337,6 +415,10 @@ server <- function(input, output) {
 
   output$data.csv = downloadHandler('data.csv', content = function(file) { 
         df <- switch(input$viewData,
+                        "Monthly UI Payments" = ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1,
+                                                             c("st","rptdate", "total_state_compensated_mov_avg", "total_federal_compensated_mov_avg", "total_state_compensated", "total_federal_compensated", "total_paid_annual_mov_avg")],
+                        "Overpayment Balance/Annual UI Payments" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
+                                                          c("st","rptdate", "outstanding_proportion", "outstanding", "total_paid_annual_mov_avg")],
                         "Timeliness of Referee Decisions" = refereeTimeliness[refereeTimeliness$st==input$state & refereeTimeliness$rptdate > input$range[1]-1 & refereeTimeliness$rptdate < input$range[2]+1,],
                         "Timeliness of UCSC Payments" = paymentTimeliness[paymentTimeliness$st==input$state & paymentTimeliness$rptdate > input$range[1]-1 & paymentTimeliness$rptdate < input$range[2]+1,],
                         "Timeliness of UCBR Decisions" = ucbrTimeliness[ucbrTimeliness$st==input$state & ucbrTimeliness$rptdate > input$range[1]-1 & ucbrTimeliness$rptdate < input$range[2]+1,], 
@@ -347,17 +429,7 @@ server <- function(input, output) {
                         "Recipiency Rates" = ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1, c("st","rptdate","recipiency_annual_reg","recipiency_annual_total")]
                     ) 
         
-        # uiTable <- switch(input$viewData,
-        #                   "Timeliness of Referee Decisions" = refereeTimeliness,
-        #                   "Timeliness of UCSC Payments" = paymentTimeliness,
-        #                   "Timeliness of UCBR Decisions" = ucbrTimeliness)
-        # 
-        # uiCols <- switch(input$viewData,
-        #                  "Timeliness of Referee Decisions" = c("State", "Date", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending", "US 30 Day Avg" ,"US 45 Day Avg"),
-        #                  "Timeliness of UCSC Payments" = c("State", "Date", "Within 15 Days", "Within 35 Days", "Total Paid", "US 15 Day Avg", "US 35 Day Avg"),
-        #                  "Timeliness of UCBR Decisions" = c("State", "Date", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending", "US 45 Day Avg", "US 75 Day Avg"))
-        # 
-                              
+
         write.csv(df[order(-rptdate),], file)
   })
     
@@ -365,6 +437,8 @@ server <- function(input, output) {
   output$uimap <- renderLeaflet({
     
     uiMap <- switch(input$viewData,
+                    "Monthly UI Payments" = getUIMap(usa,ucRecipiency,input$range[2],"total_compensated_mov_avg", paste("Total UI Payments disbursed in ", input$range[2]), FALSE),
+                    "Overpayment Balance/Annual UI Payments" = getUIMap(usa,ucOverpayments, input$range[2], "outstanding_proportion", paste("Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually in ", input$range[2]), FALSE),
                     "Fraud vs Non Fraud Overpayents" = getUIMap(usa,ucOverpayments,input$range[2],"fraud_num_percent", paste("Fraud vs Non-Fraud Overpayments in ",input$range[2]),FALSE),
                     "Overpayment vs Recovery" = getUIMap(usa,ucOverpayments,input$range[2],"outstanding", paste("Outstanding Overpayments Balance in ",input$range[2]),FALSE),
                     "Tax Program Overpayment Recoveries" = getUIMap(usa,ucOverpayments,input$range[2],"federal_tax_recovery", paste("Federal Tax Intercepts in Quarter ending ",input$range[2]), FALSE),

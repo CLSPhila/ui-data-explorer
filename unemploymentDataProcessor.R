@@ -235,16 +235,16 @@ getRecipiency <- function ()
   
   # name the columns that we care about for later code readability
   all_cols <- c("st","rptdate")
-  reg_cols <- c("state_intrastate", "state_liable", "ucfe_instrastate", "ufce_liable", "ucx_intrastate", "ucx_liable")
-  ext_cols <- c("ext_state_intrastate", "ext_state_liable", "ext_ucfe_instrastate", "ext_ufce_liable", "ext_ucx_intrastate", "ext_ucx_liable")
-  euc91_cols <- c("euc91_state_intrastate", "euc91_state_liable", "euc91_ucfe_instrastate", "euc91_ufce_liable", "euc91_ucx_intrastate", "euc91_ucx_liable")
-  euc08_cols <- c("euc08_state_intrastate", "euc08_state_liable", "euc08_ucfe_instrastate", "euc08_ufce_liable", "euc08_ucx_intrastate", "euc08_ucx_liable")
-  teuc_cols <-  c("teuc02_state_intrastate", "teuc02_state_liable", "teuc02_ucfe_instrastate", "teuc02_ufce_liable", "teuc02_ucx_intrastate", "teuc02_ucx_liable")
-  setnames(ucClaimsPaymentsRegular, c("c21", "c24", "c27", "c30", "c33", "c36"), reg_cols)
-  setnames(ucClaimsPaymentsExtended, c("c12", "c15", "c18", "c21", "c24", "c27"), ext_cols)
-  setnames(ucClaimsPaymentsEUC91, c("c19", "c22", "c23", "c26", "c27", "c30"), euc91_cols)
-  setnames(ucClaimsPaymentsTEUC02, c("c12", "c15", "c18", "c21", "c24", "c27"),teuc_cols)
-  setnames(ucClaimsPaymentsEUC08, c("c12", "c15", "c18", "c21", "c24", "c27"), euc08_cols)
+  reg_cols <- c("state_intrastate", "state_liable", "ucfe_instrastate", "ufce_liable", "ucx_intrastate", "ucx_liable", "state_compensated", "ucfe_ucx_compensated")
+  ext_cols <- c("ext_state_intrastate", "ext_state_liable", "ext_ucfe_instrastate", "ext_ufce_liable", "ext_ucx_intrastate", "ext_ucx_liable", "ext_state_compensated", "ext_ucfe_ucx_compensated")
+  euc91_cols <- c("euc91_state_intrastate", "euc91_state_liable", "euc91_ucfe_instrastate", "euc91_ufce_liable", "euc91_ucx_intrastate", "euc91_ucx_liable", "euc91_state_compensated", "euc91_ucfe_ucx_compensated")
+  euc08_cols <- c("euc08_state_intrastate", "euc08_state_liable", "euc08_ucfe_instrastate", "euc08_ufce_liable", "euc08_ucx_intrastate", "euc08_ucx_liable", "euc08_state_compensated", "euc08_ucfe_ucx_compensated")
+  teuc_cols <-  c("teuc02_state_intrastate", "teuc02_state_liable", "teuc02_ucfe_instrastate", "teuc02_ufce_liable", "teuc02_ucx_intrastate", "teuc02_ucx_liable", "teuc02_state_compensated")
+  setnames(ucClaimsPaymentsRegular, c("c21", "c24", "c27", "c30", "c33", "c36", "c45","c48"), reg_cols)
+  setnames(ucClaimsPaymentsExtended, c("c12", "c15", "c18", "c21", "c24", "c27","c35", "c37"), ext_cols)
+  setnames(ucClaimsPaymentsEUC91, c("c19", "c22", "c23", "c26", "c27", "c30", "c38","c42"), euc91_cols)
+  setnames(ucClaimsPaymentsTEUC02, c("c12", "c15", "c18", "c21", "c24", "c27","c35"),teuc_cols)
+  setnames(ucClaimsPaymentsEUC08, c("c12", "c15", "c18", "c21", "c24", "c27","c35", "c37"), euc08_cols)
   
   # merge the different datasets together and backfill with 0 if there is no data for a month
   ucRecipiency <- merge(subset(ucClaimsPaymentsRegular,select=c(all_cols,reg_cols)), subset(ucClaimsPaymentsExtended,select=c(all_cols,ext_cols)), by=all_cols, all.x=TRUE)
@@ -262,17 +262,25 @@ getRecipiency <- function ()
   ucRecipiency$reg_total_week <- ucRecipiency$reg_total / (days_in_month(ucRecipiency$rptdate) / 7)
   ucRecipiency$fed_total_week <- ucRecipiency$fed_total / (days_in_month(ucRecipiency$rptdate) / 7)
   ucRecipiency$total_week <- ucRecipiency$total / (days_in_month(ucRecipiency$rptdate) / 7)
+
+  # this is a measure of the total money paid out per month in all of the various programs.  Note that we are missing EUC80s....
+  ucRecipiency$total_compensated <- ucRecipiency$state_compensated+ucRecipiency$ucfe_ucx_compensated+ucRecipiency$euc91_state_compensated+ucRecipiency$euc91_ucfe_ucx_compensated+ucRecipiency$teuc02_state_compensated+ucRecipiency$euc08_state_compensated+ucRecipiency$euc08_ucfe_ucx_compensated+ucRecipiency$ext_state_compensated+ucRecipiency$ext_ucfe_ucx_compensated
+  ucRecipiency$total_state_compensated <- ucRecipiency$state_compensated+ucRecipiency$ucfe_ucx_compensated
+  ucRecipiency$total_federal_compensated <- ucRecipiency$total_compensated - ucRecipiency$total_state_compensated
   
   # also do the same as above, but come up with 12month moving averages
   ucRecipiency$reg_total_week_mov_avg <- ave(ucRecipiency$reg_total_week, ucRecipiency$st, FUN = function(x) rollmean(x, k=12, align="right", na.pad=T))
   ucRecipiency$fed_total_week_mov_avg <- ave(ucRecipiency$fed_total_week, ucRecipiency$st, FUN = function(x) rollmean(x, k=12, align="right", na.pad=T))
   ucRecipiency$total_week_mov_avg <- ave(ucRecipiency$total_week, ucRecipiency$st, FUN = function(x) rollmean(x, k=12, align="right", na.pad=T))
+  ucRecipiency$total_compensated_mov_avg <- ave(ucRecipiency$total_compensated, ucRecipiency$st, FUN = function(x) round(rollmean(x, k=12, align="right", na.pad=T), 0))
+  ucRecipiency$total_state_compensated_mov_avg <- ave(ucRecipiency$total_state_compensated, ucRecipiency$st, FUN = function(x) round(rollmean(x, k=12, align="right", na.pad=T),0))
+  ucRecipiency$total_federal_compensated_mov_avg <- ave(ucRecipiency$total_federal_compensated, ucRecipiency$st, FUN = function(x) round(rollmean(x, k=12, align="right", na.pad=T),0))
   
   # now combine with the BLS unemployed data
   ucRecipiency <- merge(ucRecipiency,bls_unemployed[,c("st","rptdate","total_unemployed", "unemployed_avg")], by=c("st","rptdate"))
   
   # compute US averages for each time period and merge back
-  usAvg <- aggregate(cbind(total_unemployed, unemployed_avg, reg_total_week_mov_avg,fed_total_week_mov_avg,total_week_mov_avg) ~ rptdate, ucRecipiency, FUN=mean)
+  usAvg <- aggregate(cbind(total_unemployed, unemployed_avg, reg_total_week_mov_avg,fed_total_week_mov_avg,total_week_mov_avg, total_compensated, total_compensated_mov_avg) ~ rptdate, ucRecipiency, FUN=mean)
   usAvg$st <- "US"
   
   ucRecipiency <- bind_rows(ucRecipiency,usAvg)
@@ -397,9 +405,18 @@ recessions.df = read.table(textConnection(
 ucRecipiency <- getRecipiency()
 
 ucOverpayments <- getOverpayments()
+
+# add in the uc payments by month into the ucOverpayments data to get overpayments as a percent of annual costs
+ucOverpayments <- merge(ucOverpayments, ucRecipiency[,c("st","rptdate","total_state_compensated", "total_compensated", "total_federal_compensated", "total_federal_compensated_mov_avg", "total_state_compensated_mov_avg", "total_compensated_mov_avg")], by=c("st", "rptdate"), all.x=TRUE)
+ucOverpayments$total_paid_annual_mov_avg <- ucOverpayments$total_compensated_mov_avg*12
+ucRecipiency$total_paid_annual_mov_avg <- ucRecipiency$total_compensated_mov_avg*12
+ucOverpayments$outstanding_proportion <- round(ucOverpayments$outstanding / ucOverpayments$total_paid_annual_mov_avg,4)
+
 #get the max dollars; use for scale of the graph
 maxOverpaymentDollars <- max(c(ucOverpayments$state_tax_recovery,ucOverpayments$federal_tax_recovery))
 maxOutstandingOverpayment <- max(ucOverpayments$outstanding)
+maxUIPayments <- max(ucRecipiency$total_compensated_mov_avg, na.rm=TRUE)
+maxOutstandingProportion <- max(ucOverpayments$outstanding_proportion, na.rm = TRUE)
 
 tmp <- tempdir()
 unzip("cb_2015_us_state_20m.zip", exdir = tmp)
