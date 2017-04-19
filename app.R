@@ -377,7 +377,7 @@ server <- function(input, output) {
     {
       uiTable <- switch(input$viewData,
                         "Timeliness of Referee Decisions" = refereeTimeliness,
-                        "Timeliness of UCSC Payments" = paymentTimeliness,
+                        "Timeliness of UCSC Payments" = paymentTimeliness[,c("st","rptdate","Within15Days","Within35Days","Total","Avg15Day","Avg35Day")],
                         "Timeliness of UCBR Decisions" = ucbrTimeliness)
       
       uiCols <- switch(input$viewData,

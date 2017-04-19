@@ -316,7 +316,7 @@ setBenefitAppealNames(ucBenefitAppealsEUC02x04)
 setBenefitAppealNames(ucBenefitAppealsEUC91x94)
 
 #9050 report
-setnames(ucFirstTimePaymentLapse, c("c1", "c9", "c17", "c25", "c33", "c41", "c49"), c("Total", "x0x7", "x8x14", "x15x21", "x22x28", "x29x35", "x36x42"))
+setnames(ucFirstTimePaymentLapse, c("c1", "c9", "c17", "c25", "c33", "c41", "c49", "c57", "c65","c73","c81","c89"), c("Total", "x0x7", "x8x14", "x15x21", "x22x28", "x29x35", "x36x42","x43x49","x50x56","x57x63","x64x70","xOver70" ))
 #9054 reports
 setnames(ucAppealsTimeLapseLower, c("c1", "c4", "c7"), c("Total", "x0x30", "x31x45"))
 setnames(ucAppealsTimeLapseHigher, c("c1", "c4", "c7", "c10"), c("Total", "x0x45", "x46x60", "x61x75"))
@@ -333,6 +333,9 @@ ucAppealsTimeLapseHigher$Within75Days <- round((ucAppealsTimeLapseHigher$x0x45 +
 
 ucFirstTimePaymentLapse$Within15Days <- round((ucFirstTimePaymentLapse$x0x7+ucFirstTimePaymentLapse$x8x14) / ucFirstTimePaymentLapse$Total,3)
 ucFirstTimePaymentLapse$Within35Days <- round((ucFirstTimePaymentLapse$x0x7+ucFirstTimePaymentLapse$x8x14 + ucFirstTimePaymentLapse$x15x21 + ucFirstTimePaymentLapse$x22x28 + ucFirstTimePaymentLapse$x29x35) / ucFirstTimePaymentLapse$Total,3)
+ucFirstTimePaymentLapse$Within49Days <- round((ucFirstTimePaymentLapse$x0x7+ucFirstTimePaymentLapse$x8x14 + ucFirstTimePaymentLapse$x15x21 + ucFirstTimePaymentLapse$x22x28 + ucFirstTimePaymentLapse$x29x35+ ucFirstTimePaymentLapse$x36x42+ ucFirstTimePaymentLapse$x43x49) / ucFirstTimePaymentLapse$Total,3)
+ucFirstTimePaymentLapse$Within70Days <- round((ucFirstTimePaymentLapse$x0x7+ucFirstTimePaymentLapse$x8x14 + ucFirstTimePaymentLapse$x15x21 + ucFirstTimePaymentLapse$x22x28 + ucFirstTimePaymentLapse$x29x35+ ucFirstTimePaymentLapse$x36x42+ ucFirstTimePaymentLapse$x43x49+ ucFirstTimePaymentLapse$x50x56+ ucFirstTimePaymentLapse$x57x63+ ucFirstTimePaymentLapse$x64x70) / ucFirstTimePaymentLapse$Total,3)
+ucFirstTimePaymentLapse$Over70Days <- round((ucFirstTimePaymentLapse$x0x7+ucFirstTimePaymentLapse$x8x14 + ucFirstTimePaymentLapse$x15x21 + ucFirstTimePaymentLapse$x22x28 + ucFirstTimePaymentLapse$x29x35+ ucFirstTimePaymentLapse$x36x42+ ucFirstTimePaymentLapse$x43x49+ ucFirstTimePaymentLapse$x50x56+ ucFirstTimePaymentLapse$x57x63+ ucFirstTimePaymentLapse$x64x70 + ucFirstTimePaymentLapse$xOver70) / ucFirstTimePaymentLapse$Total,3)
 
 
 
@@ -373,19 +376,21 @@ ucbrTimeliness <- rbind(ucbrTimeliness, ucbrAvg)
 
 
 # we only need to choose certain columns, so this isn't strictly necessary, but is a convenience
-paymentTimeliness <- ucFirstTimePaymentLapse[,c("st","rptdate","Within15Days","Within35Days", "Total")]
+paymentTimeliness <- ucFirstTimePaymentLapse[,c("st","rptdate","Within15Days","Within35Days", "Within49Days", "Within70Days", "Total")]
 #compute US Averages
-paymentAvg <- aggregate(cbind(Within15Days, Within35Days) ~ rptdate, paymentTimeliness, FUN=function(x) round(mean(x),3))
-setnames(paymentAvg, c("rptdate","shortAvg", "longAvg"))
+paymentAvg <- aggregate(cbind(Within15Days,Within35Days, Within49Days, Within70Days) ~ rptdate, paymentTimeliness, FUN=function(x) round(mean(x),3))
+setnames(paymentAvg, c("rptdate","Avg15Day", "Avg35Day", "Avg49Day","Avg70Day"))
 paymentTimeliness <- merge(paymentTimeliness, paymentAvg, by="rptdate")
 
 #then merge in payment Avg as separate "state" for US averages
 paymentAvg$st <- "US"
-paymentAvg$Within15Days <- paymentAvg$shortAvg
-paymentAvg$Within35Days <- paymentAvg$longAvg
+paymentAvg$Within15Days <- paymentAvg$Avg15Day
+paymentAvg$Within35Days <- paymentAvg$Avg35Day
+paymentAvg$Within49Days <- paymentAvg$Avg49Day
+paymentAvg$Within70Days <- paymentAvg$Avg70Day
 paymentAvg$Total <- NA
 paymentTimeliness <- rbind(paymentTimeliness,paymentAvg)
-paymentTimeliness <- paymentTimeliness[,c("st","rptdate","Within15Days","Within35Days", "Total", "shortAvg", "longAvg")]
+paymentTimeliness <- paymentTimeliness[,c("st","rptdate","Within15Days","Within35Days", "Within49Days", "Within70Days", "Total", "Avg15Day", "Avg35Day", "Avg49Day", "Avg70Day")]
 
 
 # recession data; not implemented in the charting yet
