@@ -518,14 +518,25 @@ getUIMap <- function(usa,df,uiDate,dfColumn, stateText, reverseLevels)
 # ?geom_hline
 
 
-#recipiency plot
-# 
-# ucMelt <- melt(subset(ucRecipiency, st=="US", select=c("rptdate","recipiency_annual_reg","recipiency_annual_total")) ,id.vars="rptdate")
-# 
-# 
-# 
-# ggplot(ucMelt, aes(rptdate, value, col=variable)) +
-#   geom_ribbon(data=ucMelt[ucMelt$variable=="recipiency_annual_total",],aes(ymin=0, ymax=value, fill=variable))+
-#   geom_ribbon(data=ucMelt[ucMelt$variable=="recipiency_annual_reg",], aes(ymin=0, ymax=value, fill=variable))+
-#   geom_line()
-#   
+#recipiency breakdown plot
+# I will move this in the future to a top-level plot that can be seen from teh website.  Seems like a very important
+# breakdown to given everyone
+# ucMelt <- melt(subset(ucRecipiency, st=="PA" & rptdate > "1979-12-31", select=c("rptdate","total_week_mov_avg","unemployed_avg")) ,id.vars="rptdate")
+#  
+#  
+#  require(scales)
+#  ggplot(ucMelt) +
+#    geom_rect(data=recessions.df[recessions.df$Peak>"1979-12-31",], aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+#    geom_line(data=ucMelt[ucMelt$variable=="total_week_mov_avg",], aes(rptdate, value, col=variable), size=2)+
+#    geom_line(data=ucMelt[ucMelt$variable=="unemployed_avg",], aes(rptdate, value, col=variable ), size=2) +
+#    reportTheme +
+#    labs(x="Date", y="",
+#         caption="Weekly continued claims and Total Unemployed by month.\nBoth numbers are smoothed over 12 month periods.  These are the two components of recipiency rate.\nCreated by Community Legal Services 8-2017") + 
+#    ggtitle("A Breakdown of Recipiency Rate in PA, 1980-2017") + 
+#    scale_y_continuous(labels=comma) +
+#    scale_color_brewer(palette="Set1",
+#                      breaks=c("total_week_mov_avg","unemployed_avg"),
+#                      labels=c("Weekly Continued Claims","Monthy Unemployed (BLS)"))
+#  
+# write.csv(ucRecipiency, "UCRecipiency.csv", row.names=F)   
+# write.csv(ucMelt, "UCRecipiencyPAMelt.csv", row.names=F)   
