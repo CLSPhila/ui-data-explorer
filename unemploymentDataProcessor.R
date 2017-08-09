@@ -220,7 +220,7 @@ getRecipiency <- function ()
   
   #arrange the BLS data by state then month and then do 12 month moving averages of the unemployed number
   bls_unemployed <- arrange(bls_unemployed,state,month)
-  bls_unemployed$unemployed_avg<- ave(bls_unemployed$total_unemployed, bls_unemployed$state, FUN = function(x) rollmean(x, k=12, align="right", na.pad=T))
+  bls_unemployed$unemployed_avg<- ave(bls_unemployed$total_unemployed, bls_unemployed$state, FUN = function(x) round(rollmean(x, k=12, align="right", na.pad=T),0))
   
   
   ucClaimsPaymentsRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar5159.csv") #5159 report
@@ -271,7 +271,7 @@ getRecipiency <- function ()
   # also do the same as above, but come up with 12month moving averages
   ucRecipiency$reg_total_week_mov_avg <- ave(ucRecipiency$reg_total_week, ucRecipiency$st, FUN = function(x) rollmean(x, k=12, align="right", na.pad=T))
   ucRecipiency$fed_total_week_mov_avg <- ave(ucRecipiency$fed_total_week, ucRecipiency$st, FUN = function(x) rollmean(x, k=12, align="right", na.pad=T))
-  ucRecipiency$total_week_mov_avg <- ave(ucRecipiency$total_week, ucRecipiency$st, FUN = function(x) rollmean(x, k=12, align="right", na.pad=T))
+  ucRecipiency$total_week_mov_avg <- ave(ucRecipiency$total_week, ucRecipiency$st, FUN = function(x) round(rollmean(x, k=12, align="right", na.pad=T),0))
   ucRecipiency$total_compensated_mov_avg <- ave(ucRecipiency$total_compensated, ucRecipiency$st, FUN = function(x) round(rollmean(x, k=12, align="right", na.pad=T), 0))
   ucRecipiency$total_state_compensated_mov_avg <- ave(ucRecipiency$total_state_compensated, ucRecipiency$st, FUN = function(x) round(rollmean(x, k=12, align="right", na.pad=T),0))
   ucRecipiency$total_federal_compensated_mov_avg <- ave(ucRecipiency$total_federal_compensated, ucRecipiency$st, FUN = function(x) round(rollmean(x, k=12, align="right", na.pad=T),0))
@@ -422,6 +422,7 @@ maxOverpaymentDollars <- max(c(ucOverpayments$state_tax_recovery,ucOverpayments$
 maxOutstandingOverpayment <- max(ucOverpayments$outstanding)
 maxUIPayments <- max(ucRecipiency$total_compensated_mov_avg, na.rm=TRUE)
 maxOutstandingProportion <- max(ucOverpayments$outstanding_proportion, na.rm = TRUE)
+maxUnemployedRecipients <- max(ucRecipiency$total_week_mov_avg, ucRecipiency$unemployed_avg, na.rm = TRUE)
 
 tmp <- tempdir()
 unzip("cb_2015_us_state_20m.zip", exdir = tmp)
