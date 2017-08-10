@@ -147,9 +147,13 @@ getOverpayments <- function() {
 
 
 # get unemployment information from the BLS website and convert to a datatable.  This function takes a long
-# time to run
-get_bls_employment_data <- function() {
-  ststdnsadata <- getURL("https://www.bls.gov/web/laus/ststdnsadata.txt")
+# time to run.  Param nsa refers to the not-seasonally-adjusdted figures vs seasonally adjusted
+get_bls_employment_data <- function(nsa=TRUE) {
+  if (nsa)
+    blsurl <- "https://www.bls.gov/web/laus/ststdnsadata.txt"
+  else
+    blsurl <- "https://www.bls.gov/web/laus/ststdsadata.txt"
+  ststdnsadata <- getURL(blsurl)
   tf <- tempfile()
   fp <- file(tf)
   write(ststdnsadata, fp)
@@ -211,7 +215,7 @@ getRecipiency <- function ()
 {
   
   # start by downloading the bls employment data to get unemployed per month
-  bls_unemployed <- get_bls_employment_data()
+  bls_unemployed <- get_bls_employment_data(nsa=TRUE)
   
   # add in the state abbreviations and make a new column with the last date of the month to match with DOL data
   bls_unemployed$st <- state.abb[match(bls_unemployed$st,state.name)]
@@ -393,6 +397,24 @@ paymentTimeliness <- rbind(paymentTimeliness,paymentAvg)
 paymentTimeliness <- paymentTimeliness[,c("st","rptdate","Within15Days","Within35Days", "Within49Days", "Within70Days", "Total", "Avg15Day", "Avg35Day", "Avg49Day", "Avg70Day")]
 
 
+# get seasonally adjusted unemployment data and change state names to abbrs
+bls_unemployed_sa <- get_bls_employment_data(nsa=FALSE)
+bls_unemployed_sa$state <- state.abb[match(bls_unemployed_sa$state,state.name)]
+
+# calculate the US numbers
+bls_us <- aggregate(cbind(pop, total, total_employed, total_unemployed) ~ month, bls_unemployed_sa, FUN=function(x) round(sum(x),3))
+bls_us$state <- "US"
+bls_us$perc_unemployed <- round(bls_us$total_unemployed/bls_us$total * 100,1)
+bls_us$perc_employed <- round(bls_us$total_employed/bls_us$pop * 100,1)
+bls_us$perc_pop <- round(bls_us$total/bls_us$pop * 100,1)
+bls_us <- bls_us[c("state","pop","total", "perc_pop","total_employed","perc_employed","total_unemployed","perc_unemployed","month")]
+
+#now merge in us data, as a separate "state" and rename a few columns
+bls_unemployed_sa <- rbind(bls_unemployed_sa, bls_us)
+names(bls_unemployed_sa)[names(bls_unemployed_sa)=='state'] <- "st"
+names(bls_unemployed_sa)[names(bls_unemployed_sa)=='month'] <- "rptdate"
+
+
 # recession data; not implemented in the charting yet
 recessions.df = read.table(textConnection(
   "Peak, Trough
@@ -423,6 +445,7 @@ maxOutstandingOverpayment <- max(ucOverpayments$outstanding)
 maxUIPayments <- max(ucRecipiency$total_compensated_mov_avg, na.rm=TRUE)
 maxOutstandingProportion <- max(ucOverpayments$outstanding_proportion, na.rm = TRUE)
 maxUnemployedRecipients <- max(ucRecipiency$total_week_mov_avg, ucRecipiency$unemployed_avg, na.rm = TRUE)
+maxUnemploymentRate <- max(bls_unemployed_sa$perc_unemployed)
 
 tmp <- tempdir()
 unzip("cb_2015_us_state_20m.zip", exdir = tmp)
