@@ -150,8 +150,8 @@ server <- function(input, output) {
         geom_rect(data=recessions.df[recessions.df$Peak>"1979-12-31",], aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
         geom_line(data=ucMelt[ucMelt$variable=="perc_unemployed",], aes(rptdate, value, col=variable), size=2)+
         reportTheme +
-        geom_line(data=usMelt[usMelt$variable=="perc_unemployed",], aes(rptdate, value, col="black"), size=1, linetype="dashed") +
-        #geom_text(aes(x=as.Date(input$range[1]),y=usMelt[usMelt$variable=="perc_unemployed",1],label = "US Avg", vjust = -1, hjust=0), color="black") +
+        geom_line(data=usMelt[usMelt$variable=="perc_unemployed",], aes(rptdate, value), size=1, linetype="dashed", color="black") +
+        geom_text(aes(x=as.Date(input$range[1]),y=as.numeric(usMelt[1,3]),label = "US Avg", vjust = -1, hjust=0), color="black") +
         labs(x="Date", y="",
         caption="Seasonally adjusted unemployed rate, based on BLS monthly report found here: https://www.bls.gov/web/laus/ststdsadata.txt.") + 
         ggtitle(paste(input$state, input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
