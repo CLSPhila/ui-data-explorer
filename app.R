@@ -77,7 +77,12 @@ ui <- fluidPage(
           downloadButton('data.csv', 'Download Data'),
           dataTableOutput("uidata")
         ),
-        tabPanel("Map",leafletOutput("uimap"))
+        tabPanel("Map",leafletOutput("uimap")),
+        tabPanel("50-State Comparison",plotOutput("smplot", height="900px")),
+        tabPanel("About", br(), 
+                 p("This page was created by Community Legal Services to visualize the unemployment data made avaialble by the US Department of Labor and Bureau of Labor Statistics."),
+                 p("The DOL Data can be found here: https://ows.doleta.gov/unemploy/DataDownloads.asp and the BLS data can be found here: https://www.bls.gov/web/laus/ststdsadata.txt and here: https://www.bls.gov/web/laus/ststdnsadata.txt."),
+                 p("If you have any suggestions for any further measures to put on the page, please email Michael Hollander (mhollander@clsphila.org, the creator and maintainer of this page."))
       )
     )
   ),
@@ -537,14 +542,32 @@ server <- function(input, output) {
                     "Recipiency Rate" = getUIMap(usa,ucRecipiency,input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
                     "Recipiency Rate Breakdown" = getUIMap(usa,ucRecipiency,input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
                     "Unemployment Rate (SA)" = getUIMap(usa,bls_unemployed_sa,input$range[2],"perc_unemployed", paste("Seasonally Adjusted Unemployed Rate in ",input$range[2]), FALSE),
-                    "Timeliness of Lower Authority Decisions" = getUIMap(usa,refereeTimeliness,input$range[2],"Within45Days", paste("Percent of Referee Decisions within 45 days, ",input$range[2]), TRUE),
+                    "Timeliness of Lower Authority Decisions" = getUIMap(usa,refereeTimeliness,input$range[2],"Within45Days", paste("Percent of First Level Appeal Decisions within 45 days, ",input$range[2]), TRUE),
                     "Timeliness of First Payments" = getUIMap(usa,paymentTimeliness,input$range[2],"Within35Days", paste("Percent of First Payments within 35 days, ",input$range[2]), TRUE),
-                    "Timeliness of Higher Authority Decisions" = getUIMap(usa,ucbrTimeliness,input$range[2],"Within75Days", paste("Percent of Board of Review Decisions within 75 days, ",input$range[2]), TRUE))
+                    "Timeliness of Higher Authority Decisions" = getUIMap(usa,ucbrTimeliness,input$range[2],"Within75Days", paste("Percent of Second Level Appeal Decisions within 75 days, ",input$range[2]), TRUE))
       
     return(uiMap)
   })
   
+  # render the small multiple plot
+  output$smplot <- renderPlot({
+    smPlot <- switch(input$viewData,
+                    "Monthly UI Payments" = getSMPlot(ucRecipiency,input$range[1], input$range[2], "total_compensated_mov_avg", "Montly UI Payments","50-state Comparison of Total Monthly UI Payments"),
+                    "Overpayment Balance/Annual UI Payments" = getSMPlot(ucOverpayments, input$range[1], input$range[2], "outstanding_proportion", "Overpayment Balance/Annual UI Payments","50-state Comparison of Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually"),
+                    "Fraud vs Non Fraud Overpayents" = getSMPlot(ucOverpayments,input$range[1], input$range[2], "fraud_num_percent", "Fraud/Non-Fraud","50-state Comparison of Fraud vs Non-Fraud UI Overpayemnts"),
+                    "Overpayment vs Recovery" = getSMPlot(ucOverpayments,input$range[1], input$range[2], "outstanding", "Overpayment Balance","50-state Comparison of Outstanding UI Overpayment Balance"),
+                    "Tax Program Overpayment Recoveries" = getSMPlot(ucOverpayments,input$range[1], input$range[2], "federal_tax_recovery", "Fed Tax Intercept $","50-state Comparison of Fed Tax Intercepts (Quarterly)"),
+                    "Recipiency Rate" = getSMPlot(ucRecipiency, input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rate"),
+                    "Recipiency Rate Breakdown" = getSMPlot(ucRecipiency,input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rates"),
+                    "Unemployment Rate (SA)" = getSMPlot(bls_unemployed_sa,input$range[1], input$range[2], "perc_unemployed", "Unemployment Rate","50-state Comparison of SA Unemployment Rates"),
+                    "Timeliness of Lower Authority Decisions" = getSMPlot(refereeTimeliness,input$range[1], input$range[2], "Within45Days", "Proportion of Decisions Within 45 Days","50-state Comparison of First Level Appeal Decisions within 45 Days"),
+                    "Timeliness of First Payments" = getSMPlot(paymentTimeliness,input$range[1], input$range[2], "Within35Days","Proportion of Payments Within 35 Days", "50-state Comparison of First Payments within 35 Days"),
+                    "Timeliness of Higher Authority Decisions" = getSMPlot(ucbrTimeliness,input$range[1], input$range[2], "Within75Days", "Proportion of Decisions Within 75 Days", "50-state Comparison of Second Level Appeal Decisions within 75 Days"))
+    
+    return(smPlot)
+  })
   
+    
 
 }
 

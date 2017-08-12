@@ -507,6 +507,32 @@ getUIMap <- function(usa,df,uiDate,dfColumn, stateText, reverseLevels)
   return(uiMap)
 }
 
+# a function to generate small multiple plots of 50-state data, compared against the US average for a given measure
+# measure - the measure to graph
+getSMPlot <- function(dfData, startDate, endDate, measure, yLabel, plotTitle)
+{ 
+  
+  # small multiple plot
+  smPlot  <- ggplot(subset(dfData, rptdate > as.Date(startDate) & rptdate < as.Date(endDate) & !(st %in% c("US","PR","VI","DC")), select=c("rptdate","st", measure)), aes_string(x="rptdate", y=measure)) +
+     geom_line(size=1.1, color="gray29") +
+     facet_wrap(~ st, ncol=5) +
+     geom_line(data=subset(dfData, rptdate > as.Date(startDate) & rptdate < as.Date(endDate) & st == "US", select=c("rptdate",measure)), aes_string(x="rptdate", y=measure), color="tomato3", linetype="dashed") +
+     theme_minimal() +
+     theme(plot.title = element_text(face="bold", hjust=.5, size=20),
+           legend.position="top",
+           legend.title = element_blank(),
+           axis.title = element_text(size=10, face="bold"),
+           axis.text = element_text(size=10),
+           strip.text.x = element_text(face="bold")
+     ) +
+    labs(x="Date", y=yLabel) + 
+    ggtitle(plotTitle) 
+  return(smPlot) 
+}
+# 
+# asdf <- getSMPlot(ucRecipiency,"1990-01-01","2017-01-01", "recipiency_annual_total", "asdfasdf")
+# asdf
+
 # 
 # 
 # state_popup <- paste0("<strong>State: </strong>", 
@@ -564,3 +590,27 @@ getUIMap <- function(usa,df,uiDate,dfColumn, stateText, reverseLevels)
 #  
 # write.csv(ucRecipiency, "UCRecipiency.csv", row.names=F)   
 # write.csv(ucMelt, "UCRecipiencyPAMelt.csv", row.names=F)   
+
+
+# small multiple plot and export!
+# smRecipiency <- ggplot(subset(ucRecipiency, rptdate > as.Date("1999-12-31") & st != "US", select=c("rptdate","st","recipiency_annual_total")), aes(x=rptdate, y=recipiency_annual_total)) +
+#   geom_line(size=1.1, color="gray29") +
+#   facet_wrap(~ st, ncol=5) +
+#   geom_line(data=subset(ucRecipiency, rptdate > as.Date("1999-12-31") & st == "US", select=c("rptdate","recipiency_annual_total")), aes(x=rptdate, y=recipiency_annual_total), color="tomato3", linetype="dashed") +
+#   theme_minimal() +
+#   theme(plot.title = element_text(face="bold", hjust=.5, size=20),
+#         legend.position="top",
+#         legend.title = element_blank(),
+#         axis.title = element_text(size=10, face="bold"),
+#         axis.text = element_text(size=10),
+#         strip.text.x = element_text(face="bold")
+#   )
+# 
+# png(filename="Std_PNG_cairo.png", 
+#     type="cairo",
+#     units="px", 
+#     width=1500, 
+#     height=1000, 
+#     res=96)
+# smRecipiency
+# dev.off()
