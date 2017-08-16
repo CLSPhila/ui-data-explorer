@@ -14,6 +14,7 @@ library(DT)
 library(ggplot2)
 library(reshape2)
 library(scales)
+library(shinycssloaders)
 source("unemploymentDataProcessor.R")
 
 maxDate <- max(ucFirstTimePaymentLapse$rptdate)
@@ -73,16 +74,18 @@ ui <- fluidPage(
     mainPanel(
       tabsetPanel(
         tabPanel("Data",
-          plotOutput("uiplot"),
+          withSpinner(plotOutput("uiplot")),
           downloadButton('data.csv', 'Download Data'),
           dataTableOutput("uidata")
         ),
-        tabPanel("Map",leafletOutput("uimap")),
-        tabPanel("50-State Comparison",plotOutput("smplot", height="900px")),
+        tabPanel("Map",withSpinner(leafletOutput("uimap"))),
+        tabPanel("50-State Comparison", withSpinner(plotOutput("smplot", height="900px"))),
         tabPanel("About", br(), 
-                 p("This page was created by Community Legal Services to visualize the unemployment data made avaialble by the US Department of Labor and Bureau of Labor Statistics."),
-                 p("The DOL Data can be found here: https://ows.doleta.gov/unemploy/DataDownloads.asp and the BLS data can be found here: https://www.bls.gov/web/laus/ststdsadata.txt and here: https://www.bls.gov/web/laus/ststdnsadata.txt."),
-                 p("If you have any suggestions for any further measures to put on the page, please email Michael Hollander (mhollander@clsphila.org, the creator and maintainer of this page."))
+                 p("This page was created by ", a(href="https://www.clsphila.org" ,"Community Legal Services"), " to visualize the unemployment data made avaialble by the US Department of Labor and Bureau of Labor Statistics."),
+                 p("The DOL Data can be found here: https://ows.doleta.gov/unemploy/DataDownloads.asp and the BLS data can be found ", a(href="https://www.bls.gov/web/laus/ststdsadata.txt", "here"), "and ", a(href="https://www.bls.gov/web/laus/ststdnsadata.txt", "here.")),
+                 p("If you have any suggestions for any further measures to put on the page, please email ", a(href="mailto:mhollander@clsphila.org", "Michael Hollander"), "(mhollander@clsphila.org, the creator and maintainer of this page."),
+                 p("You can find the code for this page on github here: ", a(href='https://github.com/CLSPhila/ui-data-explorer', target="_blank", "https://github.com/CLSPhila/ui-data-explorer"), ".")
+        )
       )
     )
   ),
@@ -95,7 +98,7 @@ ui <- fluidPage(
 
 
 
-# Define server logic required to draw a histogram
+# Define server logic required to draw page
 server <- function(input, output) {
   
   # render the plot

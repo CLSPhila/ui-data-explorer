@@ -614,3 +614,25 @@ getSMPlot <- function(dfData, startDate, endDate, measure, yLabel, plotTitle)
 #     res=96)
 # smRecipiency
 # dev.off()
+
+# dfData<-subset(ucRecipiency, rptdate > as.Date(startDate) & rptdate < as.Date(endDate) & !(st %in% c("US","PR","VI","DC")), select=c("rptdate","st", measure))
+# startDate<-"2000-01-01"
+# endDate<-"2017-06-30"
+# measure <- "recipiency_annual_total"
+# yLabel<-"recpiency rate"
+# plotTitle <-"Plot me"
+# benchplot(ggplot(dfData[rep(c(TRUE,FALSE), length=nrow(dfData)),], aes_string(x="rptdate", y=measure)) +
+#   geom_line(size=1.1, color="gray29") +
+#   facet_wrap(~ st, ncol=5) +
+#   geom_line(data=subset(dfData, rptdate > as.Date(startDate) & rptdate < as.Date(endDate) & st == "US", select=c("rptdate",measure)), aes_string(x="rptdate", y=measure), color="tomato3", linetype="dashed") +
+#  theme_minimal() +
+#  theme(plot.title = element_text(face="bold", hjust=.5, size=20),
+#        legend.position="top",
+#        legend.title = element_blank(),
+#        axis.title = element_text(size=10, face="bold"),
+#        axis.text = element_text(size=10),
+#        strip.text.x = element_text(face="bold")
+#  ) +
+#   labs(x="Date", y=yLabel) + 
+#   ggtitle(plotTitle))
+#   
