@@ -13,8 +13,16 @@ library(leaflet)
 require(bit64)
 
 downloadUCData <- function (URL) {
+  
+  # first try to find the file on the filesystem.  If we can't find it
+  # on the file system, then download it
+  #csvFile <- file.path("data", basename(URL))
+  #if (file.exists(csvFile))
+  #    mydata <- read.csv(csvFile)
+  #else
+      mydata <- fread(URL)
+  
   # convert dates to a date type
-  mydata <- fread(URL)
   mydata$rptdate <- as.Date(mydata$rptdate,("%m/%d/%Y"))
   return(mydata)
 } 
