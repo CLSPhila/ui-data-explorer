@@ -297,6 +297,48 @@ getRecipiency <- function ()
 }
 
 
+# sort through the non monetary determinations to get information about separation and non-separation issues
+getNonMonetaryDeterminations <- function()
+{
+  ucNonMonetaryRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar207.csv") #207 report
+  ucNonMonetaryExtended <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ae207.csv") #207 report
+  ucNonMonetaryEUC91 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ac207.csv") #207 report
+  ucNonMonetaryTEUC02 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at207.csv") #207 report
+  ucNonMonetaryEUC08 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au207.csv") #207 report
+  
+  # name the columns that we care about for later code readability
+  # EUC08 and TEUC appear to have the same structure as extended benefits, not euc91
+  all_cols <- c("st","rptdate")
+  reg_cols <- c("state_total_determ", "ufce_total_determ", "ucx_total_determ", "state_determ_sep_total", "state_determ_sep_vol", "state_determ_sep_misconduct", "state_determ_sep_other", "state_denial_sep_total", "state_denial_sep_vol", "state_denial_sep_misconduct", "state_denial_sep_other", "ufce_determ_sep_total", "ufce_determ_sep_vol", "ufce_determ_sep_misconduct", "ufce_determ_sep_other", "ufce_denial_sep_total", "ufce_denial_sep_vol", "ufce_denial_sep_misconduct", "ufce_denial_sep_other", "state_determ_non_total", "state_determ_non_aa", "state_determ_non_income","state_determ_non_refusework","state_determ_non_reporting","state_determ_non_referrals","state_determ_non_other",  "state_denial_non_total", "state_denial_non_aa", "state_denial_non_income","state_denial_non_refusework","state_denial_non_reporting","state_denial_non_referrals","state_denial_non_other") 
+  ext_cols <- c("ext_state_total_determ", "ext_ufce_total_determ", "ext_ucx_total_determ", "ext_state_determ_sep_total", "ext_state_determ_sep_vol", "ext_state_determ_sep_misconduct", "ext_state_determ_sep_other", "ext_state_denial_sep_total", "ext_state_denial_sep_vol", "ext_state_denial_sep_misconduct", "ext_state_denial_sep_other", "ext_state_determ_non_total", "ext_state_determ_non_aa", "ext_state_determ_non_refusework","ext_state_determ_non_other",  "ext_state_denial_non_total", "ext_state_denial_non_aa","ext_state_denial_non_refusework","ext_state_denial_non_other")
+  euc91_cols <- c("euc91_state_total_determ", "euc91_ufce_total_determ", "euc91_ucx_total_determ", "euc91_state_determ_sep_total", "euc91_state_determ_sep_vol", "euc91_state_determ_sep_misconduct", "euc91_state_determ_sep_other", "euc91_state_denial_sep_total", "euc91_state_denial_sep_vol", "euc91_state_denial_sep_misconduct", "euc91_state_denial_sep_other", "euc91_state_determ_non_total", "euc91_state_determ_non_aa", "euc91_state_determ_non_income","euc91_state_determ_non_refusework", "euc91_state_determ_non_reporting","euc91_state_determ_non_other",  "euc91_state_denial_non_total", "euc91_state_denial_non_aa", "euc91_state_denial_non_income","euc91_state_denial_non_refusework","euc91_state_denial_non_reporting","euc91_state_denial_non_other")  
+  euc08_cols <- c("euc08_state_total_determ", "euc08_ufce_total_determ", "euc08_ucx_total_determ", "euc08_state_determ_sep_total", "euc08_state_determ_sep_vol", "euc08_state_determ_sep_misconduct", "euc08_state_determ_sep_other", "euc08_state_denial_sep_total", "euc08_state_denial_sep_vol", "euc08_state_denial_sep_misconduct", "euc08_state_denial_sep_other", "euc08_state_determ_non_total", "euc08_state_determ_non_aa", "euc08_state_determ_non_refusework","euc08_state_determ_non_other",  "euc08_state_denial_non_total", "euc08_state_denial_non_aa","euc08_state_denial_non_refusework","euc08_state_denial_non_other")
+  teuc_cols <- c("teuc_state_total_determ", "teuc_ufce_total_determ", "teuc_ucx_total_determ", "teuc_state_determ_sep_total", "teuc_state_determ_sep_vol", "teuc_state_determ_sep_misconduct", "teuc_state_determ_sep_other", "teuc_state_denial_sep_total", "teuc_state_denial_sep_vol", "teuc_state_denial_sep_misconduct", "teuc_state_denial_sep_other", "teuc_state_determ_non_total", "teuc_state_determ_non_aa", "teuc_state_determ_non_refusework","teuc_state_determ_non_other",  "teuc_state_denial_non_total", "teuc_state_denial_non_aa","teuc_state_denial_non_refusework","teuc_state_denial_non_other")
+
+  setnames(ucNonMonetaryRegular, c("c1", "c13", "c15", paste0("c", 17:37), "c45", paste0("c", 38:43), "c46", "c44"), reg_cols)
+  setnames(ucNonMonetaryExtended, c("c1", "c3", "c5", paste0("c", 7:22)), ext_cols)
+  setnames(ucNonMonetaryEUC91, c("c1", "c3", "c5", paste0("c", 7:26)), euc91_cols)
+  setnames(ucNonMonetaryTEUC02, c("c1", "c3", "c5", paste0("c", 7:22)),teuc_cols)
+  setnames(ucNonMonetaryEUC08, c("c1", "c3", "c5", paste0("c", 7:22)), euc08_cols)
+  
+  # merge the different datasets together and backfill with 0 if there is no data for a month
+  ucNonMonetary <- merge(subset(ucNonMonetaryRegular,select=c(all_cols,reg_cols)), subset(ucNonMonetaryExtended,select=c(all_cols,ext_cols)), by=all_cols, all.x=TRUE)
+  ucNonMonetary <- merge(ucNonMonetary,subset(ucNonMonetaryEUC91,select=c(all_cols,euc91_cols)),by=all_cols, all.x=TRUE)
+  ucNonMonetary <- merge(ucNonMonetary,subset(ucNonMonetaryTEUC02,select=c(all_cols,teuc_cols)), by=all_cols, all.x=TRUE)
+  ucNonMonetary <- merge(ucNonMonetary,subset(ucNonMonetaryEUC08,select=c(all_cols,euc08_cols)), by=all_cols, all.x=TRUE)
+  ucNonMonetary[is.na(ucNonMonetary)] <- 0
+  
+  
+  # do some math to get some interesting information for graphing purposes
+  # so we want to find out the percentage of determinations that are non-sep denials and sep denials
+  # we also want to find out the percentage of each denial type under sep and non-sep as a % of total denials
+  # this involves adding together categories first and then doing lots of division.  Fun!
+
+  
+  
+}
+
+
 ucFirstTimePaymentLapse <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9050.csv") # 9050 report
 
 ucAppealsTimeLapseLower <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9054l.csv") # 9054 report
