@@ -13,8 +13,16 @@ library(leaflet)
 require(bit64)
 
 downloadUCData <- function (URL) {
+  
+  # first try to find the file on the filesystem.  If we can't find it
+  # on the file system, then download it
+  csvFile <- file.path("data", basename(URL))
+  if (file.exists(csvFile))
+      mydata <- read.csv(csvFile)
+  else
+      mydata <- fread(URL)
+  
   # convert dates to a date type
-  mydata <- fread(URL)
   mydata$rptdate <- as.Date(mydata$rptdate,("%m/%d/%Y"))
   return(mydata)
 } 
@@ -67,7 +75,7 @@ getOverpayments <- function() {
   ucOverpaymentsEUC91$yfederal_nonfraud_num <- ucOverpaymentsEUC91$c5+ucOverpaymentsEUC91$c6
   ucOverpaymentsEUC91$yfederal_nonfraud_dol <- ucOverpaymentsEUC91$c7+ucOverpaymentsEUC91$c8
   ucOverpaymentsEUC91$youtstanding <- ucOverpaymentsEUC91$c9+ucOverpaymentsEUC91$c10+ucOverpaymentsEUC91$c11 + ucOverpaymentsEUC91$c12
-  ucOverpaymentsEUC91$yrecovered <- ucOverpaymentsEUC91$c13+ucOverpaymentsEUC91$c14+ucOverpaymentsRegular$c15 + ucOverpaymentsRegular$c16
+  ucOverpaymentsEUC91$yrecovered <- ucOverpaymentsEUC91$c13+ucOverpaymentsEUC91$c14+ucOverpaymentsEUC91$c15 + ucOverpaymentsEUC91$c16
   
   ucOverpaymentsTEUC02$yfederal_fraud_num <- ucOverpaymentsTEUC02$c1+ucOverpaymentsTEUC02$c2
   ucOverpaymentsTEUC02$yfederal_fraud_dol <- ucOverpaymentsTEUC02$c3+ucOverpaymentsTEUC02$c4
