@@ -341,9 +341,43 @@ getNonMonetaryDeterminations <- function()
   # so we want to find out the percentage of determinations that are non-sep denials and sep denials
   # we also want to find out the percentage of each denial type under sep and non-sep as a % of total denials
   # this involves adding together categories first and then doing lots of division.  Fun!
+  # first just get our aggregate totals with all federal programs integrated with state numbers
+  ucNonMonetary$determ_total <- ucNonMonetary$state_total_determ+ucNonMonetary$ufce_total_determ+ucNonMonetary$ucx_total_determ+ucNonMonetary$ext_state_total_determ+ucNonMonetary$ext_ufce_total_determ+ucNonMonetary$ext_ucx_total_determ+ucNonMonetary$euc08_state_total_determ+ucNonMonetary$euc08_ufce_total_determ+ucNonMonetary$euc08_ucx_total_determ+ucNonMonetary$teuc_state_total_determ+ucNonMonetary$teuc_ucx_total_determ+ucNonMonetary$teuc_ufce_total_determ+ucNonMonetary$euc91_state_total_determ+ucNonMonetary$euc91_ufce_total_determ+ucNonMonetary$euc91_ucx_total_determ
+  ucNonMonetary$denial_sep_total <- ucNonMonetary$state_denial_sep_total+ucNonMonetary$ufce_denial_sep_total+ucNonMonetary$ext_state_denial_sep_total+ucNonMonetary$euc08_state_denial_sep_total+ucNonMonetary$euc91_state_denial_sep_total+ucNonMonetary$teuc_state_denial_sep_total
+  ucNonMonetary$denial_non_total <- ucNonMonetary$state_denial_non_total+ucNonMonetary$ext_state_denial_non_total+ucNonMonetary$euc08_state_denial_non_total+ucNonMonetary$euc91_state_denial_non_total+ucNonMonetary$teuc_state_denial_non_total
+  ucNonMonetary$denial_sep_misconduct <- ucNonMonetary$state_denial_sep_misconduct+ucNonMonetary$ufce_denial_sep_misconduct+ucNonMonetary$ext_state_denial_sep_misconduct+ucNonMonetary$euc08_state_denial_sep_misconduct+ucNonMonetary$euc91_state_denial_sep_misconduct+ucNonMonetary$teuc_state_denial_sep_misconduct
+  ucNonMonetary$denial_sep_vol <- ucNonMonetary$state_denial_sep_vol+ucNonMonetary$ufce_denial_sep_vol+ucNonMonetary$ext_state_denial_sep_vol+ucNonMonetary$euc08_state_denial_sep_vol+ucNonMonetary$euc91_state_denial_sep_vol+ucNonMonetary$teuc_state_denial_sep_vol
+  ucNonMonetary$denial_sep_other <- ucNonMonetary$state_denial_sep_other+ucNonMonetary$ufce_denial_sep_other+ucNonMonetary$ext_state_denial_sep_other+ucNonMonetary$euc08_state_denial_sep_other+ucNonMonetary$euc91_state_denial_sep_other+ucNonMonetary$teuc_state_denial_sep_other
+  ucNonMonetary$denial_non_aa <- ucNonMonetary$state_denial_non_aa+ucNonMonetary$ext_state_denial_non_aa+ucNonMonetary$euc08_state_denial_non_aa+ucNonMonetary$euc91_state_denial_non_aa+ucNonMonetary$teuc_state_denial_non_aa
+  ucNonMonetary$denial_non_income <- ucNonMonetary$state_denial_non_income+ucNonMonetary$euc91_state_denial_non_income
+  ucNonMonetary$denial_non_refusework <- ucNonMonetary$state_denial_non_refusework+ucNonMonetary$ext_state_denial_non_refusework+ucNonMonetary$euc08_state_denial_non_refusework+ucNonMonetary$euc91_state_denial_non_refusework+ucNonMonetary$teuc_state_denial_non_refusework
+  ucNonMonetary$denial_non_reporting <- ucNonMonetary$state_denial_non_reporting+ucNonMonetary$euc91_state_denial_non_reporting
+  ucNonMonetary$denial_non_referrals <- ucNonMonetary$state_denial_non_referrals
+  ucNonMonetary$denial_non_other <- ucNonMonetary$state_denial_non_other+ucNonMonetary$ext_state_denial_non_other+ucNonMonetary$euc08_state_denial_non_other+ucNonMonetary$euc91_state_denial_non_other+ucNonMonetary$teuc_state_denial_non_other
+  
+  # now calculate our actual statistics that we care about
+  ucNonMonetary$denial_sep_percent <- round(ucNonMonetary$denial_sep_total / ucNonMonetary$determ_total,3)
+  ucNonMonetary$denial_non_percent <- round(ucNonMonetary$denial_non_total / ucNonMonetary$determ_total,3)
+  ucNonMonetary$denial_sep_misconduct_percent <- round(ucNonMonetary$denial_sep_misconduct / ucNonMonetary$denial_sep_total,3)
+  ucNonMonetary$denial_sep_vol_percent <- round(ucNonMonetary$denial_sep_vol / ucNonMonetary$denial_sep_total,3)
+  ucNonMonetary$denial_sep_other_percent <- round(ucNonMonetary$denial_sep_other / ucNonMonetary$denial_sep_total,3)
+  ucNonMonetary$denial_non_aa_percent <- round(ucNonMonetary$denial_non_aa / ucNonMonetary$denial_non_total, 3)
+  ucNonMonetary$denial_non_income_percent <- round(ucNonMonetary$denial_non_income / ucNonMonetary$denial_non_total, 3)
+  ucNonMonetary$denial_non_refusework_percent <- round(ucNonMonetary$denial_non_refusework / ucNonMonetary$denial_non_total, 3)
+  ucNonMonetary$denial_non_reporting_percent <- round(ucNonMonetary$denial_non_reporting / ucNonMonetary$denial_non_total, 3)
+  ucNonMonetary$denial_non_referrals_percent <- round(ucNonMonetary$denial_non_referrals / ucNonMonetary$denial_non_total, 3)
+  ucNonMonetary$denial_non_other_percent <- round(ucNonMonetary$denial_non_other / ucNonMonetary$denial_non_total, 3)
 
+  #subset to just keep the columns that we care about now that we've done all of our math. - this gets rid of 113 columns * 10k observations
+  ucNonMonetary <- subset(ucNonMonetary, select=c(all_cols, c("determ_total"), grep("^denial_*", names(ucNonMonetary), value=TRUE)))
+    
+  # compute US averages for each time period and merge back (this uses all variables but state and then adds the state back in as US)
+  usAvg <- aggregate(. ~ rptdate, ucNonMonetary[,c(-1)], FUN=mean)
+  usAvg$st <- "US"
   
+  ucNonMonetary <- bind_rows(ucNonMonetary,usAvg)
   
+  return(ucNonMonetary)  
 }
 
 
@@ -488,6 +522,9 @@ ucOverpayments <- merge(ucOverpayments, ucRecipiency[,c("st","rptdate","total_st
 ucOverpayments$total_paid_annual_mov_avg <- ucOverpayments$total_compensated_mov_avg*12
 ucRecipiency$total_paid_annual_mov_avg <- ucRecipiency$total_compensated_mov_avg*12
 ucOverpayments$outstanding_proportion <- round(ucOverpayments$outstanding / ucOverpayments$total_paid_annual_mov_avg,4)
+
+# get determination data
+ucNonMonetary <- getNonMonetaryDeterminations()
 
 #get the max dollars; use for scale of the graph
 maxOverpaymentDollars <- max(c(ucOverpayments$state_tax_recovery,ucOverpayments$federal_tax_recovery))

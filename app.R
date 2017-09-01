@@ -19,7 +19,7 @@ source("unemploymentDataProcessor.R")
 
 maxDate <- max(ucFirstTimePaymentLapse$rptdate)
 minDate <- min(ucRecipiency$rptdate)
-states <- getStates(ucbrTimeliness)
+states <- sort(getStates(ucbrTimeliness))
 
 reportTheme <- theme_minimal() +
   theme(plot.title = element_text(face="bold", hjust=.5, size=20),
@@ -50,18 +50,18 @@ ui <- fluidPage(
       selectInput("viewData",
                   label = 'Select Data to View',
                   size=12, selectize=FALSE,
-                  choices = c("Recipiency Rate",
-                              "Recipiency Rate Breakdown",
-                              "Monthly UI Payments", 
-                              "Timeliness of First Payments", 
-                              "Timeliness of Lower Authority Decisions", 
-                              "Timeliness of Higher Authority Decisions", 
-                              "Overpayment vs Recovery",
-                              "Overpayment Balance/Annual UI Payments",
-                              "Fraud vs Non Fraud Overpayents", 
-                              "Tax Program Overpayment Recoveries",
-                              "Unemployment Rate (SA)"),
-                  selected = "Recipiency Rate"),
+                  choices = c("Recipiency Rate"="recipRate",
+                              "Recipiency Rate Breakdown"="recipBreakdown",
+                              "Monthly UI Payments"="monthlyUI", 
+                              "Timeliness of First Payments"="firstPay", 
+                              "Timeliness of Lower Authority Decisions"="lowerAuthority", 
+                              "Timeliness of Higher Authority Decisions"="higherAuthority", 
+                              "Overpayment vs Recovery"="overvRecovery",
+                              "Overpayment Balance/Annual UI Payments"="overvPayments",
+                              "Fraud vs Non Fraud Overpayents"="fraudvNon", 
+                              "Tax Program Overpayment Recoveries"="TOPS",
+                              "Unemployment Rate (SA)"="uirate"),
+                  selected = "recipRate"),
       
       checkboxInput("constant_y_axis", 
                     label="Constant y axis? (makes comparisons easier)",
@@ -104,7 +104,7 @@ server <- function(input, output) {
   # render the plot
   output$uiplot <- renderPlot({
 
-    if (input$viewData == "Monthly UI Payments")
+    if (input$viewData == "monthlyUI")
     {
       
       ucMelt <- melt(subset(ucRecipiency, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","total_compensated_mov_avg", "total_state_compensated_mov_avg")) ,id.vars="rptdate")
@@ -119,7 +119,7 @@ server <- function(input, output) {
         reportTheme + 
         labs(x="Date", y="Total Paid (Millions of $)",
              caption="12-month moving average of UI paid per month in both regular and federal UI programs.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.") + 
-        ggtitle(paste(input$state, input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) +
+        ggtitle(paste(input$state, "Monthly UI Payments from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) +
         scale_fill_brewer(palette="Set1",
                           breaks=c("total_state_compensated_mov_avg","total_compensated_mov_avg"),
                           labels=c("Regular Programs","Federal Programs"))
@@ -128,7 +128,7 @@ server <- function(input, output) {
       
     }
     
-    else if (input$viewData == "Recipiency Rate Breakdown")
+    else if (input$viewData == "recipBreakdown")
     {
       ucMelt <- melt(subset(ucRecipiency, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","total_week_mov_avg","unemployed_avg")) ,id.vars="rptdate")
       
@@ -139,7 +139,7 @@ server <- function(input, output) {
           reportTheme +
           labs(x="Date", y="",
                caption="Weekly continued claims and Total Unemployed by month.\nBoth numbers are smoothed over 12 month periods.  These are the two components of recipiency rate.") + 
-          ggtitle(paste(input$state, input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+          ggtitle(paste(input$state, "Recipiency Rate Breakdown from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
           scale_y_continuous(labels=comma) +
           scale_color_brewer(palette="Set1",
                             breaks=c("total_week_mov_avg","unemployed_avg"),
@@ -149,7 +149,7 @@ server <- function(input, output) {
       
     }
     
-    else if (input$viewData == "Unemployment Rate (SA)")
+    else if (input$viewData == "uirate")
     {  
         ucMelt <- melt(subset(bls_unemployed_sa, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","perc_unemployed")) ,id.vars="rptdate")
         usMelt <- melt(subset(bls_unemployed_sa, st=="US" & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","perc_unemployed")) ,id.vars="rptdate")
@@ -162,7 +162,7 @@ server <- function(input, output) {
         geom_text(aes(x=as.Date(input$range[1]),y=as.numeric(usMelt[1,3]),label = "US Avg", vjust = -1, hjust=0), color="black") +
         labs(x="Date", y="",
         caption="Seasonally adjusted unemployed rate, based on BLS monthly report found here: https://www.bls.gov/web/laus/ststdsadata.txt.") + 
-        ggtitle(paste(input$state, input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+        ggtitle(paste(input$state, "Unemployment Rate (SA) from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_y_continuous(labels=comma) +
         scale_color_brewer(palette="Set1",
                          breaks=c("perc_unemployed"),
@@ -171,7 +171,7 @@ server <- function(input, output) {
         maxPlot <- maxUnemploymentRate
     }
     
-    else if (input$viewData == "Overpayment Balance/Annual UI Payments")
+    else if (input$viewData == "overvPayments")
     {
       ucMelt <- melt(subset(ucOverpayments, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","outstanding_proportion")) ,id.vars="rptdate")
       
@@ -183,14 +183,14 @@ server <- function(input, output) {
         stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
         labs(x="Date", 
              caption="Outstanding overpayment balance divided by the total benefits paid in all federal and state programs over the last 12 months.\n Data courtesy of the USDOL.  Reports used are ETA 227 and 5159, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
-        ggtitle(paste(input$state, input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+        ggtitle(paste(input$state, "Overpayment Balance vs Montly UI Payments from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_fill_brewer(palette="Set1")
       
       maxPlot <- maxOutstandingProportion
       
     }
 
-    else if (input$viewData == "Fraud vs Non Fraud Overpayents")
+    else if (input$viewData == "fraudvNon")
     {
       ucMelt <- melt(subset(ucOverpayments, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","fraud_num_percent")) ,id.vars="rptdate")
       
@@ -203,13 +203,13 @@ server <- function(input, output) {
         stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
         labs(x="Date", 
              caption="Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
-        ggtitle(paste(input$state, input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+        ggtitle(paste(input$state, "Fraud vs Non-Fraud Overpayments from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_fill_brewer(palette="Set1")
       
       maxPlot <- 1
     }
     
-    else if (input$viewData == "Tax Program Overpayment Recoveries")
+    else if (input$viewData == "TOPS")
     {
       ucMelt <- melt(subset(ucOverpayments, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","state_tax_recovery", "federal_tax_recovery")) ,id.vars="rptdate")
       
@@ -222,13 +222,13 @@ server <- function(input, output) {
              y="Total Overpayment Recovery (millions of $)",
              caption="Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
         scale_y_continuous(labels=scales::dollar) + 
-        ggtitle(paste(input$state, input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+        ggtitle(paste(input$state, "Tax Program Overpayment Recovery from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_fill_brewer(palette="Set1")
       
       maxPlot <- maxOverpaymentDollars/1000000
       
     }
-    else if (input$viewData == "Recipiency Rate")
+    else if (input$viewData == "recipRate")
     {
      
      
@@ -245,7 +245,7 @@ server <- function(input, output) {
          reportTheme + 
          labs(x="Date", y="Recipiency Rate",
               caption="Recipiency rate calculated by dividing 12 month moving average of unemployment continuing claims divided by 12 month moving average of total unemployed.\nData not seasonally adjusted.  \nSource: Continuing claims can be found in ETA report 5159, found here: https://ows.doleta.gov/unemploy/DataDownloads.asp.\nUnemployed numbers courtesy the BLS: https://www.bls.gov/web/laus/ststdnsadata.txt.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.") + 
-         ggtitle(paste(input$state, input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) +
+         ggtitle(paste(input$state, "Recipiency Rate from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) +
          scale_fill_brewer(palette="Set1",
                            breaks=c("recipiency_annual_reg","recipiency_annual_total"),
                            labels=c("Regular Programs","Federal Programs"))
@@ -253,7 +253,7 @@ server <- function(input, output) {
       maxPlot <- 1
     }
     
-    else if (input$viewData == "Overpayment vs Recovery")
+    else if (input$viewData == "overvRecovery")
     {
       
       ucMelt <- melt(subset(ucOverpayments, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","outstanding", "recovered")) ,id.vars="rptdate")
@@ -275,26 +275,31 @@ server <- function(input, output) {
     else
     {
       uiTable <- switch(input$viewData,
-                        "Timeliness of Lower Authority Decisions" = refereeTimeliness,
-                        "Timeliness of First Payments" = paymentTimeliness,
-                        "Timeliness of Higher Authority Decisions" = ucbrTimeliness)
+                        "lowerAuthority" = refereeTimeliness,
+                        "firstPay" = paymentTimeliness,
+                        "higherAuthority" = ucbrTimeliness)
   
       plotCols <- switch(input$viewData,
-                        "Timeliness of Lower Authority Decisions" = c("rptdate", "Within30Days", "Within45Days"),
-                        "Timeliness of First Payments" = c("rptdate","Within15Days","Within35Days"),
-                        "Timeliness of Higher Authority Decisions" = c("rptdate","Within45Days","Within75Days"))
+                        "lowerAuthority" = c("rptdate", "Within30Days", "Within45Days"),
+                        "firstPay" = c("rptdate","Within15Days","Within35Days"),
+                        "higherAuthority" = c("rptdate","Within45Days","Within75Days"))
   
       line1 <- switch(input$viewData,
-                         "Timeliness of Lower Authority Decisions" = c(.6,"30-day threshold"),
-                         "Timeliness of First Payments" = c(.87,"15-day threshold"),
-                         "Timeliness of Higher Authority Decisions" = c(.4,"45-day threshold"))
+                         "lowerAuthority" = c(.6,"30-day threshold"),
+                         "firstPay" = c(.87,"15-day threshold"),
+                         "higherAuthority" = c(.4,"45-day threshold"))
       
       
       
       line2 <- switch(input$viewData,
-                      "Timeliness of Lower Authority Decisions" = c(.8,"45-day threshold"),
-                      "Timeliness of First Payments" = c(.93,"35-day threshold"),
-                      "Timeliness of Higher Authority Decisions" = c(.8,"75-day threshold"))
+                      "lowerAuthority" = c(.8,"45-day threshold"),
+                      "firstPay" = c(.93,"35-day threshold"),
+                      "higherAuthority" = c(.8,"75-day threshold"))
+
+      plotTitle <- switch(input$viewData,
+                      "lowerAuthority" = "Lower Authority Decision Timeliness",
+                      "firstPay" = "First Payment Timeliness",
+                      "higherAuthority" = "Higher Authority Decision Timeliness")
       
       uiTable <- melt(subset(uiTable, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=plotCols) ,id.vars="rptdate")
   
@@ -310,7 +315,7 @@ server <- function(input, output) {
         geom_text(aes(x=as.Date(input$range[1]),y=as.numeric(line1[1]),label = line1[2], vjust = -1, hjust=0), color="black") +
         geom_hline(aes(yintercept=as.numeric(line2[1])), linetype="dashed") +
         geom_text(aes(x=as.Date(input$range[1]),y=as.numeric(line2[1]),label = line2[2], vjust = -1, hjust=0), color="black") +
-        ggtitle(paste(input$state, input$viewData, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+        ggtitle(paste(input$state, plotTitle, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_fill_brewer(palette="Set1")
       
       maxPlot <- 1
@@ -335,7 +340,7 @@ server <- function(input, output) {
   output$uidata <- renderDataTable({
     
     
-    if (input$viewData == "Monthly UI Payments")
+    if (input$viewData == "monthlyUI")
     {
       uiDT <- DT::datatable(ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1,
                                            c("st","rptdate", "total_state_compensated_mov_avg", "total_federal_compensated_mov_avg", "total_state_compensated", "total_federal_compensated", "total_paid_annual_mov_avg")], 
@@ -352,7 +357,7 @@ server <- function(input, output) {
       
     }
     
-    else if (input$viewData == "Overpayment Balance/Annual UI Payments")
+    else if (input$viewData == "overvPayments")
     {
       
       uiDT <- DT::datatable(ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
@@ -369,7 +374,7 @@ server <- function(input, output) {
       )%>% formatCurrency(4:5, '$')
     }
     
-    else if (input$viewData == "Fraud vs Non Fraud Overpayents")
+    else if (input$viewData == "fraudvNon")
     {
       uiDT <- DT::datatable(ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
                                          c("st","rptdate", "fraud_num_percent", "regular_fraud_num", "federal_fraud_num","regular_nonfraud_num","federal_nonfraud_num")],
@@ -386,7 +391,7 @@ server <- function(input, output) {
       
     }
 
-    else if (input$viewData == "Tax Program Overpayment Recoveries")
+    else if (input$viewData == "TOPS")
     {
       uiDT <- DT::datatable(ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
                                            c("st","rptdate", "state_tax_recovery", "federal_tax_recovery")],
@@ -402,7 +407,7 @@ server <- function(input, output) {
       ) %>% formatCurrency(3:4, '$')
     }
     
-    else if (input$viewData == "Overpayment vs Recovery")
+    else if (input$viewData == "overvRecovery")
     {
       
       uiDT <- DT::datatable(ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
@@ -420,7 +425,7 @@ server <- function(input, output) {
       
     }
     
-    else if (input$viewData == "Recipiency Rate Breakdown")
+    else if (input$viewData == "recipBreakdown")
     {
       uiDT <- DT::datatable(ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1,
                                          c("st","rptdate","total_week_mov_avg", "unemployed_avg", "recipiency_annual_total")],
@@ -438,7 +443,7 @@ server <- function(input, output) {
       
     }
 
-    else if (input$viewData == "Unemployment Rate (SA)")
+    else if (input$viewData == "uirate")
     {
       uiDT <- DT::datatable(bls_unemployed_sa[bls_unemployed_sa$st==input$state & bls_unemployed_sa$rptdate > input$range[1]-1 & bls_unemployed_sa$rptdate < input$range[2]+1,
                                          c("st","rptdate","pop", "total", "total_unemployed", "perc_unemployed")],
@@ -455,7 +460,7 @@ server <- function(input, output) {
       
     }
     
-    else if (input$viewData == "Recipiency Rate")
+    else if (input$viewData == "recipRate")
     {
         uiDT <- DT::datatable(ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1,
                                            c("st","rptdate","recipiency_annual_reg","recipiency_annual_total")],
@@ -474,19 +479,19 @@ server <- function(input, output) {
     else 
     {
       uiTable <- switch(input$viewData,
-                        "Timeliness of Lower Authority Decisions" = refereeTimeliness,
-                        "Timeliness of First Payments" = paymentTimeliness[,c("st","rptdate","Within15Days","Within35Days","Total","Avg15Day","Avg35Day")],
-                        "Timeliness of Higher Authority Decisions" = ucbrTimeliness)
+                        "lowerAuthority" = refereeTimeliness,
+                        "firstPay" = paymentTimeliness[,c("st","rptdate","Within15Days","Within35Days","Total","Avg15Day","Avg35Day")],
+                        "higherAuthority" = ucbrTimeliness)
       
       uiCols <- switch(input$viewData,
-                        "Timeliness of Lower Authority Decisions" = c("State", "Date", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending", "US 30 Day Avg" ,"US 45 Day Avg"),
-                        "Timeliness of First Payments" = c("State", "Date", "Within 15 Days", "Within 35 Days", "Total Paid", "US 15 Day Avg", "US 35 Day Avg"),
-                        "Timeliness of Higher Authority Decisions" = c("State", "Date", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending", "US 45 Day Avg", "US 75 Day Avg"))
+                        "lowerAuthority" = c("State", "Date", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending", "US 30 Day Avg" ,"US 45 Day Avg"),
+                        "firstPay" = c("State", "Date", "Within 15 Days", "Within 35 Days", "Total Paid", "US 15 Day Avg", "US 35 Day Avg"),
+                        "higherAuthority" = c("State", "Date", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending", "US 45 Day Avg", "US 75 Day Avg"))
       
       thresholds <- switch(input$viewData,
-                           "Timeliness of Lower Authority Decisions" = c(.6,.8),
-                           "Timeliness of First Payments" = c(.87,.93),
-                           "Timeliness of Higher Authority Decisions" = c(.4,.8)) 
+                           "lowerAuthority" = c(.6,.8),
+                           "firstPay" = c(.87,.93),
+                           "higherAuthority" = c(.4,.8)) 
                            
       
       
@@ -513,20 +518,20 @@ server <- function(input, output) {
 
   output$data.csv = downloadHandler('data.csv', content = function(file) { 
         df <- switch(input$viewData,
-                        "Monthly UI Payments" = ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1,
+                        "monthlyUI" = ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1,
                                                              c("st","rptdate", "total_state_compensated_mov_avg", "total_federal_compensated_mov_avg", "total_state_compensated", "total_federal_compensated", "total_paid_annual_mov_avg")],
-                        "Overpayment Balance/Annual UI Payments" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
+                        "overvPayments" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
                                                           c("st","rptdate", "outstanding_proportion", "outstanding", "total_paid_annual_mov_avg")],
-                        "Timeliness of Lower AUthority Decisions" = refereeTimeliness[refereeTimeliness$st==input$state & refereeTimeliness$rptdate > input$range[1]-1 & refereeTimeliness$rptdate < input$range[2]+1,],
-                        "Timeliness of First Payments" = paymentTimeliness[paymentTimeliness$st==input$state & paymentTimeliness$rptdate > input$range[1]-1 & paymentTimeliness$rptdate < input$range[2]+1,],
-                        "Timeliness of Higher Authority Decisions" = ucbrTimeliness[ucbrTimeliness$st==input$state & ucbrTimeliness$rptdate > input$range[1]-1 & ucbrTimeliness$rptdate < input$range[2]+1,], 
-                        "Fraud vs Non Fraud Overpayents" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
+                        "lowerAuthority" = refereeTimeliness[refereeTimeliness$st==input$state & refereeTimeliness$rptdate > input$range[1]-1 & refereeTimeliness$rptdate < input$range[2]+1,],
+                        "firstPay" = paymentTimeliness[paymentTimeliness$st==input$state & paymentTimeliness$rptdate > input$range[1]-1 & paymentTimeliness$rptdate < input$range[2]+1,],
+                        "higherAuthority" = ucbrTimeliness[ucbrTimeliness$st==input$state & ucbrTimeliness$rptdate > input$range[1]-1 & ucbrTimeliness$rptdate < input$range[2]+1,], 
+                        "fraudvNon" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
                                                                           c("st","rptdate", "fraud_num_percent", "regular_fraud_num", "federal_fraud_num","regular_nonfraud_num","federal_nonfraud_num")],
-                        "Tax Program Overpayment Recoveries" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1, c("st","rptdate", "state_tax_recovery", "federal_tax_recovery")],
-                        "Overpayment vs Recovery" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1, c("st","rptdate", "outstanding", "recovered")],
-                        "Unemployment Rate (SA)" = bls_unemployed_sa[bls_unemployed_sa$st==input$state & bls_unemployed_sa$rptdate > input$range[1]-1 & bls_unemployed_sa$rptdate < input$range[2]+1,c("st","rptdate","pop","total","unemployed","perc_unemployed")],
-                        "Recipiency Rate" = ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1, c("st","rptdate","recipiency_annual_reg","recipiency_annual_total")],
-                        "Recipiency Rate Breakdown" = ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1, c("st","rptdate","total_week_mov_avg","unemployed_avg","recipiency_annual_total")]
+                        "TOPS" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1, c("st","rptdate", "state_tax_recovery", "federal_tax_recovery")],
+                        "overvRecovery" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1, c("st","rptdate", "outstanding", "recovered")],
+                        "uirate" = bls_unemployed_sa[bls_unemployed_sa$st==input$state & bls_unemployed_sa$rptdate > input$range[1]-1 & bls_unemployed_sa$rptdate < input$range[2]+1,c("st","rptdate","pop","total","unemployed","perc_unemployed")],
+                        "recipRate" = ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1, c("st","rptdate","recipiency_annual_reg","recipiency_annual_total")],
+                        "recipBreakdown" = ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1, c("st","rptdate","total_week_mov_avg","unemployed_avg","recipiency_annual_total")]
         ) 
         
 
@@ -537,17 +542,17 @@ server <- function(input, output) {
   output$uimap <- renderLeaflet({
     
     uiMap <- switch(input$viewData,
-                    "Monthly UI Payments" = getUIMap(usa,ucRecipiency,input$range[2],"total_compensated_mov_avg", paste("Total UI Payments disbursed in ", input$range[2]), FALSE),
-                    "Overpayment Balance/Annual UI Payments" = getUIMap(usa,ucOverpayments, input$range[2], "outstanding_proportion", paste("Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually in ", input$range[2]), FALSE),
-                    "Fraud vs Non Fraud Overpayents" = getUIMap(usa,ucOverpayments,input$range[2],"fraud_num_percent", paste("Fraud vs Non-Fraud Overpayments in ",input$range[2]),FALSE),
-                    "Overpayment vs Recovery" = getUIMap(usa,ucOverpayments,input$range[2],"outstanding", paste("Outstanding Overpayments Balance in ",input$range[2]),FALSE),
-                    "Tax Program Overpayment Recoveries" = getUIMap(usa,ucOverpayments,input$range[2],"federal_tax_recovery", paste("Federal Tax Intercepts in Quarter ending ",input$range[2]), FALSE),
-                    "Recipiency Rate" = getUIMap(usa,ucRecipiency,input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
-                    "Recipiency Rate Breakdown" = getUIMap(usa,ucRecipiency,input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
-                    "Unemployment Rate (SA)" = getUIMap(usa,bls_unemployed_sa,input$range[2],"perc_unemployed", paste("Seasonally Adjusted Unemployed Rate in ",input$range[2]), FALSE),
-                    "Timeliness of Lower Authority Decisions" = getUIMap(usa,refereeTimeliness,input$range[2],"Within45Days", paste("Percent of First Level Appeal Decisions within 45 days, ",input$range[2]), TRUE),
-                    "Timeliness of First Payments" = getUIMap(usa,paymentTimeliness,input$range[2],"Within35Days", paste("Percent of First Payments within 35 days, ",input$range[2]), TRUE),
-                    "Timeliness of Higher Authority Decisions" = getUIMap(usa,ucbrTimeliness,input$range[2],"Within75Days", paste("Percent of Second Level Appeal Decisions within 75 days, ",input$range[2]), TRUE))
+                    "monthlyUI" = getUIMap(usa,ucRecipiency,input$range[2],"total_compensated_mov_avg", paste("Total UI Payments disbursed in ", input$range[2]), FALSE),
+                    "overvPayments" = getUIMap(usa,ucOverpayments, input$range[2], "outstanding_proportion", paste("Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually in ", input$range[2]), FALSE),
+                    "fraudvNon" = getUIMap(usa,ucOverpayments,input$range[2],"fraud_num_percent", paste("Fraud vs Non-Fraud Overpayments in ",input$range[2]),FALSE),
+                    "overvRecovery" = getUIMap(usa,ucOverpayments,input$range[2],"outstanding", paste("Outstanding Overpayments Balance in ",input$range[2]),FALSE),
+                    "TOPS" = getUIMap(usa,ucOverpayments,input$range[2],"federal_tax_recovery", paste("Federal Tax Intercepts in Quarter ending ",input$range[2]), FALSE),
+                    "recipRate" = getUIMap(usa,ucRecipiency,input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
+                    "recipBreakdown" = getUIMap(usa,ucRecipiency,input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
+                    "uirate" = getUIMap(usa,bls_unemployed_sa,input$range[2],"perc_unemployed", paste("Seasonally Adjusted Unemployed Rate in ",input$range[2]), FALSE),
+                    "lowerAuthority" = getUIMap(usa,refereeTimeliness,input$range[2],"Within45Days", paste("Percent of First Level Appeal Decisions within 45 days, ",input$range[2]), TRUE),
+                    "firstPay" = getUIMap(usa,paymentTimeliness,input$range[2],"Within35Days", paste("Percent of First Payments within 35 days, ",input$range[2]), TRUE),
+                    "higherAuthority" = getUIMap(usa,ucbrTimeliness,input$range[2],"Within75Days", paste("Percent of Second Level Appeal Decisions within 75 days, ",input$range[2]), TRUE))
       
     return(uiMap)
   })
@@ -555,17 +560,17 @@ server <- function(input, output) {
   # render the small multiple plot
   output$smplot <- renderPlot({
     smPlot <- switch(input$viewData,
-                    "Monthly UI Payments" = getSMPlot(ucRecipiency,input$range[1], input$range[2], "total_compensated_mov_avg", "Montly UI Payments","50-state Comparison of Total Monthly UI Payments"),
-                    "Overpayment Balance/Annual UI Payments" = getSMPlot(ucOverpayments, input$range[1], input$range[2], "outstanding_proportion", "Overpayment Balance/Annual UI Payments","50-state Comparison of Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually"),
-                    "Fraud vs Non Fraud Overpayents" = getSMPlot(ucOverpayments,input$range[1], input$range[2], "fraud_num_percent", "Fraud/Non-Fraud","50-state Comparison of Fraud vs Non-Fraud UI Overpayemnts"),
-                    "Overpayment vs Recovery" = getSMPlot(ucOverpayments,input$range[1], input$range[2], "outstanding", "Overpayment Balance","50-state Comparison of Outstanding UI Overpayment Balance"),
-                    "Tax Program Overpayment Recoveries" = getSMPlot(ucOverpayments,input$range[1], input$range[2], "federal_tax_recovery", "Fed Tax Intercept $","50-state Comparison of Fed Tax Intercepts (Quarterly)"),
-                    "Recipiency Rate" = getSMPlot(ucRecipiency, input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rate"),
-                    "Recipiency Rate Breakdown" = getSMPlot(ucRecipiency,input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rates"),
-                    "Unemployment Rate (SA)" = getSMPlot(bls_unemployed_sa,input$range[1], input$range[2], "perc_unemployed", "Unemployment Rate","50-state Comparison of SA Unemployment Rates"),
-                    "Timeliness of Lower Authority Decisions" = getSMPlot(refereeTimeliness,input$range[1], input$range[2], "Within45Days", "Proportion of Decisions Within 45 Days","50-state Comparison of First Level Appeal Decisions within 45 Days"),
-                    "Timeliness of First Payments" = getSMPlot(paymentTimeliness,input$range[1], input$range[2], "Within35Days","Proportion of Payments Within 35 Days", "50-state Comparison of First Payments within 35 Days"),
-                    "Timeliness of Higher Authority Decisions" = getSMPlot(ucbrTimeliness,input$range[1], input$range[2], "Within75Days", "Proportion of Decisions Within 75 Days", "50-state Comparison of Second Level Appeal Decisions within 75 Days"))
+                    "monthlyUI" = getSMPlot(ucRecipiency,input$range[1], input$range[2], "total_compensated_mov_avg", "Montly UI Payments","50-state Comparison of Total Monthly UI Payments"),
+                    "overvPayments" = getSMPlot(ucOverpayments, input$range[1], input$range[2], "outstanding_proportion", "Overpayment Balance/Annual UI Payments","50-state Comparison of Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually"),
+                    "fraudvNon" = getSMPlot(ucOverpayments,input$range[1], input$range[2], "fraud_num_percent", "Fraud/Non-Fraud","50-state Comparison of Fraud vs Non-Fraud UI Overpayemnts"),
+                    "overvRecovery" = getSMPlot(ucOverpayments,input$range[1], input$range[2], "outstanding", "Overpayment Balance","50-state Comparison of Outstanding UI Overpayment Balance"),
+                    "TOPS" = getSMPlot(ucOverpayments,input$range[1], input$range[2], "federal_tax_recovery", "Fed Tax Intercept $","50-state Comparison of Fed Tax Intercepts (Quarterly)"),
+                    "recipRate" = getSMPlot(ucRecipiency, input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rate"),
+                    "recipBreakdown" = getSMPlot(ucRecipiency,input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rates"),
+                    "uirate" = getSMPlot(bls_unemployed_sa,input$range[1], input$range[2], "perc_unemployed", "Unemployment Rate","50-state Comparison of SA Unemployment Rates"),
+                    "lowerAuthority" = getSMPlot(refereeTimeliness,input$range[1], input$range[2], "Within45Days", "Proportion of Decisions Within 45 Days","50-state Comparison of First Level Appeal Decisions within 45 Days"),
+                    "firstPay" = getSMPlot(paymentTimeliness,input$range[1], input$range[2], "Within35Days","Proportion of Payments Within 35 Days", "50-state Comparison of First Payments within 35 Days"),
+                    "higherAuthority" = getSMPlot(ucbrTimeliness,input$range[1], input$range[2], "Within75Days", "Proportion of Decisions Within 75 Days", "50-state Comparison of Second Level Appeal Decisions within 75 Days"))
     
     return(smPlot)
   })
