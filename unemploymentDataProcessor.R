@@ -370,12 +370,22 @@ getNonMonetaryDeterminations <- function()
 
   #subset to just keep the columns that we care about now that we've done all of our math. - this gets rid of 113 columns * 10k observations
   ucNonMonetary <- subset(ucNonMonetary, select=c(all_cols, c("determ_total"), grep("^denial_*", names(ucNonMonetary), value=TRUE)))
+  
+  
+  #there seems to be some bad data in the dataset--every once in a while, a state will misreport total denials by a factor of 10
+  # This makes the proportions > 1, which obviously doesn't makes much sense.  
+  # for now, I am going to just set any proportion > 1 to 1.  But in the future, may make more sense
+  # to capture 'total denials' and 'total determinations' by adding the subsets together.
+  # this function looks at every "*percent" column and sets the max value to 1.
+  ucNonMonetary[grep("percent", names(ucNonMonetary))] <- lapply(ucNonMonetary[grep("percent", names(ucNonMonetary))], function(x) ifelse(x > 1,1,x))
     
   # compute US averages for each time period and merge back (this uses all variables but state and then adds the state back in as US)
   usAvg <- aggregate(. ~ rptdate, ucNonMonetary[,c(-1)], FUN=mean)
   usAvg$st <- "US"
   
   ucNonMonetary <- bind_rows(ucNonMonetary,usAvg)
+  
+  
   
   return(ucNonMonetary)  
 }
@@ -533,6 +543,9 @@ maxUIPayments <- max(ucRecipiency$total_compensated_mov_avg, na.rm=TRUE)
 maxOutstandingProportion <- max(ucOverpayments$outstanding_proportion, na.rm = TRUE)
 maxUnemployedRecipients <- max(ucRecipiency$total_week_mov_avg, ucRecipiency$unemployed_avg, na.rm = TRUE)
 maxUnemploymentRate <- max(bls_unemployed_sa$perc_unemployed)
+maxDenials <- max(ucNonMonetary$denial_sep_percent, ucNonMonetary$denial_non_percent, na.rm = TRUE)
+maxSepDenials <- max(ucNonMonetary$denial_sep_misconduct_percent, ucNonMonetary$denial_sep_vol_percent, ucNonMonetary$denial_sep_other_percent, na.rm = TRUE)
+maxNonSepDenials <- max(ucNonMonetary$denial_non_aa_percent,ucNonMonetary$denial_non_income_percent, ucNonMonetary$denial_non_refusework_percent, ucNonMonetary$denial_non_reporting_percent, ucNonMonetary$denial_non_referrals_percent, ucNonMonetary$denial_non_other_percent, na.rm=TRUE)
 
 tmp <- tempdir()
 unzip("cb_2015_us_state_20m.zip", exdir = tmp)
