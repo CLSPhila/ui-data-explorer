@@ -343,6 +343,8 @@ getNonMonetaryDeterminations <- function()
   # this involves adding together categories first and then doing lots of division.  Fun!
   # first just get our aggregate totals with all federal programs integrated with state numbers
   ucNonMonetary$determ_total <- ucNonMonetary$state_total_determ+ucNonMonetary$ufce_total_determ+ucNonMonetary$ucx_total_determ+ucNonMonetary$ext_state_total_determ+ucNonMonetary$ext_ufce_total_determ+ucNonMonetary$ext_ucx_total_determ+ucNonMonetary$euc08_state_total_determ+ucNonMonetary$euc08_ufce_total_determ+ucNonMonetary$euc08_ucx_total_determ+ucNonMonetary$teuc_state_total_determ+ucNonMonetary$teuc_ucx_total_determ+ucNonMonetary$teuc_ufce_total_determ+ucNonMonetary$euc91_state_total_determ+ucNonMonetary$euc91_ufce_total_determ+ucNonMonetary$euc91_ucx_total_determ
+  ucNonMonetary$determ_sep_vol <- ucNonMonetary$state_determ_sep_vol+ucNonMonetary$ufce_determ_sep_vol+ucNonMonetary$ext_state_determ_sep_vol+ucNonMonetary$euc08_state_determ_sep_vol+ucNonMonetary$euc91_state_determ_sep_vol+ucNonMonetary$teuc_state_determ_sep_vol
+  ucNonMonetary$determ_sep_misconduct <- ucNonMonetary$state_determ_sep_misconduct+ucNonMonetary$ufce_determ_sep_misconduct+ucNonMonetary$ext_state_determ_sep_misconduct+ucNonMonetary$euc08_state_determ_sep_misconduct+ucNonMonetary$euc91_state_determ_sep_misconduct+ucNonMonetary$teuc_state_determ_sep_misconduct
   ucNonMonetary$denial_sep_total <- ucNonMonetary$state_denial_sep_total+ucNonMonetary$ufce_denial_sep_total+ucNonMonetary$ext_state_denial_sep_total+ucNonMonetary$euc08_state_denial_sep_total+ucNonMonetary$euc91_state_denial_sep_total+ucNonMonetary$teuc_state_denial_sep_total
   ucNonMonetary$denial_non_total <- ucNonMonetary$state_denial_non_total+ucNonMonetary$ext_state_denial_non_total+ucNonMonetary$euc08_state_denial_non_total+ucNonMonetary$euc91_state_denial_non_total+ucNonMonetary$teuc_state_denial_non_total
   ucNonMonetary$denial_total <- ucNonMonetary$denial_sep_total+ucNonMonetary$denial_non_total
@@ -357,10 +359,13 @@ getNonMonetaryDeterminations <- function()
   ucNonMonetary$denial_non_other <- ucNonMonetary$state_denial_non_other+ucNonMonetary$ext_state_denial_non_other+ucNonMonetary$euc08_state_denial_non_other+ucNonMonetary$euc91_state_denial_non_other+ucNonMonetary$teuc_state_denial_non_other
   
   # now calculate our actual statistics that we care about
+  ucNonMonetary$denial_rate_overall <- round(ucNonMonetary$denial_total / ucNonMonetary$determ_total, 3)
   ucNonMonetary$denial_sep_percent <- round(ucNonMonetary$denial_sep_total / ucNonMonetary$determ_total,3)
   ucNonMonetary$denial_non_percent <- round(ucNonMonetary$denial_non_total / ucNonMonetary$determ_total,3)
   ucNonMonetary$denial_sep_misconduct_percent <- round(ucNonMonetary$denial_sep_misconduct / ucNonMonetary$denial_sep_total,3)
+  ucNonMonetary$denial_sep_misconduct_rate <- round(ucNonMonetary$denial_sep_misconduct / ucNonMonetary$determ_sep_misconduct, 3)
   ucNonMonetary$denial_sep_vol_percent <- round(ucNonMonetary$denial_sep_vol / ucNonMonetary$denial_sep_total,3)
+  ucNonMonetary$denial_sep_vol_rate <- round(ucNonMonetary$denial_sep_vol / ucNonMonetary$determ_sep_vol,3)
   ucNonMonetary$denial_sep_other_percent <- round(ucNonMonetary$denial_sep_other / ucNonMonetary$denial_sep_total,3)
   ucNonMonetary$denial_non_aa_percent <- round(ucNonMonetary$denial_non_aa / ucNonMonetary$denial_non_total, 3)
   ucNonMonetary$denial_non_income_percent <- round(ucNonMonetary$denial_non_income / ucNonMonetary$denial_non_total, 3)
@@ -370,7 +375,7 @@ getNonMonetaryDeterminations <- function()
   ucNonMonetary$denial_non_other_percent <- round(ucNonMonetary$denial_non_other / ucNonMonetary$denial_non_total, 3)
 
   #subset to just keep the columns that we care about now that we've done all of our math. - this gets rid of 113 columns * 10k observations
-  ucNonMonetary <- subset(ucNonMonetary, select=c(all_cols, c("determ_total"), grep("^denial_*", names(ucNonMonetary), value=TRUE)))
+  ucNonMonetary <- subset(ucNonMonetary, select=c(all_cols, c("determ_total", "determ_sep_vol"), grep("^denial_*", names(ucNonMonetary), value=TRUE)))
   
   
   #there seems to be some bad data in the dataset--every once in a while, a state will misreport total denials by a factor of 10
