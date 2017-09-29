@@ -122,8 +122,8 @@ server <- function(input, output) {
         scale_color_discrete(guide=FALSE) +
         reportTheme + 
         labs(x="Date", y="Total Paid (Millions of $)",
-             caption="12-month moving average of UI paid per month in both regular and federal UI programs.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.") + 
-        ggtitle(paste(input$state, "Monthly UI Payments from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) +
+             caption="12-month moving average of UI paid per month in both regular and federal UI programs.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",  
+             title = paste(input$state, "Monthly UI Payments from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) +
         scale_fill_brewer(palette="Set1",
                           breaks=c("total_state_compensated_mov_avg","total_compensated_mov_avg"),
                           labels=c("Regular Programs","Federal Programs"))
@@ -142,8 +142,8 @@ server <- function(input, output) {
           geom_line(data=ucMelt[ucMelt$variable=="unemployed_avg",], aes(rptdate, value, col=variable ), size=2) +
           reportTheme +
           labs(x="Date", y="",
-               caption="Weekly continued claims and Total Unemployed by month.\nBoth numbers are smoothed over 12 month periods.  These are the two components of recipiency rate.") + 
-          ggtitle(paste(input$state, "Recipiency Rate Breakdown from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+               caption="Weekly continued claims and Total Unemployed by month.\nBoth numbers are smoothed over 12 month periods.  These are the two components of recipiency rate.", 
+               title=paste(input$state, "Recipiency Rate Breakdown from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
           scale_y_continuous(labels=comma) +
           scale_color_brewer(palette="Set1",
                             breaks=c("total_week_mov_avg","unemployed_avg"),
@@ -165,8 +165,8 @@ server <- function(input, output) {
         geom_line(data=usMelt[usMelt$variable=="perc_unemployed",], aes(rptdate, value), size=1, linetype="dashed", color="black") +
         geom_text(aes(x=as.Date(input$range[1]),y=as.numeric(usMelt[1,3]),label = "US Avg", vjust = -1, hjust=0), color="black") +
         labs(x="Date", y="",
-        caption="Seasonally adjusted unemployed rate, based on BLS monthly report found here: https://www.bls.gov/web/laus/ststdsadata.txt.") + 
-        ggtitle(paste(input$state, "Unemployment Rate (SA) from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+             caption="Seasonally adjusted unemployed rate, based on BLS monthly report found here: https://www.bls.gov/web/laus/ststdsadata.txt.",
+             title=paste(input$state, "Unemployment Rate (SA) from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_y_continuous(labels=comma) +
         scale_color_brewer(palette="Set1",
                          breaks=c("perc_unemployed"),
@@ -186,8 +186,8 @@ server <- function(input, output) {
         reportTheme + 
         stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
         labs(x="Date", 
-             caption="Outstanding overpayment balance divided by the total benefits paid in all federal and state programs over the last 12 months.\n Data courtesy of the USDOL.  Reports used are ETA 227 and 5159, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
-        ggtitle(paste(input$state, "Overpayment Balance vs Montly UI Payments from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+             caption="Outstanding overpayment balance divided by the total benefits paid in all federal and state programs over the last 12 months.\n Data courtesy of the USDOL.  Reports used are ETA 227 and 5159, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+             title=paste(input$state, "Overpayment Balance vs Montly UI Payments from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_fill_brewer(palette="Set1")
       
       maxPlot <- maxOutstandingProportion
@@ -206,8 +206,8 @@ server <- function(input, output) {
         reportTheme + 
         stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
         labs(x="Date", 
-             caption="Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
-        ggtitle(paste(input$state, "Fraud vs Non-Fraud Overpayments from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+             caption="Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+             title=paste(input$state, "Fraud vs Non-Fraud Overpayments from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_fill_brewer(palette="Set1")
       
       maxPlot <- 1
@@ -224,9 +224,9 @@ server <- function(input, output) {
         stat_smooth(span=.3, aes(rptdate, value/1000000, col=variable)) + 
         labs(x="Date", 
              y="Total Overpayment Recovery (millions of $)",
-             caption="Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
+             caption="Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+             title=paste(input$state, "Tax Program Overpayment Recovery from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_y_continuous(labels=scales::dollar) + 
-        ggtitle(paste(input$state, "Tax Program Overpayment Recovery from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_fill_brewer(palette="Set1")
       
       maxPlot <- maxOverpaymentDollars/1000000
@@ -248,8 +248,8 @@ server <- function(input, output) {
          scale_color_discrete(guide=FALSE) +
          reportTheme + 
          labs(x="Date", y="Recipiency Rate",
-              caption="Recipiency rate calculated by dividing 12 month moving average of unemployment continuing claims divided by 12 month moving average of total unemployed.\nData not seasonally adjusted.  \nSource: Continuing claims can be found in ETA report 5159, found here: https://ows.doleta.gov/unemploy/DataDownloads.asp.\nUnemployed numbers courtesy the BLS: https://www.bls.gov/web/laus/ststdnsadata.txt.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.") + 
-         ggtitle(paste(input$state, "Recipiency Rate from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) +
+              caption="Recipiency rate calculated by dividing 12 month moving average of unemployment continuing claims divided by 12 month moving average of total unemployed.\nData not seasonally adjusted.  \nSource: Continuing claims can be found in ETA report 5159, found here: https://ows.doleta.gov/unemploy/DataDownloads.asp.\nUnemployed numbers courtesy the BLS: https://www.bls.gov/web/laus/ststdnsadata.txt.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",
+              title=paste(input$state, "Recipiency Rate from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) +
          scale_fill_brewer(palette="Set1",
                            breaks=c("recipiency_annual_reg","recipiency_annual_total"),
                            labels=c("Regular Programs","Federal Programs"))
@@ -269,8 +269,8 @@ server <- function(input, output) {
         stat_smooth(span=.3, aes(rptdate, value/1000000, col=variable)) + 
         labs(x="Date", 
              y="Millions of $",
-             caption="Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
-        ggtitle(paste(input$state, "Outstanding Overpayments vs $ Recovered from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+             caption="Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+             title=paste(input$state, "Outstanding Overpayments vs $ Recovered from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_fill_brewer(palette="Set1")
       
       maxPlot <- maxOutstandingOverpayment/1000000
@@ -289,9 +289,9 @@ server <- function(input, output) {
         reportTheme + 
         stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
         labs(x="Date", 
-             y="Percent of total non-monetary determinations",
-             caption="Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
-        ggtitle(paste(input$state, "% of Denials for Separation and Non-Separation Reasons in Non-Monetary Decisions", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+             y="Proportion of total non-monetary determinations",
+             caption="Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+             title=paste(input$state, "Proportion of Denials for Separation and Non-Separation Reasons in Non-Monetary Decisions", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_color_brewer(palette="Set1", 
                           breaks=c("denial_sep_percent", "denial_non_percent", "denial_rate_overall"),
                           labels=c("Separation Denials", "Non-Separation Denials", "Total Denial Rate"))
@@ -311,9 +311,9 @@ server <- function(input, output) {
         reportTheme + 
         stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
         labs(x="Date", 
-             y="Breakdown of all separation denials ",
-             caption="Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
-        ggtitle(paste(input$state, "Breakdown of Non-Monetary Separation Denials", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+             y="Proportion of all separation denials ",
+             caption="Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+             title=paste(input$state, "Proportion of Non-Monetary Separation Denials", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_color_brewer(palette="Set1", 
                            breaks=c("denial_sep_misconduct_percent","denial_sep_vol_percent", "denial_sep_other_percent"),
                            labels=c("Misconduct", "Voluntary Quit", "Other"))
@@ -333,9 +333,9 @@ server <- function(input, output) {
         reportTheme + 
         stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
         labs(x="Date", 
-             y="Breakdown of all separation denials ",
-             caption="Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
-        ggtitle(paste(input$state, "Non-Monetary Separation Denial Rate", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+             y="Proportion of all separation denials ",
+             caption="Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+             title=paste(input$state, "Non-Monetary Separation Denial Rate", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_color_brewer(palette="Set1", 
                            breaks=c("denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate"),
                            labels=c("Misconduct", "Voluntary Quit", "Other"))
@@ -355,9 +355,9 @@ server <- function(input, output) {
         reportTheme + 
         stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
         labs(x="Date", 
-             y="Breakdown of all non-separation denials ",
-             caption="Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
-        ggtitle(paste(input$state, "Breakdown of Non-Monetary Non-Separation Denials", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+             y="Proportion of all non-separation denials ",
+             caption="Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+             title=paste(input$state, "Proportion of Non-Monetary Non-Separation Denials", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_color_brewer(palette="Set1", 
                            breaks=c("denial_non_aa_percent","denial_non_income_percent", "denial_non_refusework_percent", "denial_non_reporting_percent", "denial_non_referrals_percent", "denial_non_other_percent"),
                            labels=c("Able and Available", "Disqualifying Income", "Refusal of Suitable Work", "Reporting/Call Ins/Etc...", "Refusal of Referral", "Other"))
@@ -404,12 +404,12 @@ server <- function(input, output) {
         reportTheme + 
         stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
         labs(x="Date", 
-             caption="Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://ows.doleta.gov/unemploy/DataDownloads.asp.") + 
+             caption="Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+             title=paste(input$state, plotTitle, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         geom_hline(aes(yintercept=as.numeric(line1[1])), linetype="dashed") +
         geom_text(aes(x=as.Date(input$range[1]),y=as.numeric(line1[1]),label = line1[2], vjust = -1, hjust=0), color="black") +
         geom_hline(aes(yintercept=as.numeric(line2[1])), linetype="dashed") +
         geom_text(aes(x=as.Date(input$range[1]),y=as.numeric(line2[1]),label = line2[2], vjust = -1, hjust=0), color="black") +
-        ggtitle(paste(input$state, plotTitle, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
         scale_fill_brewer(palette="Set1")
       
       maxPlot <- 1
@@ -701,7 +701,7 @@ server <- function(input, output) {
         ) 
         
 
-        write.csv(df[order(-rptdate),], file)
+        write.csv(df[rev(order(df$rptdate)),], file, row.names=FALSE)
   })
     
   # render the proper leaflet map
@@ -720,9 +720,9 @@ server <- function(input, output) {
                     "recipRate" = getUIMap(usa,ucRecipiency,input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
                     "recipBreakdown" = getUIMap(usa,ucRecipiency,input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
                     "uirate" = getUIMap(usa,bls_unemployed_sa,input$range[2],"perc_unemployed", paste("Seasonally Adjusted Unemployed Rate in ",input$range[2]), FALSE),
-                    "lowerAuthority" = getUIMap(usa,refereeTimeliness,input$range[2],"Within45Days", paste("Percent of First Level Appeal Decisions within 45 days, ",input$range[2]), TRUE),
-                    "firstPay" = getUIMap(usa,paymentTimeliness,input$range[2],"Within35Days", paste("Percent of First Payments within 35 days, ",input$range[2]), TRUE),
-                    "higherAuthority" = getUIMap(usa,ucbrTimeliness,input$range[2],"Within75Days", paste("Percent of Second Level Appeal Decisions within 75 days, ",input$range[2]), TRUE))
+                    "lowerAuthority" = getUIMap(usa,refereeTimeliness,input$range[2],"Within45Days", paste("Proportion of First Level Appeal Decisions within 45 days, ",input$range[2]), TRUE),
+                    "firstPay" = getUIMap(usa,paymentTimeliness,input$range[2],"Within35Days", paste("Proportion of First Payments within 35 days, ",input$range[2]), TRUE),
+                    "higherAuthority" = getUIMap(usa,ucbrTimeliness,input$range[2],"Within75Days", paste("Prioportion of Second Level Appeal Decisions within 75 days, ",input$range[2]), TRUE))
       
     return(uiMap)
   })
