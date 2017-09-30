@@ -346,6 +346,12 @@ getNonMonetaryDeterminations <- function()
   ucNonMonetary$determ_sep_vol <- ucNonMonetary$state_determ_sep_vol+ucNonMonetary$ufce_determ_sep_vol+ucNonMonetary$ext_state_determ_sep_vol+ucNonMonetary$euc08_state_determ_sep_vol+ucNonMonetary$euc91_state_determ_sep_vol+ucNonMonetary$teuc_state_determ_sep_vol
   ucNonMonetary$determ_sep_misconduct <- ucNonMonetary$state_determ_sep_misconduct+ucNonMonetary$ufce_determ_sep_misconduct+ucNonMonetary$ext_state_determ_sep_misconduct+ucNonMonetary$euc08_state_determ_sep_misconduct+ucNonMonetary$euc91_state_determ_sep_misconduct+ucNonMonetary$teuc_state_determ_sep_misconduct
   ucNonMonetary$determ_sep_other <- ucNonMonetary$state_determ_sep_other+ucNonMonetary$ufce_determ_sep_other+ucNonMonetary$ext_state_determ_sep_other+ucNonMonetary$euc08_state_determ_sep_other+ucNonMonetary$euc91_state_determ_sep_other+ucNonMonetary$teuc_state_determ_sep_other
+  ucNonMonetary$determ_non_aa <- ucNonMonetary$state_determ_non_aa+ucNonMonetary$ext_state_determ_non_aa+ucNonMonetary$euc08_state_determ_non_aa+ucNonMonetary$euc91_state_determ_non_aa+ucNonMonetary$teuc_state_determ_non_aa
+  ucNonMonetary$determ_non_income <- ucNonMonetary$state_determ_non_income+ucNonMonetary$euc91_state_determ_non_income
+  ucNonMonetary$determ_non_refusework <- ucNonMonetary$state_determ_non_refusework+ucNonMonetary$ext_state_determ_non_refusework+ucNonMonetary$euc08_state_determ_non_refusework+ucNonMonetary$euc91_state_determ_non_refusework+ucNonMonetary$teuc_state_determ_non_refusework
+  ucNonMonetary$determ_non_reporting <- ucNonMonetary$state_determ_non_reporting+ucNonMonetary$euc91_state_determ_non_reporting
+  ucNonMonetary$determ_non_referrals <- ucNonMonetary$state_determ_non_referrals
+  ucNonMonetary$determ_non_other <- ucNonMonetary$state_determ_non_other+ucNonMonetary$ext_state_determ_non_other+ucNonMonetary$euc08_state_determ_non_other+ucNonMonetary$euc91_state_determ_non_other+ucNonMonetary$teuc_state_determ_non_other
   ucNonMonetary$denial_sep_total <- ucNonMonetary$state_denial_sep_total+ucNonMonetary$ufce_denial_sep_total+ucNonMonetary$ext_state_denial_sep_total+ucNonMonetary$euc08_state_denial_sep_total+ucNonMonetary$euc91_state_denial_sep_total+ucNonMonetary$teuc_state_denial_sep_total
   ucNonMonetary$denial_non_total <- ucNonMonetary$state_denial_non_total+ucNonMonetary$ext_state_denial_non_total+ucNonMonetary$euc08_state_denial_non_total+ucNonMonetary$euc91_state_denial_non_total+ucNonMonetary$teuc_state_denial_non_total
   ucNonMonetary$denial_total <- ucNonMonetary$denial_sep_total+ucNonMonetary$denial_non_total
@@ -364,6 +370,7 @@ getNonMonetaryDeterminations <- function()
   ucNonMonetary$denial_sep_percent <- round(ucNonMonetary$denial_sep_total / ucNonMonetary$determ_total,3)
   ucNonMonetary$denial_sep_rate <- round(ucNonMonetary$denial_sep_total / (ucNonMonetary$determ_sep_misconduct+ucNonMonetary$determ_sep_vol+ucNonMonetary$determ_sep_other),3)
   ucNonMonetary$denial_non_percent <- round(ucNonMonetary$denial_non_total / ucNonMonetary$determ_total,3)
+  ucNonMonetary$denial_non_rate <- round(ucNonMonetary$denial_non_total / (ucNonMonetary$determ_non_aa+ucNonMonetary$determ_non_income+ucNonMonetary$determ_non_refusework+ucNonMonetary$determ_non_reporting+ucNonMonetary$determ_non_referrals+ucNonMonetary$determ_non_other),3)
   ucNonMonetary$denial_sep_misconduct_percent <- round(ucNonMonetary$denial_sep_misconduct / ucNonMonetary$denial_sep_total,3)
   ucNonMonetary$denial_sep_misconduct_rate <- round(ucNonMonetary$denial_sep_misconduct / ucNonMonetary$determ_sep_misconduct, 3)
   ucNonMonetary$denial_sep_vol_percent <- round(ucNonMonetary$denial_sep_vol / ucNonMonetary$denial_sep_total,3)
@@ -376,9 +383,15 @@ getNonMonetaryDeterminations <- function()
   ucNonMonetary$denial_non_reporting_percent <- round(ucNonMonetary$denial_non_reporting / ucNonMonetary$denial_non_total, 3)
   ucNonMonetary$denial_non_referrals_percent <- round(ucNonMonetary$denial_non_referrals / ucNonMonetary$denial_non_total, 3)
   ucNonMonetary$denial_non_other_percent <- round(ucNonMonetary$denial_non_other / ucNonMonetary$denial_non_total, 3)
-
+  ucNonMonetary$denial_non_aa_rate <- round(ucNonMonetary$denial_non_aa / ucNonMonetary$determ_non_aa, 3)
+  ucNonMonetary$denial_non_income_rate <- round(ucNonMonetary$denial_non_income / ucNonMonetary$determ_non_income, 3)
+  ucNonMonetary$denial_non_refusework_rate <- round(ucNonMonetary$denial_non_refusework / ucNonMonetary$determ_non_refusework, 3)
+  ucNonMonetary$denial_non_reporting_rate <- round(ucNonMonetary$denial_non_reporting / ucNonMonetary$determ_non_reporting, 3)
+  ucNonMonetary$denial_non_referrals_rate <- round(ucNonMonetary$denial_non_referrals / ucNonMonetary$determ_non_referrals, 3)
+  ucNonMonetary$denial_non_other_rate <- round(ucNonMonetary$denial_non_other / ucNonMonetary$determ_non_other, 3)
+  
   #subset to just keep the columns that we care about now that we've done all of our math. - this gets rid of 113 columns * 10k observations
-  ucNonMonetary <- subset(ucNonMonetary, select=c(all_cols, c("determ_total"), grep("^denial_*", names(ucNonMonetary), value=TRUE)))
+  ucNonMonetary <- subset(ucNonMonetary, select=c(all_cols, grep("^denial_*|^determ_*", names(ucNonMonetary), value=TRUE)))
   
   
   #there seems to be some bad data in the dataset--every once in a while, a state will misreport total denials by a factor of 10
@@ -556,6 +569,7 @@ maxDenials <- max(ucNonMonetary$denial_rate_overall, na.rm = TRUE)
 maxSepDenials <- max(ucNonMonetary$denial_sep_misconduct_percent, ucNonMonetary$denial_sep_vol_percent, ucNonMonetary$denial_sep_other_percent, na.rm = TRUE)
 maxNonSepDenials <- max(ucNonMonetary$denial_non_aa_percent,ucNonMonetary$denial_non_income_percent, ucNonMonetary$denial_non_refusework_percent, ucNonMonetary$denial_non_reporting_percent, ucNonMonetary$denial_non_referrals_percent, ucNonMonetary$denial_non_other_percent, na.rm=TRUE)
 maxSepDenialRate <- max(ucNonMonetary$denial_sep_misconduct_rate, ucNonMonetary$denial_sep_vol_rate, ucNonMonetary$denial_sep_other_rate, na.rm=TRUE)
+maxNonSepDenialRate <- max(ucNonMonetary$denial_non_aa_rate,ucNonMonetary$denial_non_income_rate, ucNonMonetary$denial_non_refusework_rate, ucNonMonetary$denial_non_reporting_rate, ucNonMonetary$denial_non_referrals_rate, ucNonMonetary$denial_non_other_rate, na.rm=TRUE)
 
 tmp <- tempdir()
 unzip("cb_2015_us_state_20m.zip", exdir = tmp)

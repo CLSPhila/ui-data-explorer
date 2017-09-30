@@ -49,7 +49,7 @@ ui <- fluidPage(
       
       selectInput("viewData",
                   label = 'Select Data to View',
-                  size=15, selectize=FALSE,
+                  size=17, selectize=FALSE,
                   choices = c("Recipiency Rate"="recipRate",
                               "--Recipiency Rate Breakdown"="recipBreakdown",
                               "Monthly UI Payments"="monthlyUI", 
@@ -62,8 +62,9 @@ ui <- fluidPage(
                               "--Tax Program Overpayment Recoveries"="TOPS",
                               "Non-Monetary Denials"="nonMonDen",
                               "--Separation Denial Breakdown"="nonMonSep",
-                              "--Separation Denial Rate"="nonMonSepRate",
-                              "--Non-Separation Denials"="nonMonNonSep",
+                              "--Separation Denial Rates"="nonMonSepRate",
+                              "--Non-Separation Denial Breakdown"="nonMonNonSep",
+                              "--Non-Separation Denial Rates"="nonMonNonSepRate",
                               "Unemployment Rate (SA)"="uirate"),
                   selected = "recipRate"),
       
@@ -365,6 +366,28 @@ server <- function(input, output) {
       maxPlot <- maxNonSepDenials
       
     }
+
+    else if (input$viewData == "nonMonNonSepRate")
+    {
+      
+      ucMelt <- melt(subset(ucNonMonetary, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate")) ,id.vars="rptdate")
+      
+      uPlot = ggplot(ucMelt) +
+        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+        geom_point(aes(rptdate, value, col=variable), alpha=.9) +
+        reportTheme + 
+        stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
+        labs(x="Date", 
+             y="Proportion of all non-separation denials ",
+             caption="Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+             title=paste(input$state, "Denial Rates for Non-Monetary Non-Separation Denials", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
+        scale_color_brewer(palette="Set1", 
+                           breaks=c("denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate"),
+                           labels=c("Able and Available", "Disqualifying Income", "Refusal of Suitable Work", "Reporting/Call Ins/Etc...", "Refusal of Referral", "Other"))
+      
+      maxPlot <- maxNonSepDenialRate
+      
+    }
     
     else
     {
@@ -586,6 +609,24 @@ server <- function(input, output) {
       )
     
     }
+
+    else if (input$viewData == "nonMonNonSepRate")
+    {
+      
+      uiDT <- DT::datatable(ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1,
+                                          c("st","rptdate", "denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate")],
+                            options=list(
+                              pageLength = 12,
+                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
+                              order = list(1,'desc'),
+                              searching=FALSE
+                            ), 
+                            colnames=c("State","Report Date", "A&A %", "Disqualifying Income %", "Refusal of Suitable Work %", "Reporting/call In/etc..", "Refuse Referral", "Other"),
+                            class="nowrap stripe",
+                            rownames=FALSE
+      )
+      
+    }
     
     else if (input$viewData == "recipBreakdown")
     {
@@ -691,10 +732,11 @@ server <- function(input, output) {
                                                                           c("st","rptdate", "fraud_num_percent", "regular_fraud_num", "federal_fraud_num","regular_nonfraud_num","federal_nonfraud_num")],
                         "TOPS" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1, c("st","rptdate", "state_tax_recovery", "federal_tax_recovery")],
                         "overvRecovery" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1, c("st","rptdate", "outstanding", "recovered")],
-                        "nonMonDen" = ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1, c("st","rptdate", "determ_total", "denial_sep_total", "denial_non_total", "denial_sep_percent", "denial_non_percent", "denial_rate_overall")],
-                        "nonMonSep" = ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1, c("st","rptdate", "determ_total", "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other")],
-                        "nonMonSepRate" = ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1, c("st","rptdate", "determ_total", "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other")],
-                        "nonMonNonSep" = ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1, c("st","rptdate", "determ_total", "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other")],
+                        "nonMonDen" = ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1, c("st","rptdate", "determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other")],
+                        "nonMonSep" = ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1, c("st","rptdate", "determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other")],
+                        "nonMonSepRate" = ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1, c("st","rptdate", "determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other")],
+                        "nonMonNonSep" = ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1, c("st","rptdate", "determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other")],
+                        "nonMonNonSepRate" = ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1, c("st","rptdate", "determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other")],
                         "uirate" = bls_unemployed_sa[bls_unemployed_sa$st==input$state & bls_unemployed_sa$rptdate > input$range[1]-1 & bls_unemployed_sa$rptdate < input$range[2]+1,c("st","rptdate","pop","total","unemployed","perc_unemployed")],
                         "recipRate" = ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1, c("st","rptdate","recipiency_annual_reg","recipiency_annual_total")],
                         "recipBreakdown" = ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1, c("st","rptdate","total_week_mov_avg","unemployed_avg","recipiency_annual_total")]
@@ -713,9 +755,10 @@ server <- function(input, output) {
                     "fraudvNon" = getUIMap(usa,ucOverpayments,input$range[2],"fraud_num_percent", paste("Fraud vs Non-Fraud Overpayments in ",input$range[2]),FALSE),
                     "overvRecovery" = getUIMap(usa,ucOverpayments,input$range[2],"outstanding", paste("Outstanding Overpayments Balance in ",input$range[2]),FALSE),
                     "nonMonDen" = getUIMap(usa,ucNonMonetary,input$range[2],"denial_rate_overall", paste("Non-Monetary Denial Rate in ",input$range[2]),FALSE),
-                    "nonMonSep" = getUIMap(usa,ucNonMonetary,input$range[2],"denial_sep_percent", paste("Non-Monetary Separation Denial % in ",input$range[2]),FALSE),
+                    "nonMonSep" = getUIMap(usa,ucNonMonetary,input$range[2],"denial_sep_percent", paste("Proportion of Non-Monetary Denials that are Separation Related in ",input$range[2]),FALSE),
                     "nonMonSepRate" = getUIMap(usa,ucNonMonetary,input$range[2],"denial_sep_rate", paste("Non-Monetary Denial Rate in ",input$range[2]),FALSE),
-                    "nonMonNonSep" = getUIMap(usa,ucNonMonetary,input$range[2],"denial_non_percent", paste("Non-Monetary Non-Separation Denial % in ",input$range[2]),FALSE),
+                    "nonMonNonSep" = getUIMap(usa,ucNonMonetary,input$range[2],"denial_non_percent", paste("Proportion of Non-Monetary Denials that are Non-Separation Related in ",input$range[2]),FALSE),
+                    "nonMonNonSepRate" = getUIMap(usa,ucNonMonetary,input$range[2],"denial_non_rate", paste("Non-Monetary Non-Separation Denial Rate in ",input$range[2]),FALSE),
                     "TOPS" = getUIMap(usa,ucOverpayments,input$range[2],"federal_tax_recovery", paste("Federal Tax Intercepts in Quarter ending ",input$range[2]), FALSE),
                     "recipRate" = getUIMap(usa,ucRecipiency,input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
                     "recipBreakdown" = getUIMap(usa,ucRecipiency,input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
@@ -735,9 +778,10 @@ server <- function(input, output) {
                     "fraudvNon" = getSMPlot(ucOverpayments,input$range[1], input$range[2], "fraud_num_percent", "Fraud/Non-Fraud","50-state Comparison of Fraud vs Non-Fraud UI Overpayemnts"),
                     "overvRecovery" = getSMPlot(ucOverpayments,input$range[1], input$range[2], "outstanding", "Overpayment Balance","50-state Comparison of Outstanding UI Overpayment Balance"),
                     "nonMonDen" = getSMPlot(ucNonMonetary,input$range[1], input$range[2], "denial_rate_overall", "Non-Monetary Denial Rate","50-state Comparison of Denial Rates for Non-Monetary Reasons"),
-                    "nonMonSep" = getSMPlot(ucNonMonetary,input$range[1], input$range[2], "denial_sep_percent", "Non-Monetary Separation Denial %","50-state Comparison of Denials for Separation Reasons"),
-                    "nonMonSepRate" = getSMPlot(ucNonMonetary,input$range[1], input$range[2], "denial_sep_rate", "Non-Monetary Separation Denial Rate","50-state Comparison of Denial Rates for Separation Reasons"),
-                    "nonMonNonSep" = getSMPlot(ucNonMonetary,input$range[1], input$range[2], "denial_non_percent", "Non-Monetary Non-Separation Denial %","50-state Comparison of Denials for Non-Separation Reasons"),
+                    "nonMonSep" = getSMPlot(ucNonMonetary,input$range[1], input$range[2], "denial_sep_percent", "Proportion of all Non-Monetary Determinations","50-state Comparison of Denials for Separation Reasons"),
+                    "nonMonSepRate" = getSMPlot(ucNonMonetary,input$range[1], input$range[2], "denial_sep_rate", "Non-Monetary Separation Denial Rate","50-state Comparison of Denial Rate for Separation Reasons"),
+                    "nonMonNonSep" = getSMPlot(ucNonMonetary,input$range[1], input$range[2], "denial_non_percent", "Proportion of all Non-Monetary Determinations","50-state Comparison of Denials for Non-Separation Reasons"),
+                    "nonMonNonSepRate" = getSMPlot(ucNonMonetary,input$range[1], input$range[2], "denial_non_rate", "Non-Monetary Non-Separation Denial Rate","50-state Comparison of Denial Rate for Non-Separation Reasons"),
                     "TOPS" = getSMPlot(ucOverpayments,input$range[1], input$range[2], "federal_tax_recovery", "Fed Tax Intercept $","50-state Comparison of Fed Tax Intercepts (Quarterly)"),
                     "recipRate" = getSMPlot(ucRecipiency, input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rate"),
                     "recipBreakdown" = getSMPlot(ucRecipiency,input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rates"),
