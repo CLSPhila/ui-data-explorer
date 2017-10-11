@@ -12,6 +12,7 @@ library(rgdal)
 library(leaflet)
 require(bit64)
 
+
 downloadUCData <- function (URL) {
   
   # first try to find the file on the filesystem.  If we can't find it
@@ -511,7 +512,8 @@ paymentAvg$Within70Days <- paymentAvg$Avg70Day
 paymentAvg$Total <- NA
 paymentTimeliness <- rbind(paymentTimeliness,paymentAvg)
 paymentTimeliness <- paymentTimeliness[,c("st","rptdate","Within15Days","Within35Days", "Within49Days", "Within70Days", "Total", "Avg15Day", "Avg35Day", "Avg49Day", "Avg70Day")]
-
+setDF(paymentTimeliness)
+paymentTimeliness$st <- as.factor(paymentTimeliness$st)
 
 # get seasonally adjusted unemployment data and change state names to abbrs
 bls_unemployed_sa <- get_bls_employment_data(nsa=FALSE)
@@ -653,74 +655,44 @@ getSMPlot <- function(dfData, startDate, endDate, measure, yLabel, plotTitle)
     ggtitle(plotTitle) 
   return(smPlot) 
 }
+
+
+# a function to generate a single state vs 50-state overview on one graphs
+# measure - the measure to graph
+get50StateComparisonPlot <- function(dfData, startDate, endDate, measure, highlightState, yLabel, plotTitle)
+{ 
+  plot <- ggplot(dfData[dfData$rptdate > as.Date(startDate) & dfData$rptdate < as.Date(endDate) & !(dfData$st %in% c("US","PR","VI","DC")), c("rptdate","st", measure)], aes_string(x="rptdate", y=measure, group="st")) +
+    geom_line(color="grey") +
+    geom_line(data=dfData[dfData$rptdate > as.Date(startDate) & dfData$rptdate < as.Date(endDate) & dfData$st==highlightState, c("rptdate", "st", measure)], color="tomato3", size=2) +
+    theme_minimal() +
+    theme(plot.title = element_text(face="bold", hjust=.5, size=20),
+          legend.position="top",
+          legend.title = element_blank(),
+          axis.title = element_text(size=17, face="bold"),
+          axis.text = element_text(size=17)
+    ) +
+    ggtitle(plotTitle) +
+    labs(x="Date", y=yLabel)
+  return(plot)
+}
+
+
+# # make an uber DF that has all of the measures that we want and then melt/do a facet_grid
+# uberDF <- ucRecipiency[,c("rptdate","st", "recipiency_annual_total")]
 # 
-# asdf <- getSMPlot(ucRecipiency,"1990-01-01","2017-01-01", "recipiency_annual_total", "asdfasdf")
-# asdf
-
+# bls_unemployed_sa$rptdate <- bls_unemployed_sa$rptdate+months(1)-days(1)
+# uberDF <- merge(uberDF, bls_unemployed_sa[,c("rptdate", "st", "perc_unemployed")], by=c("st", "rptdate"), all=TRUE)
+# uberDF <- merge(uberDF, ucNonMonetary[,c("rptdate","st","denial_sep_percent", "denial_non_percent", "denial_rate_overall", "denial_sep_rate", "denial_non_rate")], by=c("st", "rptdate"), all=TRUE)
 # 
+# uberMelt <- melt(uberDF[,c("rptdate","st","perc_unemployed", "recipiency_annual_total", "denial_rate_overall", "denial_sep_rate", "denial_non_rate")],id.vars=c("st", "rptdate"))
+# uberMelt$variable <- factor(uberMelt$variable, levels=c("perc_unemployed", "recipiency_annual_total", "denial_rate_overall", "denial_sep_rate", "denial_non_rate"), labels=c("Unemp Rate", "Recipiency Rate", "Non-Mon Denial Rate", "Sep Denial Rate", "Non-Sep Denial Rate"))
 # 
-# state_popup <- paste0("<strong>State: </strong>", 
-#                       usa$NAME, 
-#                       "<br><strong>Recipiency Rate: </strong>", 
-#                       usa$recipiency_annual_total)
-# 
-# # print out the map.  The problem here is that the palettes are white->red as you go from bad->good, which
-# # means that we often will want to resort everything 
-# leaflet(data = usa) %>%
-#   addProviderTiles("CartoDB.Positron") %>%
-#   addPolygons(fillColor = ~pal(recipiency_annual_total), 
-#               fillOpacity = 0.8, 
-#               color = "#BDBDC3", 
-#               weight = 1, 
-#               popup = state_popup)
-# 
-
-# timeliness plot
-#uiTable <- melt(subset(refereeTimeliness, st=="PA", select=c("rptdate", "Within30Days", "Within45Days")) ,id.vars="rptdate")
-
-
-# uPlot <- ggplot(uiTable, aes(rptdate, value, col=variable)) +
-#   geom_point() +
-#   stat_smooth() + 
-#   labs(x="Date") + 
-#   ggtitle("hi")
-# 
-# uPlot +
-#   geom_hline(aes(yintercept=.9), linetype="dashed") +
-#   geom_text(aes(x=as.Date("2000-01-01"), y=.9,label = "the line", vjust = -1), color="black")
-# 
-# ?geom_hline
-
-
-#recipiency breakdown plot
-# I will move this in the future to a top-level plot that can be seen from teh website.  Seems like a very important
-# breakdown to given everyone
-# ucMelt <- melt(subset(ucRecipiency, st=="PA" & rptdate > "1979-12-31", select=c("rptdate","total_week_mov_avg","unemployed_avg")) ,id.vars="rptdate")
-#  
-#  
-#  require(scales)
-#  ggplot(ucMelt) +
-#    geom_rect(data=recessions.df[recessions.df$Peak>"1979-12-31",], aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-#    geom_line(data=ucMelt[ucMelt$variable=="total_week_mov_avg",], aes(rptdate, value, col=variable), size=2)+
-#    geom_line(data=ucMelt[ucMelt$variable=="unemployed_avg",], aes(rptdate, value, col=variable ), size=2) +
-#    reportTheme +
-#    labs(x="Date", y="",
-#         caption="Weekly continued claims and Total Unemployed by month.\nBoth numbers are smoothed over 12 month periods.  These are the two components of recipiency rate.\nCreated by Community Legal Services 8-2017") + 
-#    ggtitle("A Breakdown of Recipiency Rate in PA, 1980-2017") + 
-#    scale_y_continuous(labels=comma) +
-#    scale_color_brewer(palette="Set1",
-#                      breaks=c("total_week_mov_avg","unemployed_avg"),
-#                      labels=c("Weekly Continued Claims","Monthy Unemployed (BLS)"))
-#  
-# write.csv(ucRecipiency, "UCRecipiency.csv", row.names=F)   
-# write.csv(ucMelt, "UCRecipiencyPAMelt.csv", row.names=F)   
-
-
-# small multiple plot and export!
-# smRecipiency <- ggplot(subset(ucRecipiency, rptdate > as.Date("1999-12-31") & st != "US", select=c("rptdate","st","recipiency_annual_total")), aes(x=rptdate, y=recipiency_annual_total)) +
+# #smPlot  <- ggplot(uberMelt[!(uberMelt$st %in% c("US","PR","VI","DC")) & !is.na(uberMelt$value),], aes_string(x="rptdate", y="value")) +
+# smPlot  <- ggplot(uberMelt[uberMelt$st %in% c("AK","PA") & !is.na(uberMelt$value),], aes_string(x="rptdate", y="value")) +
 #   geom_line(size=1.1, color="gray29") +
-#   facet_wrap(~ st, ncol=5) +
-#   geom_line(data=subset(ucRecipiency, rptdate > as.Date("1999-12-31") & st == "US", select=c("rptdate","recipiency_annual_total")), aes(x=rptdate, y=recipiency_annual_total), color="tomato3", linetype="dashed") +
+#   facet_wrap(st ~ variable, ncol=5, scales="free_y", labeller=labeller(.cols=label_value, .multi_line=FALSE)) +
+#   geom_line(data=subset(dfData, rptdate > as.Date(startDate) & rptdate < as.Date(endDate) & st == "US", select=c("rptdate",measure)), aes_string(x="rptdate", y=measure), color="tomato3", linetype="dashed") +
+# #  geom_line(data=uberMelt[uberMelt$st=="US" & !is.na(uberMelt$value),c("rptdate", "variable", "value")], aes_string(x="rptdate", y="value"), color="tomato3", linetype="dashed") +
 #   theme_minimal() +
 #   theme(plot.title = element_text(face="bold", hjust=.5, size=20),
 #         legend.position="top",
@@ -728,35 +700,9 @@ getSMPlot <- function(dfData, startDate, endDate, measure, yLabel, plotTitle)
 #         axis.title = element_text(size=10, face="bold"),
 #         axis.text = element_text(size=10),
 #         strip.text.x = element_text(face="bold")
-#   )
+#   ) +
+#   ggtitle("A 50-State Look at the Health of Unemployment Systems") 
 # 
-# png(filename="Std_PNG_cairo.png", 
-#     type="cairo",
-#     units="px", 
-#     width=1500, 
-#     height=1000, 
-#     res=96)
-# smRecipiency
-# dev.off()
+# ggsave("out2.png", plot=smPlot, device="png", width=15, height=50, units="in", limitsize=FALSE)
 
-# dfData<-subset(ucRecipiency, rptdate > as.Date(startDate) & rptdate < as.Date(endDate) & !(st %in% c("US","PR","VI","DC")), select=c("rptdate","st", measure))
-# startDate<-"2000-01-01"
-# endDate<-"2017-06-30"
-# measure <- "recipiency_annual_total"
-# yLabel<-"recpiency rate"
-# plotTitle <-"Plot me"
-# benchplot(ggplot(dfData[rep(c(TRUE,FALSE), length=nrow(dfData)),], aes_string(x="rptdate", y=measure)) +
-#   geom_line(size=1.1, color="gray29") +
-#   facet_wrap(~ st, ncol=5) +
-#   geom_line(data=subset(dfData, rptdate > as.Date(startDate) & rptdate < as.Date(endDate) & st == "US", select=c("rptdate",measure)), aes_string(x="rptdate", y=measure), color="tomato3", linetype="dashed") +
-#  theme_minimal() +
-#  theme(plot.title = element_text(face="bold", hjust=.5, size=20),
-#        legend.position="top",
-#        legend.title = element_blank(),
-#        axis.title = element_text(size=10, face="bold"),
-#        axis.text = element_text(size=10),
-#        strip.text.x = element_text(face="bold")
-#  ) +
-#   labs(x="Date", y=yLabel) + 
-#   ggtitle(plotTitle))
-#   
+

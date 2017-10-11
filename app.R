@@ -83,8 +83,9 @@ ui <- fluidPage(
           downloadButton('data.csv', 'Download Data'),
           dataTableOutput("uidata")
         ),
+        tabPanel("50-State Overlay (one plot)", withSpinner(plotOutput("fiftyStatePlot"))),
+        tabPanel("50-State Comparison (many plots)", withSpinner(plotOutput("smplot", height="900px"))),
         tabPanel("Map",withSpinner(leafletOutput("uimap"))),
-        tabPanel("50-State Comparison", withSpinner(plotOutput("smplot", height="900px"))),
         tabPanel("About", br(), 
                  p("This page was created by ", a(href="https://www.clsphila.org" ,"Community Legal Services"), " to visualize the unemployment data made avaialble by the US Department of Labor and Bureau of Labor Statistics."),
                  p("The DOL Data can be found here: https://ows.doleta.gov/unemploy/DataDownloads.asp and the BLS data can be found ", a(href="https://www.bls.gov/web/laus/ststdsadata.txt", "here"), "and ", a(href="https://www.bls.gov/web/laus/ststdnsadata.txt", "here.")),
@@ -792,8 +793,28 @@ server <- function(input, output) {
     
     return(smPlot)
   })
-  
-    
+
+  # render the small multiple plot
+  output$fiftyStatePlot <- renderPlot({
+    fiftyStatePlot <- switch(input$viewData,
+                     "monthlyUI" = get50StateComparisonPlot(ucRecipiency,input$range[1], input$range[2], "total_compensated_mov_avg", input$state, "Montly UI Payments",paste(input$state, "vs. US: Total Monthly UI Payments")),
+                     "overvPayments" = get50StateComparisonPlot(ucOverpayments, input$range[1], input$range[2], "outstanding_proportion", input$state, "Overpayment Balance/Annual UI Payments",paste(input$state, "vs. US: Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually")),
+                     "fraudvNon" = get50StateComparisonPlot(ucOverpayments,input$range[1], input$range[2], "fraud_num_percent", input$state, "Fraud/Non-Fraud",paste(input$state, "vs. US: Fraud / Non-Fraud UI Overpayemnts")),
+                     "overvRecovery" = get50StateComparisonPlot(ucOverpayments,input$range[1], input$range[2], "outstanding", input$state, "Overpayment Balance",paste(input$state, "vs. US: Outstanding UI Overpayment Balance")),
+                     "nonMonDen" = get50StateComparisonPlot(ucNonMonetary,input$range[1], input$range[2], "denial_rate_overall", input$state, "Non-Monetary Denial Rate",paste(input$state, "vs. US: Denial Rates for Non-Monetary Reasons")),
+                     "nonMonSep" = get50StateComparisonPlot(ucNonMonetary,input$range[1], input$range[2], "denial_sep_percent", input$state, "Proportion of all Non-Monetary Determinations",paste(input$state, "vs. US: Denials for Separation Reasons")),
+                     "nonMonSepRate" = get50StateComparisonPlot(ucNonMonetary,input$range[1], input$range[2], "denial_sep_rate", input$state, "Non-Monetary Separation Denial Rate",paste(input$state, "vs. US: Denial Rate for Separation Reasons")),
+                     "nonMonNonSep" = get50StateComparisonPlot(ucNonMonetary,input$range[1], input$range[2], "denial_non_percent", input$state, "Proportion of all Non-Monetary Determinations",paste(input$state, "vs. US: Denials for Non-Separation Reasons")),
+                     "nonMonNonSepRate" = get50StateComparisonPlot(ucNonMonetary,input$range[1], input$range[2], "denial_non_rate", input$state, "Non-Monetary Non-Separation Denial Rate",paste(input$state, "vs. US: Denial Rate for Non-Separation Reasons")),
+                     "TOPS" = get50StateComparisonPlot(ucOverpayments,input$range[1], input$range[2], "federal_tax_recovery", input$state, "Fed Tax Intercept $",paste(input$state, "vs. US: Fed Tax Intercepts (Quarterly)")),
+                     "recipRate" = get50StateComparisonPlot(ucRecipiency, input$range[1], input$range[2], "recipiency_annual_total", input$state, "Recipiency Rate", paste(input$state, "vs. US: UI Recipiency Rate")),
+                     "recipBreakdown" = get50StateComparisonPlot(ucRecipiency,input$range[1], input$range[2], "recipiency_annual_total", input$state, "Recipiency Rate", paste(input$state, "vs. US: UI Recipiency Rates")),
+                     "uirate" = get50StateComparisonPlot(bls_unemployed_sa,input$range[1], input$range[2], "perc_unemployed", input$state, "Unemployment Rate",paste(input$state, "vs. US: Seasonally Adjusted Unemployment Rates")),
+                     "lowerAuthority" = get50StateComparisonPlot(refereeTimeliness,input$range[1], input$range[2], "Within45Days", input$state, "Proportion of Decisions Within 45 Days", paste(input$state, "vs. US: First Level Appeal Decisions within 45 Days")),
+                     "firstPay" = get50StateComparisonPlot(paymentTimeliness,input$range[1], input$range[2], "Within35Days", input$state, "Proportion of Payments Within 35 Days", paste(input$state, "vs. US: First Payments within 35 Days")),
+                     "higherAuthority" = get50StateComparisonPlot(ucbrTimeliness,input$range[1], input$range[2], "Within75Days", input$state, "Proportion of Decisions Within 75 Days", paste(input$state, "vs. US: Second Level Appeal Decisions within 75 Days")))
+    return(fiftyStatePlot)
+  })
 
 }
 
