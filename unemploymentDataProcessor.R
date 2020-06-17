@@ -24,8 +24,8 @@ downloadUCData <- function (URL) {
       mydata <- fread(URL)
   
   # convert dates to a date type
-  mydata$rptdate <- as.Date(mydata$rptdate,("%m/%d/%Y"))
-  return(mydata)
+  mydata %>% 
+    mutate(rptdate = as.Date(rptdate, "%m/%d/%Y"))
 } 
 
 # sets the names of specific columns in the 5130 dataset
@@ -56,100 +56,121 @@ getOverpayments <- function() {
   ucOverpaymentsEUC91 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ac227.csv") #227 report
   ucOverpaymentsTEUC02 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at227.csv") #227 report
   ucOverpaymentsEUC08 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au227.csv") #227 report
-  
-  # just pull out the columns that we care about
-  ucOverpaymentsRegular$regular_fraud_num <- ucOverpaymentsRegular$c1+ucOverpaymentsRegular$c2
-  ucOverpaymentsRegular$federal_fraud_num <- ucOverpaymentsRegular$c234
-  ucOverpaymentsRegular$regular_fraud_dol <- ucOverpaymentsRegular$c3+ucOverpaymentsRegular$c4
-  ucOverpaymentsRegular$federal_fraud_dol <- ucOverpaymentsRegular$c235
-  ucOverpaymentsRegular$regular_nonfraud_num <- ucOverpaymentsRegular$c27+ucOverpaymentsRegular$c28
-  ucOverpaymentsRegular$federal_nonfraud_num <- ucOverpaymentsRegular$c250
-  ucOverpaymentsRegular$regular_nonfraud_dol <- ucOverpaymentsRegular$c29+ucOverpaymentsRegular$c30
-  ucOverpaymentsRegular$federal_nonfraud_dol <- ucOverpaymentsRegular$c251
-  ucOverpaymentsRegular$state_tax_recovery <- ucOverpaymentsRegular$c210+ucOverpaymentsRegular$c211+ucOverpaymentsRegular$c212+ucOverpaymentsRegular$c213+ucOverpaymentsRegular$c284 + ucOverpaymentsRegular$c285
-  ucOverpaymentsRegular$federal_tax_recovery <- ucOverpaymentsRegular$c286+ucOverpaymentsRegular$c287+ucOverpaymentsRegular$c289+ucOverpaymentsRegular$c290+ ucOverpaymentsRegular$c288 + ucOverpaymentsRegular$c291
-  ucOverpaymentsRegular$outstanding <- ucOverpaymentsRegular$c35+ucOverpaymentsRegular$c36+ucOverpaymentsRegular$c276 + ucOverpaymentsRegular$c37+ucOverpaymentsRegular$c38+ucOverpaymentsRegular$c277
-  ucOverpaymentsRegular$recovered <- ucOverpaymentsRegular$c206+ucOverpaymentsRegular$c207+ucOverpaymentsRegular$c278 + ucOverpaymentsRegular$c208+ucOverpaymentsRegular$c209+ucOverpaymentsRegular$c279
-  
-  ucOverpaymentsEUC91$yfederal_fraud_num <- ucOverpaymentsEUC91$c1+ucOverpaymentsEUC91$c2
-  ucOverpaymentsEUC91$yfederal_fraud_dol <- ucOverpaymentsEUC91$c3+ucOverpaymentsEUC91$c4
-  ucOverpaymentsEUC91$yfederal_nonfraud_num <- ucOverpaymentsEUC91$c5+ucOverpaymentsEUC91$c6
-  ucOverpaymentsEUC91$yfederal_nonfraud_dol <- ucOverpaymentsEUC91$c7+ucOverpaymentsEUC91$c8
-  ucOverpaymentsEUC91$youtstanding <- ucOverpaymentsEUC91$c9+ucOverpaymentsEUC91$c10+ucOverpaymentsEUC91$c11 + ucOverpaymentsEUC91$c12
-  ucOverpaymentsEUC91$yrecovered <- ucOverpaymentsEUC91$c13+ucOverpaymentsEUC91$c14+ucOverpaymentsEUC91$c15 + ucOverpaymentsEUC91$c16
-  
-  ucOverpaymentsTEUC02$yfederal_fraud_num <- ucOverpaymentsTEUC02$c1+ucOverpaymentsTEUC02$c2
-  ucOverpaymentsTEUC02$yfederal_fraud_dol <- ucOverpaymentsTEUC02$c3+ucOverpaymentsTEUC02$c4
-  ucOverpaymentsTEUC02$yfederal_nonfraud_num <- ucOverpaymentsTEUC02$c27+ucOverpaymentsTEUC02$c28
-  ucOverpaymentsTEUC02$yfederal_nonfraud_dol <- ucOverpaymentsTEUC02$c29+ucOverpaymentsTEUC02$c30
-  ucOverpaymentsTEUC02$ystate_tax_recovery <- ucOverpaymentsTEUC02$c210+ucOverpaymentsTEUC02$c211+ucOverpaymentsTEUC02$c212+ucOverpaymentsTEUC02$c213
-  ucOverpaymentsTEUC02$yfederal_tax_recovery <- ucOverpaymentsTEUC02$c214+ucOverpaymentsTEUC02$c215+ucOverpaymentsTEUC02$c216+ucOverpaymentsTEUC02$c217
-  ucOverpaymentsTEUC02$youtstanding <- ucOverpaymentsTEUC02$c35 +ucOverpaymentsTEUC02$c36 +ucOverpaymentsTEUC02$c37 +ucOverpaymentsTEUC02$c38
-  ucOverpaymentsTEUC02$yrecovered <- ucOverpaymentsTEUC02$c206 +ucOverpaymentsTEUC02$c207 +ucOverpaymentsTEUC02$c208 +ucOverpaymentsTEUC02$c209
-  
-  ucOverpaymentsEUC08$yfederal_fraud_num <- ucOverpaymentsEUC08$c1+ucOverpaymentsEUC08$c2
-  ucOverpaymentsEUC08$yfederal_fraud_dol <- ucOverpaymentsEUC08$c3+ucOverpaymentsEUC08$c4
-  ucOverpaymentsEUC08$yfederal_nonfraud_num <- ucOverpaymentsEUC08$c27+ucOverpaymentsEUC08$c28
-  ucOverpaymentsEUC08$yfederal_nonfraud_dol <- ucOverpaymentsEUC08$c29+ucOverpaymentsEUC08$c30
-  ucOverpaymentsEUC08$ystate_tax_recovery <- ucOverpaymentsEUC08$c210+ucOverpaymentsEUC08$c211+ucOverpaymentsEUC08$c212+ucOverpaymentsEUC08$c213
-  ucOverpaymentsEUC08$yfederal_tax_recovery <- ucOverpaymentsEUC08$c214+ucOverpaymentsEUC08$c215+ucOverpaymentsEUC08$c216+ucOverpaymentsEUC08$c217
-  ucOverpaymentsEUC08$youtstanding <- ucOverpaymentsEUC08$c35 +ucOverpaymentsEUC08$c36 +ucOverpaymentsEUC08$c37 +ucOverpaymentsEUC08$c38
-  ucOverpaymentsEUC08$yrecovered <- ucOverpaymentsEUC08$c206 +ucOverpaymentsEUC08$c207 +ucOverpaymentsEUC08$c208 +ucOverpaymentsEUC08$c209
-  
-  # subsetout only the fields that we want and then merge and combine everything
+
+  # cols that we want to keep
   overpayment_cols <- c("st","rptdate","regular_fraud_num","federal_fraud_num","regular_fraud_dol","federal_fraud_dol","regular_nonfraud_num","federal_nonfraud_num","regular_nonfraud_dol","federal_nonfraud_dol","state_tax_recovery","federal_tax_recovery", "outstanding", "recovered")
-  ucOverpayments <- subset(ucOverpaymentsRegular,select=overpayment_cols)
-  
   all_cols <- c("st","rptdate")
   detection_cols <- c("yfederal_fraud_num","yfederal_fraud_dol","yfederal_nonfraud_num","yfederal_nonfraud_dol", "youtstanding", "yrecovered")
   recovery_cols <- c("ystate_tax_recovery","yfederal_tax_recovery")
   
-  # and now add in all of the federal programs
-  ucOverpayments <- merge(ucOverpayments,subset(ucOverpaymentsEUC91,select=c(all_cols,detection_cols)),by=all_cols,all.x=TRUE)
-  ucOverpayments [is.na(ucOverpayments)] <- 0
-  ucOverpayments$federal_fraud_num <- ucOverpayments$federal_fraud_num+ucOverpayments$yfederal_fraud_num
-  ucOverpayments$federal_fraud_dol <- ucOverpayments$federal_fraud_dol+ucOverpayments$yfederal_fraud_dol
-  ucOverpayments$federal_nonfraud_num <- ucOverpayments$federal_nonfraud_num+ucOverpayments$yfederal_nonfraud_num
-  ucOverpayments$federal_nonfraud_dol <- ucOverpayments$federal_nonfraud_dol+ucOverpayments$yfederal_nonfraud_dol
-  ucOverpayments$outstanding <- ucOverpayments$outstanding+ucOverpayments$youtstanding
-  ucOverpayments$recovered <- ucOverpayments$recovered+ucOverpayments$yrecovered
-  ucOverpayments <- subset(ucOverpayments,select=overpayment_cols)
+  
+  # just pull out the columns that we care about
+  ucOverpaymentsRegular <- ucOverpaymentsRegular %>%
+    mutate(
+      regular_fraud_num = c1 + c2,
+      federal_fraud_num = c234,
+      regular_fraud_dol = c3 + c4,
+      federal_fraud_dol = c235,
+      regular_nonfraud_num = c27 + c28,
+      federal_nonfraud_num = c250,
+      regular_nonfraud_dol = c29 + c30,
+      federal_nonfraud_dol = c251,
+      state_tax_recovery = c210 + c211 + c212 + c213 + c284 + c285,
+      federal_tax_recovery = c286 + c287 + c289 + c290+ c288 + c291,
+      outstanding = c35 + c36 + c276 + c37 + c38 + c277,
+      recovered = c206 + c207 + c278 + c208 + c209 + c279
+    ) %>% 
+    select(one_of(overpayment_cols))
+    
+  ucOverpaymentsEUC91 <- ucOverpaymentsEUC91 %>% 
+    mutate( 
+      yfederal_fraud_num = c1 + c2,
+      yfederal_fraud_dol = c3 + c4,
+      yfederal_nonfraud_num = c5 + c6,
+      yfederal_nonfraud_dol = c7 + c8,
+      youtstanding = c9 + c10 + c11 + c12,
+      yrecovered = c13 + c14 + c15 + c16
+    ) %>% 
+    select(one_of(all_cols, detection_cols))
+  
+  ucOverpaymentsTEUC02 <- ucOverpaymentsTEUC02 %>% 
+    mutate(
+      yfederal_fraud_num = c1 + c2,
+      yfederal_fraud_dol = c3 + c4,
+      yfederal_nonfraud_num = c27 + c28,
+      yfederal_nonfraud_dol = c29 + c30,
+      ystate_tax_recovery = c210 + c211 + c212 + c213,
+      yfederal_tax_recovery = c214 + c215 + c216 + c217,
+      youtstanding = c35 + c36 + c37 + c38,
+      yrecovered = c206 + c207 + c208 + c209,
+    ) %>% 
+    select(one_of(all_cols, detection_cols, recovery_cols))
+  
+  ucOverpaymentsEUC08 <- ucOverpaymentsEUC08 %>% 
+    mutate(
+      yfederal_fraud_num = c1 + c2,
+      yfederal_fraud_dol = c3 + c4,
+      yfederal_nonfraud_num = c27 + c28,
+      yfederal_nonfraud_dol = c29 + c30,
+      ystate_tax_recovery = c210 + c211 + c212 + c213,
+      yfederal_tax_recovery = c214 + c215 + c216 + c217,
+      youtstanding = c35 + c36 + c37 + c38,
+      yrecovered = c206 + c207 + c208 + c209,
+    ) %>% 
+    select(one_of(all_cols, detection_cols, recovery_cols))
+  
+  # join the four dfs together and do some calculaations
+  
+  combine_ucOverpaymentDFs <- function(overpayment_df, extension_df, 
+                                       all_cols, overpayment_cols) {
+    df <- overpayment_df %>% 
+      left_join(extension_df, by = all_cols) %>% 
+      rowwise() %>% 
+      mutate(
+        federal_fraud_num = sum(federal_fraud_num, yfederal_fraud_num, na.rm = T),
+        federal_fraud_dol = sum(federal_fraud_dol, yfederal_fraud_dol, na.rm = T),
+        federal_nonfraud_num = sum(federal_nonfraud_num, yfederal_nonfraud_num, na.rm = T),
+        federal_nonfraud_dol = sum(federal_nonfraud_dol,yfederal_nonfraud_dol, na.rm = T),
+        outstanding = sum(outstanding, youtstanding, na.rm = T),
+        recovered = sum(recovered, yrecovered, na.rm = T)
+      ) %>% 
+      ungroup() 
 
-  ucOverpayments <- merge(ucOverpayments,subset(ucOverpaymentsTEUC02,select=c(all_cols,detection_cols,recovery_cols)),by=all_cols,all.x=TRUE)
-  ucOverpayments [is.na(ucOverpayments)] <- 0
-  ucOverpayments$federal_fraud_num <- ucOverpayments$federal_fraud_num+ucOverpayments$yfederal_fraud_num
-  ucOverpayments$federal_fraud_dol <- ucOverpayments$federal_fraud_dol+ucOverpayments$yfederal_fraud_dol
-  ucOverpayments$federal_nonfraud_num <- ucOverpayments$federal_nonfraud_num+ucOverpayments$yfederal_nonfraud_num
-  ucOverpayments$federal_nonfraud_dol <- ucOverpayments$federal_nonfraud_dol+ucOverpayments$yfederal_nonfraud_dol
-  ucOverpayments$state_tax_recovery <- ucOverpayments$state_tax_recovery+ucOverpayments$state_tax_recovery
-  ucOverpayments$federal_tax_recovery <- ucOverpayments$federal_tax_recovery+ucOverpayments$federal_tax_recovery
-  ucOverpayments$outstanding <- ucOverpayments$outstanding+ucOverpayments$youtstanding
-  ucOverpayments$recovered <- ucOverpayments$recovered+ucOverpayments$yrecovered
-  ucOverpayments <- subset(ucOverpayments,select=overpayment_cols)
+    # for some of the extensions, we track state_tax_recovery as well
+    if("ystate_tax_recovery" %in% colnames(extension_df)) {
+      df <- df %>% 
+        rowwise() %>% 
+        mutate(
+          state_tax_recovery = sum(state_tax_recovery, ystate_tax_recovery, na.rm = T),
+          federal_tax_recovery = sum(federal_tax_recovery, yfederal_tax_recovery, na.rm = T)
+        ) %>% 
+        ungroup()
+    }
+    
+    # keep only some columns
+    df %>% 
+      select(one_of(overpayment_cols))
+  }
   
-  ucOverpayments <- merge(ucOverpayments,subset(ucOverpaymentsEUC08,select=c(all_cols,detection_cols,recovery_cols)),by=all_cols,all.x=TRUE)
-  ucOverpayments [is.na(ucOverpayments)] <- 0
-  ucOverpayments$federal_fraud_num <- ucOverpayments$federal_fraud_num+ucOverpayments$yfederal_fraud_num
-  ucOverpayments$federal_fraud_dol <- ucOverpayments$federal_fraud_dol+ucOverpayments$yfederal_fraud_dol
-  ucOverpayments$federal_nonfraud_num <- ucOverpayments$federal_nonfraud_num+ucOverpayments$yfederal_nonfraud_num
-  ucOverpayments$federal_nonfraud_dol <- ucOverpayments$federal_nonfraud_dol+ucOverpayments$yfederal_nonfraud_dol
-  ucOverpayments$state_tax_recovery <- ucOverpayments$state_tax_recovery+ucOverpayments$state_tax_recovery
-  ucOverpayments$federal_tax_recovery <- ucOverpayments$federal_tax_recovery+ucOverpayments$federal_tax_recovery
-  ucOverpayments$totalRecovery <- ucOverpayments$
-  ucOverpayments$outstanding <- ucOverpayments$outstanding+ucOverpayments$youtstanding
-  ucOverpayments$recovered <- ucOverpayments$recovered+ucOverpayments$yrecovered
-  ucOverpayments <- subset(ucOverpayments,select=overpayment_cols)
-
+  ucOverpayments <- ucOverpaymentsRegular %>% 
+    combine_ucOverpaymentDFs(ucOverpaymentsEUC91, all_cols, overpayment_cols) %>% 
+    combine_ucOverpaymentDFs(ucOverpaymentsTEUC02, all_cols, overpayment_cols) %>% 
+    combine_ucOverpaymentDFs(ucOverpaymentsEUC08, all_cols, overpayment_cols)
   
-  # compute US Averages
-  usAvg <- aggregate(cbind(regular_fraud_num, regular_fraud_dol, federal_fraud_num, federal_fraud_dol,regular_nonfraud_num, regular_nonfraud_dol, federal_nonfraud_num, federal_nonfraud_dol, state_tax_recovery, federal_tax_recovery, outstanding, recovered) ~ rptdate, ucOverpayments, FUN= function(x) round(mean(x),1))
-  # then merge in the same data, but as a separate "state" for US Avg
-  usAvg$st <- "US"
-  ucOverpayments <- rbind(ucOverpayments,usAvg)
   
-  # compute rates
-  ucOverpayments$fraud_num_percent <- round((ucOverpayments$regular_fraud_num + ucOverpayments$federal_fraud_num)/(ucOverpayments$regular_fraud_num+ucOverpayments$federal_fraud_num+ucOverpayments$regular_nonfraud_num+ucOverpayments$federal_nonfraud_num),3)
+  # compute US Averages and add them into the df
+  usAvg <- ucOverpayments %>% 
+    group_by(rptdate) %>% 
+    summarize(across(where(is.numeric), ~round(mean(., 1))))
   
+  ucOverpayments <- ucOverpayments %>%
+    bind_rows(usAvg %>% mutate(st = "US")) %>%
+    mutate(
+      # then calculate the fraud percent
+      fraud_num_percent = round((regular_fraud_num + federal_fraud_num) / 
+                                  (regular_fraud_num + federal_fraud_num + 
+                                     regular_nonfraud_num + federal_nonfraud_num), 
+                                3))
   
   return(ucOverpayments)
 }
@@ -162,11 +183,12 @@ get_bls_employment_data <- function(nsa=TRUE) {
     blsurl <- "https://www.bls.gov/web/laus/ststdnsadata.txt"
   else
     blsurl <- "https://www.bls.gov/web/laus/ststdsadata.txt"
-  ststdnsadata <- getURL(blsurl)
   tf <- tempfile()
-  fp <- file(tf)
-  write(ststdnsadata, fp)
-  close(fp)
+  download.file(blsurl, tf)
+  #ststdnsadata <- curl::curl(blsurl) %>% readLines()
+  #fp <- file(tf)
+  #write(ststdnsadata, fp)
+  #close(fp)
   doc <- readLines(tf)
   doc <- sub('^ +', '', doc, perl=TRUE)
   doc <- gsub(',', '', doc, perl=TRUE)
@@ -211,7 +233,7 @@ get_bls_employment_data <- function(nsa=TRUE) {
       }
     }
   }
-  results <- results[-seq(i+1L, n), ]
+  results <- results[-seq(i + 1L, n), ]
 }
 
 
@@ -227,13 +249,19 @@ getRecipiency <- function ()
   bls_unemployed <- get_bls_employment_data(nsa=TRUE)
   
   # add in the state abbreviations and make a new column with the last date of the month to match with DOL data
-  bls_unemployed$st <- state.abb[match(bls_unemployed$st,state.name)]
-  bls_unemployed$rptdate <- bls_unemployed$month+months(1)-days(1)
+  bls_unemployed <- bls_unemployed %>% 
+    mutate(
+      st = state.abb[match(state, state.name)],
+      rptdate = ceiling_date(month, "month") - 1
+    )
   
   
   #arrange the BLS data by state then month and then do 12 month moving averages of the unemployed number
-  bls_unemployed <- arrange(bls_unemployed,state,month)
-  bls_unemployed$unemployed_avg<- ave(bls_unemployed$total_unemployed, bls_unemployed$state, FUN = function(x) round(rollmean(x, k=12, align="right", na.pad=T),0))
+  bls_unemployed <- bls_unemployed %>%
+    arrange(st, rptdate) %>% 
+    group_by(st) %>% 
+    mutate(unemployed_avg = round(rollmean(total_unemployed, k=12, align="right", na.pad=T), 0)) %>% 
+    ungroup()
   
   
   ucClaimsPaymentsRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar5159.csv") #5159 report
@@ -244,7 +272,8 @@ getRecipiency <- function ()
   
   # EUC data from the 80s isn't available on the DOL website, but DOL provided a copy of those claims
   ucClaimsPaymentsEUC80s <- read.csv("EUC-1982-1987-USDOLData.csv")
-  ucClaimsPaymentsEUC80s$rptdate <- as.Date(ucClaimsPaymentsEUC80s$rptdate)
+  ucClaimsPaymentsEUC80s <- ucClaimsPaymentsEUC80s %>% 
+    mutate(rptdate =  as.Date(rptdate))
   
   # name the columns that we care about for later code readability
   all_cols <- c("st","rptdate")
@@ -260,48 +289,71 @@ getRecipiency <- function ()
   setnames(ucClaimsPaymentsEUC08, c("c12", "c15", "c18", "c21", "c24", "c27","c35", "c37"), euc08_cols)
   
   # merge the different datasets together and backfill with 0 if there is no data for a month
-  ucRecipiency <- merge(subset(ucClaimsPaymentsRegular,select=c(all_cols,reg_cols)), subset(ucClaimsPaymentsExtended,select=c(all_cols,ext_cols)), by=all_cols, all.x=TRUE)
-  ucRecipiency <- merge(ucRecipiency,subset(ucClaimsPaymentsEUC91,select=c(all_cols,euc91_cols)),by=all_cols, all.x=TRUE)
-  ucRecipiency <- merge(ucRecipiency,subset(ucClaimsPaymentsTEUC02,select=c(all_cols,teuc_cols)), by=all_cols, all.x=TRUE)
-  ucRecipiency <- merge(ucRecipiency,subset(ucClaimsPaymentsEUC08,select=c(all_cols,euc08_cols)), by=all_cols, all.x=TRUE)
-  ucRecipiency <- merge(ucRecipiency,subset(ucClaimsPaymentsEUC80s,select=c(all_cols,c("euc80s"))), by=all_cols, all.x=TRUE)
-  ucRecipiency[is.na(ucRecipiency)] <- 0
-  
+  ucRecipiency <- ucClaimsPaymentsRegular %>% select(all_of(c(all_cols, reg_cols))) %>% 
+    left_join(ucClaimsPaymentsExtended %>% select(all_of(c(all_cols, ext_cols))), by = all_cols) %>% 
+    left_join(ucClaimsPaymentsEUC91 %>% select(all_of(c(all_cols, euc91_cols))), by = all_cols) %>% 
+    left_join(ucClaimsPaymentsTEUC02 %>% select(all_of(c(all_cols, teuc_cols))), by = all_cols) %>% 
+    left_join(ucClaimsPaymentsEUC08 %>% select(all_of(c(all_cols, euc08_cols))), by = all_cols) %>% 
+    left_join(ucClaimsPaymentsEUC80s %>% select(one_of(c(all_cols, "euc80s"))), by = all_cols) %>% 
+    replace(is.na(.), 0)
+    
   
   # sum the various numbers that we care about and then divide by the number of weeks in the month to get a weekly number rather than a monthly number
-  ucRecipiency$reg_total <- ucRecipiency$state_intrastate+ucRecipiency$state_liable+ucRecipiency$ucfe_instrastate+ucRecipiency$ufce_liable+ucRecipiency$ucx_intrastate+ucRecipiency$ucx_liable
-  ucRecipiency$fed_total <- ucRecipiency$ext_state_intrastate+ucRecipiency$ext_state_liable+ucRecipiency$ext_ucfe_instrastate+ucRecipiency$ext_ufce_liable+ucRecipiency$ext_ucx_intrastate+ucRecipiency$ext_ucx_liable+ucRecipiency$euc91_state_intrastate+ucRecipiency$euc91_state_liable+ucRecipiency$euc91_ucfe_instrastate+ucRecipiency$euc91_ufce_liable+ucRecipiency$euc91_ucx_intrastate+ucRecipiency$euc91_ucx_liable+ucRecipiency$euc08_state_intrastate+ucRecipiency$euc08_state_liable+ucRecipiency$euc08_ucfe_instrastate+ucRecipiency$euc08_ufce_liable+ucRecipiency$euc08_ucx_intrastate+ucRecipiency$euc08_ucx_liable+ucRecipiency$teuc02_state_intrastate+ucRecipiency$teuc02_state_liable+ucRecipiency$teuc02_ucfe_instrastate+ucRecipiency$teuc02_ufce_liable+ucRecipiency$teuc02_ucx_intrastate+ucRecipiency$teuc02_ucx_liable+ucRecipiency$euc80s
-  ucRecipiency$total <- ucRecipiency$reg_total+ucRecipiency$fed_total 
-  ucRecipiency$reg_total_week <- ucRecipiency$reg_total / (days_in_month(ucRecipiency$rptdate) / 7)
-  ucRecipiency$fed_total_week <- ucRecipiency$fed_total / (days_in_month(ucRecipiency$rptdate) / 7)
-  ucRecipiency$total_week <- ucRecipiency$total / (days_in_month(ucRecipiency$rptdate) / 7)
+  ucRecipiency <- ucRecipiency %>% 
+    mutate(reg_total = state_intrastate + state_liable + ucfe_instrastate + ufce_liable + ucx_intrastate + ucx_liable,
+           fed_total = ext_state_intrastate + ext_state_liable + ext_ucfe_instrastate + ext_ufce_liable + ext_ucx_intrastate + 
+             ext_ucx_liable + euc91_state_intrastate + euc91_state_liable + euc91_ucfe_instrastate + euc91_ufce_liable + 
+             euc91_ucx_intrastate + euc91_ucx_liable + euc08_state_intrastate + euc08_state_liable + euc08_ucfe_instrastate + 
+             euc08_ufce_liable + euc08_ucx_intrastate + euc08_ucx_liable + teuc02_state_intrastate + teuc02_state_liable + 
+             teuc02_ucfe_instrastate + teuc02_ufce_liable + teuc02_ucx_intrastate + teuc02_ucx_liable + euc80s,
+           total = reg_total + fed_total, 
+           reg_total_week = reg_total / (as.numeric(days_in_month(rptdate)) / 7),
+           fed_total_week = fed_total / (as.numeric(days_in_month(rptdate)) / 7),
+           total_week = total / (as.numeric(days_in_month(rptdate)) / 7),
+           
+           # this is a measure of the total money paid out per month in all of the various programs.  Note that we are missing EUC80s....
+           total_compensated = state_compensated + ucfe_ucx_compensated + euc91_state_compensated + euc91_ucfe_ucx_compensated + 
+             teuc02_state_compensated + euc08_state_compensated + euc08_ucfe_ucx_compensated + ext_state_compensated + ext_ucfe_ucx_compensated,
+           total_state_compensated = state_compensated + ucfe_ucx_compensated,
+           total_federal_compensated = total_compensated - total_state_compensated
+    ) %>% 
+    arrange(rptdate) %>% 
+    # 12 month moving averages of the above
+    group_by(st) %>% 
+    mutate(
+      reg_total_week_mov_avg = rollmean(reg_total_week, k = 12, align = "right", na.pad = T),
+      fed_total_week_mov_avg = rollmean(fed_total_week, k = 12, align = "right", na.pad = T),
+      total_week_mov_avg = rollmean(total_week, k = 12, align = "right", na.pad = T),
+      total_compensated_mov_avg = rollmean(total_compensated, k = 12, align = "right", na.pad = T),
+      total_state_compensated_mov_avg = rollmean(total_state_compensated, k = 12, align = "right", na.pad = T),
+      total_federal_compensated_mov_avg = rollmean(total_federal_compensated, k = 12, align = "right", na.pad = T),
+    ) %>% 
+    ungroup() %>% 
+    # try to get rid of NAs that show up as a crazy integer in integer64 cols
+    mutate(total_compensated_mov_avg = if_else(total_compensated_mov_avg==9218868437227407266, NA_integer64_, total_compensated_mov_avg),
+           total_state_compensated_mov_avg = if_else(total_state_compensated_mov_avg==9218868437227407266, NA_integer64_, total_state_compensated_mov_avg),
+           total_federal_compensated_mov_avg = if_else(total_federal_compensated_mov_avg==9218868437227407266, NA_integer64_, total_federal_compensated_mov_avg))
+  
 
-  # this is a measure of the total money paid out per month in all of the various programs.  Note that we are missing EUC80s....
-  ucRecipiency$total_compensated <- ucRecipiency$state_compensated+ucRecipiency$ucfe_ucx_compensated+ucRecipiency$euc91_state_compensated+ucRecipiency$euc91_ucfe_ucx_compensated+ucRecipiency$teuc02_state_compensated+ucRecipiency$euc08_state_compensated+ucRecipiency$euc08_ucfe_ucx_compensated+ucRecipiency$ext_state_compensated+ucRecipiency$ext_ucfe_ucx_compensated
-  ucRecipiency$total_state_compensated <- ucRecipiency$state_compensated+ucRecipiency$ucfe_ucx_compensated
-  ucRecipiency$total_federal_compensated <- ucRecipiency$total_compensated - ucRecipiency$total_state_compensated
-  
-  # also do the same as above, but come up with 12month moving averages
-  ucRecipiency$reg_total_week_mov_avg <- ave(ucRecipiency$reg_total_week, ucRecipiency$st, FUN = function(x) rollmean(x, k=12, align="right", na.pad=T))
-  ucRecipiency$fed_total_week_mov_avg <- ave(ucRecipiency$fed_total_week, ucRecipiency$st, FUN = function(x) rollmean(x, k=12, align="right", na.pad=T))
-  ucRecipiency$total_week_mov_avg <- ave(ucRecipiency$total_week, ucRecipiency$st, FUN = function(x) round(rollmean(x, k=12, align="right", na.pad=T),0))
-  ucRecipiency$total_compensated_mov_avg <- ave(ucRecipiency$total_compensated, ucRecipiency$st, FUN = function(x) round(rollmean(x, k=12, align="right", na.pad=T), 0))
-  ucRecipiency$total_state_compensated_mov_avg <- ave(ucRecipiency$total_state_compensated, ucRecipiency$st, FUN = function(x) round(rollmean(x, k=12, align="right", na.pad=T),0))
-  ucRecipiency$total_federal_compensated_mov_avg <- ave(ucRecipiency$total_federal_compensated, ucRecipiency$st, FUN = function(x) round(rollmean(x, k=12, align="right", na.pad=T),0))
-  
   # now combine with the BLS unemployed data
-  ucRecipiency <- merge(ucRecipiency,bls_unemployed[,c("st","rptdate","total_unemployed", "unemployed_avg")], by=c("st","rptdate"))
+  ucRecipiency <- ucRecipiency %>% 
+    left_join(bls_unemployed %>% select(c("st", "rptdate", "total_unemployed", "unemployed_avg")), 
+              by = c("st", "rptdate"))
   
-  # compute US averages for each time period and merge back
-  usAvg <- aggregate(cbind(total_unemployed, unemployed_avg, reg_total_week_mov_avg,fed_total_week_mov_avg,total_week_mov_avg, total_compensated, total_compensated_mov_avg) ~ rptdate, ucRecipiency, FUN=mean)
-  usAvg$st <- "US"
   
-  ucRecipiency <- bind_rows(ucRecipiency,usAvg)
+  # compute US Averages and add them into the df
+  usAvg <- ucRecipiency %>% 
+    group_by(rptdate) %>% 
+    summarize(across(where(is.numeric), mean))
   
-  # get recipiency rates
-  ucRecipiency$recipiency_annual_reg <- round(ucRecipiency$reg_total_week_mov_avg / ucRecipiency$unemployed_avg,3)
-  ucRecipiency$recipiency_annual_total <- round(ucRecipiency$total_week_mov_avg / ucRecipiency$unemployed_avg, 3)
-  ucRecipiency[is.na(ucRecipiency)] <- 0
+  ucRecipiency <- ucRecipiency %>% 
+    bind_rows(usAvg %>% mutate(st = "US")) %>%
+    mutate(
+      # get recipiency rates
+      recipiency_annual_reg = round(reg_total_week_mov_avg / unemployed_avg,3),
+      recipiency_annual_total = round(total_week_mov_avg / unemployed_avg, 3)) %>% 
+    replace(is.na(.), 0)
+
   return(ucRecipiency)
 }
 
@@ -331,189 +383,280 @@ getNonMonetaryDeterminations <- function()
   setnames(ucNonMonetaryEUC08, c("c1", "c3", "c5", paste0("c", 7:22)), euc08_cols)
   
   # merge the different datasets together and backfill with 0 if there is no data for a month
-  ucNonMonetary <- merge(subset(ucNonMonetaryRegular,select=c(all_cols,reg_cols)), subset(ucNonMonetaryExtended,select=c(all_cols,ext_cols)), by=all_cols, all.x=TRUE)
-  ucNonMonetary <- merge(ucNonMonetary,subset(ucNonMonetaryEUC91,select=c(all_cols,euc91_cols)),by=all_cols, all.x=TRUE)
-  ucNonMonetary <- merge(ucNonMonetary,subset(ucNonMonetaryTEUC02,select=c(all_cols,teuc_cols)), by=all_cols, all.x=TRUE)
-  ucNonMonetary <- merge(ucNonMonetary,subset(ucNonMonetaryEUC08,select=c(all_cols,euc08_cols)), by=all_cols, all.x=TRUE)
-  ucNonMonetary[is.na(ucNonMonetary)] <- 0
-  
+  ucNonMonetary <- ucNonMonetaryRegular %>% 
+    select(all_of(c(all_cols,reg_cols))) %>% 
+    left_join(ucNonMonetaryExtended %>% select(all_of(c(all_cols,ext_cols))), by = all_cols) %>% 
+    left_join(ucNonMonetaryEUC91 %>% select(all_of(c(all_cols,euc91_cols))), by = all_cols) %>% 
+    left_join(ucNonMonetaryTEUC02 %>% select(all_of(c(all_cols,teuc_cols))), by = all_cols) %>% 
+    left_join(ucNonMonetaryEUC08 %>% select(all_of(c(all_cols,euc08_cols))), by = all_cols) %>% 
+    replace(is.na(.), 0)
   
   # do some math to get some interesting information for graphing purposes
   # so we want to find out the percentage of determinations that are non-sep denials and sep denials
   # we also want to find out the percentage of each denial type under sep and non-sep as a % of total denials
   # this involves adding together categories first and then doing lots of division.  Fun!
   # first just get our aggregate totals with all federal programs integrated with state numbers
-  ucNonMonetary$determ_total <- ucNonMonetary$state_total_determ+ucNonMonetary$ufce_total_determ+ucNonMonetary$ucx_total_determ+ucNonMonetary$ext_state_total_determ+ucNonMonetary$ext_ufce_total_determ+ucNonMonetary$ext_ucx_total_determ+ucNonMonetary$euc08_state_total_determ+ucNonMonetary$euc08_ufce_total_determ+ucNonMonetary$euc08_ucx_total_determ+ucNonMonetary$teuc_state_total_determ+ucNonMonetary$teuc_ucx_total_determ+ucNonMonetary$teuc_ufce_total_determ+ucNonMonetary$euc91_state_total_determ+ucNonMonetary$euc91_ufce_total_determ+ucNonMonetary$euc91_ucx_total_determ
-  ucNonMonetary$determ_sep_vol <- ucNonMonetary$state_determ_sep_vol+ucNonMonetary$ufce_determ_sep_vol+ucNonMonetary$ext_state_determ_sep_vol+ucNonMonetary$euc08_state_determ_sep_vol+ucNonMonetary$euc91_state_determ_sep_vol+ucNonMonetary$teuc_state_determ_sep_vol
-  ucNonMonetary$determ_sep_misconduct <- ucNonMonetary$state_determ_sep_misconduct+ucNonMonetary$ufce_determ_sep_misconduct+ucNonMonetary$ext_state_determ_sep_misconduct+ucNonMonetary$euc08_state_determ_sep_misconduct+ucNonMonetary$euc91_state_determ_sep_misconduct+ucNonMonetary$teuc_state_determ_sep_misconduct
-  ucNonMonetary$determ_sep_other <- ucNonMonetary$state_determ_sep_other+ucNonMonetary$ufce_determ_sep_other+ucNonMonetary$ext_state_determ_sep_other+ucNonMonetary$euc08_state_determ_sep_other+ucNonMonetary$euc91_state_determ_sep_other+ucNonMonetary$teuc_state_determ_sep_other
-  ucNonMonetary$determ_non_aa <- ucNonMonetary$state_determ_non_aa+ucNonMonetary$ext_state_determ_non_aa+ucNonMonetary$euc08_state_determ_non_aa+ucNonMonetary$euc91_state_determ_non_aa+ucNonMonetary$teuc_state_determ_non_aa
-  ucNonMonetary$determ_non_income <- ucNonMonetary$state_determ_non_income+ucNonMonetary$euc91_state_determ_non_income
-  ucNonMonetary$determ_non_refusework <- ucNonMonetary$state_determ_non_refusework+ucNonMonetary$ext_state_determ_non_refusework+ucNonMonetary$euc08_state_determ_non_refusework+ucNonMonetary$euc91_state_determ_non_refusework+ucNonMonetary$teuc_state_determ_non_refusework
-  ucNonMonetary$determ_non_reporting <- ucNonMonetary$state_determ_non_reporting+ucNonMonetary$euc91_state_determ_non_reporting
-  ucNonMonetary$determ_non_referrals <- ucNonMonetary$state_determ_non_referrals
-  ucNonMonetary$determ_non_other <- ucNonMonetary$state_determ_non_other+ucNonMonetary$ext_state_determ_non_other+ucNonMonetary$euc08_state_determ_non_other+ucNonMonetary$euc91_state_determ_non_other+ucNonMonetary$teuc_state_determ_non_other
-  ucNonMonetary$denial_sep_total <- ucNonMonetary$state_denial_sep_total+ucNonMonetary$ufce_denial_sep_total+ucNonMonetary$ext_state_denial_sep_total+ucNonMonetary$euc08_state_denial_sep_total+ucNonMonetary$euc91_state_denial_sep_total+ucNonMonetary$teuc_state_denial_sep_total
-  ucNonMonetary$denial_non_total <- ucNonMonetary$state_denial_non_total+ucNonMonetary$ext_state_denial_non_total+ucNonMonetary$euc08_state_denial_non_total+ucNonMonetary$euc91_state_denial_non_total+ucNonMonetary$teuc_state_denial_non_total
-  ucNonMonetary$denial_total <- ucNonMonetary$denial_sep_total+ucNonMonetary$denial_non_total
-  ucNonMonetary$denial_sep_misconduct <- ucNonMonetary$state_denial_sep_misconduct+ucNonMonetary$ufce_denial_sep_misconduct+ucNonMonetary$ext_state_denial_sep_misconduct+ucNonMonetary$euc08_state_denial_sep_misconduct+ucNonMonetary$euc91_state_denial_sep_misconduct+ucNonMonetary$teuc_state_denial_sep_misconduct
-  ucNonMonetary$denial_sep_vol <- ucNonMonetary$state_denial_sep_vol+ucNonMonetary$ufce_denial_sep_vol+ucNonMonetary$ext_state_denial_sep_vol+ucNonMonetary$euc08_state_denial_sep_vol+ucNonMonetary$euc91_state_denial_sep_vol+ucNonMonetary$teuc_state_denial_sep_vol
-  ucNonMonetary$denial_sep_other <- ucNonMonetary$state_denial_sep_other+ucNonMonetary$ufce_denial_sep_other+ucNonMonetary$ext_state_denial_sep_other+ucNonMonetary$euc08_state_denial_sep_other+ucNonMonetary$euc91_state_denial_sep_other+ucNonMonetary$teuc_state_denial_sep_other
-  ucNonMonetary$denial_non_aa <- ucNonMonetary$state_denial_non_aa+ucNonMonetary$ext_state_denial_non_aa+ucNonMonetary$euc08_state_denial_non_aa+ucNonMonetary$euc91_state_denial_non_aa+ucNonMonetary$teuc_state_denial_non_aa
-  ucNonMonetary$denial_non_income <- ucNonMonetary$state_denial_non_income+ucNonMonetary$euc91_state_denial_non_income
-  ucNonMonetary$denial_non_refusework <- ucNonMonetary$state_denial_non_refusework+ucNonMonetary$ext_state_denial_non_refusework+ucNonMonetary$euc08_state_denial_non_refusework+ucNonMonetary$euc91_state_denial_non_refusework+ucNonMonetary$teuc_state_denial_non_refusework
-  ucNonMonetary$denial_non_reporting <- ucNonMonetary$state_denial_non_reporting+ucNonMonetary$euc91_state_denial_non_reporting
-  ucNonMonetary$denial_non_referrals <- ucNonMonetary$state_denial_non_referrals
-  ucNonMonetary$denial_non_other <- ucNonMonetary$state_denial_non_other+ucNonMonetary$ext_state_denial_non_other+ucNonMonetary$euc08_state_denial_non_other+ucNonMonetary$euc91_state_denial_non_other+ucNonMonetary$teuc_state_denial_non_other
+  ucNonMonetary <- ucNonMonetary %>% 
+    mutate(
+      determ_total = state_total_determ + ufce_total_determ + ucx_total_determ + ext_state_total_determ + 
+        ext_ufce_total_determ + ext_ucx_total_determ + euc08_state_total_determ + euc08_ufce_total_determ + 
+        euc08_ucx_total_determ + teuc_state_total_determ + teuc_ucx_total_determ + teuc_ufce_total_determ + 
+        euc91_state_total_determ + euc91_ufce_total_determ + euc91_ucx_total_determ,
+      determ_sep_vol = state_determ_sep_vol + ufce_determ_sep_vol + ext_state_determ_sep_vol + 
+        euc08_state_determ_sep_vol + euc91_state_determ_sep_vol + teuc_state_determ_sep_vol,
+      determ_sep_misconduct = state_determ_sep_misconduct + ufce_determ_sep_misconduct + 
+        ext_state_determ_sep_misconduct + euc08_state_determ_sep_misconduct + euc91_state_determ_sep_misconduct + 
+        teuc_state_determ_sep_misconduct,
+      determ_sep_other = state_determ_sep_other + ufce_determ_sep_other + ext_state_determ_sep_other + 
+        euc08_state_determ_sep_other + euc91_state_determ_sep_other + teuc_state_determ_sep_other,
+      determ_non_aa = state_determ_non_aa + ext_state_determ_non_aa + euc08_state_determ_non_aa + 
+        euc91_state_determ_non_aa + teuc_state_determ_non_aa,
+      determ_non_income = state_determ_non_income + euc91_state_determ_non_income,
+      determ_non_refusework = state_determ_non_refusework + ext_state_determ_non_refusework + 
+        euc08_state_determ_non_refusework + euc91_state_determ_non_refusework + 
+        teuc_state_determ_non_refusework,
+      determ_non_reporting = state_determ_non_reporting + euc91_state_determ_non_reporting,
+      determ_non_referrals = state_determ_non_referrals,
+      determ_non_other = state_determ_non_other + ext_state_determ_non_other + euc08_state_determ_non_other + 
+        euc91_state_determ_non_other + teuc_state_determ_non_other,
+      denial_sep_total = state_denial_sep_total + ufce_denial_sep_total + ext_state_denial_sep_total + 
+        euc08_state_denial_sep_total + euc91_state_denial_sep_total + teuc_state_denial_sep_total,
+      denial_non_total = state_denial_non_total + ext_state_denial_non_total + euc08_state_denial_non_total + 
+        euc91_state_denial_non_total + teuc_state_denial_non_total,
+      denial_total = denial_sep_total + denial_non_total,
+      denial_sep_misconduct = state_denial_sep_misconduct + ufce_denial_sep_misconduct + 
+        ext_state_denial_sep_misconduct + euc08_state_denial_sep_misconduct + 
+        euc91_state_denial_sep_misconduct + teuc_state_denial_sep_misconduct,
+      denial_sep_vol = state_denial_sep_vol + ufce_denial_sep_vol + ext_state_denial_sep_vol + 
+        euc08_state_denial_sep_vol + euc91_state_denial_sep_vol + teuc_state_denial_sep_vol,
+      denial_sep_other = state_denial_sep_other + ufce_denial_sep_other + ext_state_denial_sep_other + 
+        euc08_state_denial_sep_other + euc91_state_denial_sep_other + teuc_state_denial_sep_other,
+      denial_non_aa = state_denial_non_aa + ext_state_denial_non_aa + euc08_state_denial_non_aa + 
+        euc91_state_denial_non_aa + teuc_state_denial_non_aa,
+      denial_non_income = state_denial_non_income + euc91_state_denial_non_income,
+      denial_non_refusework = state_denial_non_refusework + ext_state_denial_non_refusework + 
+        euc08_state_denial_non_refusework + euc91_state_denial_non_refusework + 
+        teuc_state_denial_non_refusework,
+      denial_non_reporting = state_denial_non_reporting + euc91_state_denial_non_reporting,
+      denial_non_referrals = state_denial_non_referrals,
+      denial_non_other = state_denial_non_other + ext_state_denial_non_other + euc08_state_denial_non_other + 
+        euc91_state_denial_non_other + teuc_state_denial_non_other,
+      
+      # now calculate our actual statistics that we care about
+      denial_rate_overall = round(denial_total / determ_total, 3),
+      denial_sep_percent = round(denial_sep_total / determ_total,3),
+      denial_sep_rate = round(denial_sep_total / (determ_sep_misconduct + determ_sep_vol + 
+                                                    determ_sep_other),3),
+      denial_non_percent = round(denial_non_total / determ_total,3),
+      denial_non_rate = round(denial_non_total / 
+                                (determ_non_aa + determ_non_income + determ_non_refusework + 
+                                   determ_non_reporting + determ_non_referrals + determ_non_other),3),
+      denial_sep_misconduct_percent = round(denial_sep_misconduct / denial_sep_total,3),
+      denial_sep_misconduct_rate = round(denial_sep_misconduct / determ_sep_misconduct, 3),
+      denial_sep_vol_percent = round(denial_sep_vol / denial_sep_total,3),
+      denial_sep_vol_rate = round(denial_sep_vol / determ_sep_vol,3),
+      denial_sep_other_percent = round(denial_sep_other / denial_sep_total,3),
+      denial_sep_other_rate = round(denial_sep_other / determ_sep_other, 3),
+      denial_non_aa_percent = round(denial_non_aa / denial_non_total, 3),
+      denial_non_income_percent = round(denial_non_income / denial_non_total, 3),
+      denial_non_refusework_percent = round(denial_non_refusework / denial_non_total, 3),
+      denial_non_reporting_percent = round(denial_non_reporting / denial_non_total, 3),
+      denial_non_referrals_percent = round(denial_non_referrals / denial_non_total, 3),
+      denial_non_other_percent = round(denial_non_other / denial_non_total, 3),
+      denial_non_aa_rate = round(denial_non_aa / determ_non_aa, 3),
+      denial_non_income_rate = round(denial_non_income / determ_non_income, 3),
+      denial_non_refusework_rate = round(denial_non_refusework / determ_non_refusework, 3),
+      denial_non_reporting_rate = round(denial_non_reporting / determ_non_reporting, 3),
+      denial_non_referrals_rate = round(denial_non_referrals / determ_non_referrals, 3),
+      denial_non_other_rate = round(denial_non_other / determ_non_other, 3)) %>% 
+    select(all_of(all_cols), starts_with(c("denial_", "determ_"))) %>% 
+    # there seems to be some bad data in the dataset--every once in a while, a state will misreport total denials by a factor of 10
+    # This makes the proportions > 1, which obviously doesn't makes much sense.  
+    # for now, I am going to just set any proportion > 1 to 1.  But in the future, may make more sense
+    # to capture 'total denials' and 'total determinations' by adding the subsets together.
+    # this function looks at every "*percent" column and sets the max value to 1.
+    mutate_if(ends_with(c("percent", "rate")), ~if_else(. > 1, 1, .))
   
-  # now calculate our actual statistics that we care about
-  ucNonMonetary$denial_rate_overall <- round(ucNonMonetary$denial_total / ucNonMonetary$determ_total, 3)
-  ucNonMonetary$denial_sep_percent <- round(ucNonMonetary$denial_sep_total / ucNonMonetary$determ_total,3)
-  ucNonMonetary$denial_sep_rate <- round(ucNonMonetary$denial_sep_total / (ucNonMonetary$determ_sep_misconduct+ucNonMonetary$determ_sep_vol+ucNonMonetary$determ_sep_other),3)
-  ucNonMonetary$denial_non_percent <- round(ucNonMonetary$denial_non_total / ucNonMonetary$determ_total,3)
-  ucNonMonetary$denial_non_rate <- round(ucNonMonetary$denial_non_total / (ucNonMonetary$determ_non_aa+ucNonMonetary$determ_non_income+ucNonMonetary$determ_non_refusework+ucNonMonetary$determ_non_reporting+ucNonMonetary$determ_non_referrals+ucNonMonetary$determ_non_other),3)
-  ucNonMonetary$denial_sep_misconduct_percent <- round(ucNonMonetary$denial_sep_misconduct / ucNonMonetary$denial_sep_total,3)
-  ucNonMonetary$denial_sep_misconduct_rate <- round(ucNonMonetary$denial_sep_misconduct / ucNonMonetary$determ_sep_misconduct, 3)
-  ucNonMonetary$denial_sep_vol_percent <- round(ucNonMonetary$denial_sep_vol / ucNonMonetary$denial_sep_total,3)
-  ucNonMonetary$denial_sep_vol_rate <- round(ucNonMonetary$denial_sep_vol / ucNonMonetary$determ_sep_vol,3)
-  ucNonMonetary$denial_sep_other_percent <- round(ucNonMonetary$denial_sep_other / ucNonMonetary$denial_sep_total,3)
-  ucNonMonetary$denial_sep_other_rate <- round(ucNonMonetary$denial_sep_other / ucNonMonetary$determ_sep_othe, 3)
-  ucNonMonetary$denial_non_aa_percent <- round(ucNonMonetary$denial_non_aa / ucNonMonetary$denial_non_total, 3)
-  ucNonMonetary$denial_non_income_percent <- round(ucNonMonetary$denial_non_income / ucNonMonetary$denial_non_total, 3)
-  ucNonMonetary$denial_non_refusework_percent <- round(ucNonMonetary$denial_non_refusework / ucNonMonetary$denial_non_total, 3)
-  ucNonMonetary$denial_non_reporting_percent <- round(ucNonMonetary$denial_non_reporting / ucNonMonetary$denial_non_total, 3)
-  ucNonMonetary$denial_non_referrals_percent <- round(ucNonMonetary$denial_non_referrals / ucNonMonetary$denial_non_total, 3)
-  ucNonMonetary$denial_non_other_percent <- round(ucNonMonetary$denial_non_other / ucNonMonetary$denial_non_total, 3)
-  ucNonMonetary$denial_non_aa_rate <- round(ucNonMonetary$denial_non_aa / ucNonMonetary$determ_non_aa, 3)
-  ucNonMonetary$denial_non_income_rate <- round(ucNonMonetary$denial_non_income / ucNonMonetary$determ_non_income, 3)
-  ucNonMonetary$denial_non_refusework_rate <- round(ucNonMonetary$denial_non_refusework / ucNonMonetary$determ_non_refusework, 3)
-  ucNonMonetary$denial_non_reporting_rate <- round(ucNonMonetary$denial_non_reporting / ucNonMonetary$determ_non_reporting, 3)
-  ucNonMonetary$denial_non_referrals_rate <- round(ucNonMonetary$denial_non_referrals / ucNonMonetary$determ_non_referrals, 3)
-  ucNonMonetary$denial_non_other_rate <- round(ucNonMonetary$denial_non_other / ucNonMonetary$determ_non_other, 3)
   
-  #subset to just keep the columns that we care about now that we've done all of our math. - this gets rid of 113 columns * 10k observations
-  ucNonMonetary <- subset(ucNonMonetary, select=c(all_cols, grep("^denial_*|^determ_*", names(ucNonMonetary), value=TRUE)))
+  # compute US Averages and add them into the df
+  usAvg <- ucNonMonetary %>% 
+    group_by(rptdate) %>% 
+    summarize(across(where(is.numeric), mean))
   
-  
-  #there seems to be some bad data in the dataset--every once in a while, a state will misreport total denials by a factor of 10
-  # This makes the proportions > 1, which obviously doesn't makes much sense.  
-  # for now, I am going to just set any proportion > 1 to 1.  But in the future, may make more sense
-  # to capture 'total denials' and 'total determinations' by adding the subsets together.
-  # this function looks at every "*percent" column and sets the max value to 1.
-  ucNonMonetary[grep("percent|rate", names(ucNonMonetary))] <- lapply(ucNonMonetary[grep("percent|rate", names(ucNonMonetary))], function(x) ifelse(x > 1,1,x))
-    
-  # compute US averages for each time period and merge back (this uses all variables but state and then adds the state back in as US)
-  usAvg <- aggregate(. ~ rptdate, ucNonMonetary[,c(-1)], FUN=mean)
-  usAvg$st <- "US"
-  
-  ucNonMonetary <- bind_rows(ucNonMonetary,usAvg)
-  
+  ucNonMonetary <- ucNonMonetary %>% 
+    bind_rows(usAvg %>% mutate(st = "US"))
   
   
   return(ucNonMonetary)  
 }
 
+getUCFirstTimePaymentLapse <- function() {
+  
+  # download the data
+  ucFirstTimePaymentLapse <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9050.csv") # 9050 report
 
-ucFirstTimePaymentLapse <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9050.csv") # 9050 report
-
-ucAppealsTimeLapseLower <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9054l.csv") # 9054 report
-ucAppealsTimeLapseHigher <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9054h.csv") # 9054 report
-
-ucAppealsCaseAgingLower <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9055l.csv") # 9055 report
-ucAppealsCaseAgingHigher <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9055h.csv") # 9055 report
-
-ucBenefitAppealsRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar5130.csv") # 5130 report
-ucBenefitAppealsExtended <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ae5130.csv") # 5130 report
-ucBenefitAppealsEUC91x94 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ac5130.csv") # 5130 report
-ucBenefitAppealsEUC02x04 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at5130.csv") # 5130 report
-ucBenefitAppealsEUC08x13 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au5130.csv") # 5130 report
-
-
-# set the column names for the data that we're interested in
-setBenefitAppealNames(ucBenefitAppealsRegular)
-setBenefitAppealNames(ucBenefitAppealsExtended)
-setBenefitAppealNames(ucBenefitAppealsEUC08x13)
-setBenefitAppealNames(ucBenefitAppealsEUC02x04)
-setBenefitAppealNames(ucBenefitAppealsEUC91x94)
-
-#9050 report
-setnames(ucFirstTimePaymentLapse, c("c1", "c9", "c17", "c25", "c33", "c41", "c49", "c57", "c65","c73","c81","c89"), c("Total", "x0x7", "x8x14", "x15x21", "x22x28", "x29x35", "x36x42","x43x49","x50x56","x57x63","x64x70","xOver70" ))
-#9054 reports
-setnames(ucAppealsTimeLapseLower, c("c1", "c4", "c7"), c("Total", "x0x30", "x31x45"))
-setnames(ucAppealsTimeLapseHigher, c("c1", "c4", "c7", "c10"), c("Total", "x0x45", "x46x60", "x61x75"))
-
-#9055 reports
-setnames(ucAppealsCaseAgingLower, "c1", "Total")
-setnames(ucAppealsCaseAgingHigher, "c1", "Total")
-
-#calculated values
-ucAppealsTimeLapseLower$Within30Days <- round(ucAppealsTimeLapseLower$x0x30 / ucAppealsTimeLapseLower$Total, 3)
-ucAppealsTimeLapseLower$Within45Days <- round((ucAppealsTimeLapseLower$x0x30 + ucAppealsTimeLapseLower$x31x45) / ucAppealsTimeLapseLower$Total, 3)
-ucAppealsTimeLapseHigher$Within45Days <- round(ucAppealsTimeLapseHigher$x0x45 / ucAppealsTimeLapseHigher$Total,3)
-ucAppealsTimeLapseHigher$Within75Days <- round((ucAppealsTimeLapseHigher$x0x45 + ucAppealsTimeLapseHigher$x46x60 + ucAppealsTimeLapseHigher$x61x75) / ucAppealsTimeLapseHigher$Total,3)
-
-ucFirstTimePaymentLapse$Within15Days <- round((ucFirstTimePaymentLapse$x0x7+ucFirstTimePaymentLapse$x8x14) / ucFirstTimePaymentLapse$Total,3)
-ucFirstTimePaymentLapse$Within35Days <- round((ucFirstTimePaymentLapse$x0x7+ucFirstTimePaymentLapse$x8x14 + ucFirstTimePaymentLapse$x15x21 + ucFirstTimePaymentLapse$x22x28 + ucFirstTimePaymentLapse$x29x35) / ucFirstTimePaymentLapse$Total,3)
-ucFirstTimePaymentLapse$Within49Days <- round((ucFirstTimePaymentLapse$x0x7+ucFirstTimePaymentLapse$x8x14 + ucFirstTimePaymentLapse$x15x21 + ucFirstTimePaymentLapse$x22x28 + ucFirstTimePaymentLapse$x29x35+ ucFirstTimePaymentLapse$x36x42+ ucFirstTimePaymentLapse$x43x49) / ucFirstTimePaymentLapse$Total,3)
-ucFirstTimePaymentLapse$Within70Days <- round((ucFirstTimePaymentLapse$x0x7+ucFirstTimePaymentLapse$x8x14 + ucFirstTimePaymentLapse$x15x21 + ucFirstTimePaymentLapse$x22x28 + ucFirstTimePaymentLapse$x29x35+ ucFirstTimePaymentLapse$x36x42+ ucFirstTimePaymentLapse$x43x49+ ucFirstTimePaymentLapse$x50x56+ ucFirstTimePaymentLapse$x57x63+ ucFirstTimePaymentLapse$x64x70) / ucFirstTimePaymentLapse$Total,3)
-ucFirstTimePaymentLapse$Over70Days <- round((ucFirstTimePaymentLapse$x0x7+ucFirstTimePaymentLapse$x8x14 + ucFirstTimePaymentLapse$x15x21 + ucFirstTimePaymentLapse$x22x28 + ucFirstTimePaymentLapse$x29x35+ ucFirstTimePaymentLapse$x36x42+ ucFirstTimePaymentLapse$x43x49+ ucFirstTimePaymentLapse$x50x56+ ucFirstTimePaymentLapse$x57x63+ ucFirstTimePaymentLapse$x64x70 + ucFirstTimePaymentLapse$xOver70) / ucFirstTimePaymentLapse$Total,3)
-
-
-
-# merge the data sets to get DFs that have only the columns that we need/want for display
-
-# need to add EUC and EB into this, but not now
-refereeTimeliness <- merge(ucAppealsTimeLapseLower[,c("st","rptdate","Within30Days","Within45Days")], ucAppealsCaseAgingLower[,c("st","rptdate","Total")], by=c("st", "rptdate"), all=TRUE)
-refereeTimeliness <- merge(refereeTimeliness, ucBenefitAppealsRegular[,c("st", "rptdate", "lower-filed","lower-disposed")], by=c("st", "rptdate"), all=TRUE)
-# compute US Averages
-refereeAvg <- aggregate(cbind(Within30Days, Within45Days) ~ rptdate, refereeTimeliness, FUN= function(x) round(mean(x),3))
-setnames(refereeAvg, c("rptdate","shortAvg", "longAvg"))
-refereeTimeliness <- merge(refereeTimeliness, refereeAvg, by="rptdate")
-refereeTimeliness <- refereeTimeliness[,c("st", "rptdate","Within30Days","Within45Days", "lower-filed","lower-disposed","Total", "shortAvg","longAvg")]
-
-# then merge in the same data, but as a separate "state" for US Avg
-refereeAvg$st <- "US"
-refereeAvg$Within30Days <- refereeAvg$shortAvg
-refereeAvg$Within45Days <- refereeAvg$longAvg
-refereeAvg[c("lower-filed","lower-disposed","Total")] <- NA
-refereeTimeliness <- rbind(refereeTimeliness,refereeAvg)
-
-ucbrTimeliness <- merge(ucAppealsTimeLapseHigher[,c("st","rptdate","Within45Days","Within75Days")], ucAppealsCaseAgingHigher[,c("st","rptdate","Total")], by=c("st", "rptdate"), all=TRUE)
-ucbrTimeliness <- merge(ucbrTimeliness, ucBenefitAppealsRegular[,c("st", "rptdate", "higher-filed","higher-disposed")], by=c("st", "rptdate"), all=TRUE)
-#compute US Averages
-ucbrAvg <- aggregate(cbind(Within45Days, Within75Days) ~ rptdate, ucbrTimeliness, FUN=function(x) round(mean(x),3))
-setnames(ucbrAvg, c("rptdate","shortAvg", "longAvg"))
-
-# first merge in the average to each row
-ucbrTimeliness <- merge(ucbrTimeliness, ucbrAvg, by="rptdate")
-ucbrTimeliness <- ucbrTimeliness[, c("st", "rptdate","Within45Days","Within75Days", "higher-filed","higher-disposed", "Total", "shortAvg","longAvg")]
-
-#then merge in the same data, but as a separate "state"
-ucbrAvg$st <- "US"
-ucbrAvg$Within45Days <- ucbrAvg$shortAvg
-ucbrAvg$Within75Days <- ucbrAvg$longAvg
-ucbrAvg[c("higher-filed","higher-disposed", "Total")] <- NA
-ucbrTimeliness <- rbind(ucbrTimeliness, ucbrAvg)
+  #set some names
+  setnames(ucFirstTimePaymentLapse, 
+           c("c1", "c9", "c17", "c25", "c33", "c41", "c49", "c57", "c65","c73","c81","c89"), 
+           c("Total", "x0x7", "x8x14", "x15x21", "x22x28", "x29x35", "x36x42","x43x49","x50x56","x57x63","x64x70","xOver70" ))
+  
+  # calculate some values
+  ucFirstTimePaymentLapse <- ucFirstTimePaymentLapse %>% 
+    mutate(
+      Within15Days = round((x0x7 + x8x14) / Total, 3),
+      Within35Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35) / Total, 3),
+      Within49Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42 + x43x49) / Total, 3),
+      Within70Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42+ x43x49 + 
+                              x50x56 + x57x63 + x64x70) / Total,3),
+      Over70Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42 + x43x49 + x50x56 + 
+                            x57x63 + x64x70 + xOver70) / Total,3)) %>% 
+  
+    # we only need to choose certain columns, so this isn't strictly necessary, but is a convenience
+    select(all_of(c("st","rptdate","Within15Days","Within35Days", "Within49Days", "Within70Days", "Total"))) 
+  
+  #compute US Averages
+  # compute US Averages and add them into the df
+  usAvg <- ucFirstTimePaymentLapse %>% 
+    group_by(rptdate) %>% 
+    summarize(across(where(is.numeric), function(x) round(mean(x), 3))) %>% 
+    mutate(Total = NA) # this is ported from earlier code; I'm not sure why I did this back then
+  
+  ucFirstTimePaymentLapse <- ucFirstTimePaymentLapse %>% 
+    bind_rows(usAvg %>% mutate(st = "US")) %>% 
+    mutate(st = as.factor(st))
+  
+  
+  ## mgh note to later self - this is doing somethign weird.  it is computing a US average AND it is 
+  # both making a row out of it and extra columns on each row.  Seems like a waste.  In redoing
+  # this, I'm going to skip that.
+  #paymentAvg <- aggregate(cbind(Within15Days,Within35Days, Within49Days, Within70Days) ~ rptdate, paymentTimeliness, FUN=function(x) round(mean(x),3))
+  #setnames(paymentAvg, c("rptdate","Avg15Day", "Avg35Day", "Avg49Day","Avg70Day"))
+  #paymentTimeliness <- merge(paymentTimeliness, paymentAvg, by="rptdate")
+  
+  return(ucFirstTimePaymentLapse)
+}
 
 
-# we only need to choose certain columns, so this isn't strictly necessary, but is a convenience
-paymentTimeliness <- ucFirstTimePaymentLapse[,c("st","rptdate","Within15Days","Within35Days", "Within49Days", "Within70Days", "Total")]
-#compute US Averages
-paymentAvg <- aggregate(cbind(Within15Days,Within35Days, Within49Days, Within70Days) ~ rptdate, paymentTimeliness, FUN=function(x) round(mean(x),3))
-setnames(paymentAvg, c("rptdate","Avg15Day", "Avg35Day", "Avg49Day","Avg70Day"))
-paymentTimeliness <- merge(paymentTimeliness, paymentAvg, by="rptdate")
+getUCFirstTimePaymentLapse <- function(ucBenefitAppealsRegular) {
 
-#then merge in payment Avg as separate "state" for US averages
-paymentAvg$st <- "US"
-paymentAvg$Within15Days <- paymentAvg$Avg15Day
-paymentAvg$Within35Days <- paymentAvg$Avg35Day
-paymentAvg$Within49Days <- paymentAvg$Avg49Day
-paymentAvg$Within70Days <- paymentAvg$Avg70Day
-paymentAvg$Total <- NA
-paymentTimeliness <- rbind(paymentTimeliness,paymentAvg)
-paymentTimeliness <- paymentTimeliness[,c("st","rptdate","Within15Days","Within35Days", "Within49Days", "Within70Days", "Total", "Avg15Day", "Avg35Day", "Avg49Day", "Avg70Day")]
-setDF(paymentTimeliness)
-paymentTimeliness$st <- as.factor(paymentTimeliness$st)
+  # get the data
+  ucAppealsTimeLapseLower <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9054l.csv") # 9054 report
+  ucAppealsCaseAgingLower <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9055l.csv") # 9055 report
+  
+  # set some names
+  setnames(ucAppealsTimeLapseLower, 
+           c("c1", "c4", "c7"), 
+           c("Total", "x0x30", "x31x45"))
+  setnames(ucAppealsCaseAgingLower, "c1", "Total")
+  
+  # calculate some values
+  ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
+    mutate(
+      Within30Days = round(x0x30 / Total, 3),
+      Within45Days = round((x0x30 + x31x45) / Total, 3)) %>% 
+    select(all_of(c("st","rptdate","Within30Days","Within45Days")))
+  
+  # need to add EUC and EB into this, but not now
+  ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
+    full_join(ucAppealsCaseAgingLower %>% 
+                select(all_of(c("st","rptdate","Total"))), by=c("st", "rptdate")) %>% 
+    full_join(ucBenefitAppealsRegular %>% 
+                select(all_of(c("st", "rptdate", "lower-filed","lower-disposed"))), by=c("st", "rptdate"))
+
+  # compute US Averages  
+  usAvg <- ucAppealsTimeLapseLower %>% 
+    group_by(rptdate) %>% 
+    summarize(across(where(is.numeric), function(x) round(mean(x), 3))) %>% 
+    mutate(Total = NA) # this is ported from earlier code; I'm not sure why I did this back then
+  
+  ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
+    bind_rows(usAvg %>% mutate(st = "US")) %>% 
+    mutate(st = as.factor(st))
+
+  # mgh: note to self - same.  We are making averges and then adding them to each row
+  # setnames(refereeAvg, c("rptdate","shortAvg", "longAvg"))
+  # refereeTimeliness <- merge(refereeTimeliness, refereeAvg, by="rptdate")
+  # refereeTimeliness <- refereeTimeliness[,c("st", "rptdate","Within30Days","Within45Days", "lower-filed","lower-disposed","Total", "shortAvg","longAvg")]
+  # 
+  # then merge in the same data, but as a separate "state" for US Avg
+  return(ucAppealsTimeLapseLower)
+}
+
+getucAppealsTimeLapseHigher <- function() {
+  
+  # download data
+  ucAppealsTimeLapseHigher <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9054h.csv") # 9054 report
+  ucAppealsCaseAgingHigher <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9055h.csv") # 9055 report
+  
+  # set some names
+  setnames(ucAppealsTimeLapseHigher, c("c1", "c4", "c7", "c10"), c("Total", "x0x45", "x46x60", "x61x75"))
+  setnames(ucAppealsCaseAgingHigher, "c1", "Total")
+  
+  #calculate soome values
+  ucAppealsTimeLapseHigher <- ucAppealsTimeLapseHigher %>% 
+    mutate(
+      Within45Days = round(x0x45 / Total,3),
+      Within75Days = round((x0x45 + x46x60 + x61x75) / Total,3)) %>% 
+    select(one_of(c("st","rptdate","Within45Days","Within75Days"))) %>% 
+    # merge with UCCaseAging Data
+    full_join(ucAppealsCaseAgingHigher %>% 
+                select(all_of(c("st","rptdate","Total"))), 
+              by=c("st", "rptdate")) %>% 
+    # merge with ucbenefitappeal data, but not EUC stuff yet
+    full_join(ucBenefitAppealsRegular %>% 
+                select(all_of(c("st", "rptdate", "higher-filed","higher-disposed"))),
+              by=c("st", "rptdate"))
+  
+  #compute US Averages
+  usAvg <- ucAppealsTimeLapseHigher %>% 
+    group_by(rptdate) %>% 
+    summarize(across(where(is.numeric), function(x) round(mean(x), 3))) %>% 
+    mutate(Total = NA) # this is ported from earlier code; I'm not sure why I did this back then
+  
+  ucAppealsTimeLapseHigher <- ucAppealsTimeLapseHigher %>% 
+    bind_rows(usAvg %>% mutate(st = "US")) %>% 
+    mutate(st = as.factor(st))
+  
+  # mgh: note again that we are adding in the average to each row and then again at the bottom
+  # ucbrAvg <- aggregate(cbind(Within45Days, Within75Days) ~ rptdate, ucbrTimeliness, FUN=function(x) round(mean(x),3))
+  # setnames(ucbrAvg, c("rptdate","shortAvg", "longAvg"))
+  # 
+  # # first merge in the average to each row
+  # ucbrTimeliness <- merge(ucbrTimeliness, ucbrAvg, by="rptdate")
+  # ucbrTimeliness <- ucbrTimeliness[, c("st", "rptdate","Within45Days","Within75Days", "higher-filed","higher-disposed", "Total", "shortAvg","longAvg")]
+  # 
+  # #then merge in the same data, but as a separate "state"
+  # ucbrAvg$st <- "US"
+  # ucbrAvg$Within45Days <- ucbrAvg$shortAvg
+  # ucbrAvg$Within75Days <- ucbrAvg$longAvg
+  # ucbrAvg[c("higher-filed","higher-disposed", "Total")] <- NA
+  # ucbrTimeliness <- rbind(ucbrTimeliness, ucbrAvg)
+  # 
+  
+  return(ucAppealsTimeLapseHigher)
+}
+
+getUCBenefitAppeals <- function(url) {
+  df <- downloadUCData(url) %>%  # 5130 report
+    setBenefitAppealNames()
+  return(df)
+}
+
+
+ucFirstTimePaymentLapse <- getUCFirstTimePaymentLapse()
+
+# get all of the appeals information
+ucBenefitAppealsRegular <- getUCBenefitAppeals("https://ows.doleta.gov/unemploy/csv/ar5130.csv") 
+ucBenefitAppealsExtended <- getUCBenefitAppeals("https://ows.doleta.gov/unemploy/csv/ae5130.csv") 
+ucBenefitAppealsEUC91x94 <- getUCBenefitAppeals("https://ows.doleta.gov/unemploy/csv/ac5130.csv") 
+ucBenefitAppealsEUC02x04 <- getUCBenefitAppeals("https://ows.doleta.gov/unemploy/csv/at5130.csv") 
+ucBenefitAppealsEUC08x13 <- getUCBenefitAppeals("https://ows.doleta.gov/unemploy/csv/au5130.csv") 
+
+ucAppealsTimeLapseLower <- getUCAppealsTimeLapseLower(ucBenefitAppealsRegular)
+ucAppealsTimeLapseHigher <- getucAppealsTimeLapseHigher()
+
+
+
 
 # get seasonally adjusted unemployment data and change state names to abbrs
 bls_unemployed_sa <- get_bls_employment_data(nsa=FALSE)
@@ -680,7 +823,7 @@ get50StateComparisonPlot <- function(dfData, startDate, endDate, measure, highli
 # # make an uber DF that has all of the measures that we want and then melt/do a facet_grid
 # uberDF <- ucRecipiency[,c("rptdate","st", "recipiency_annual_total")]
 # 
-# bls_unemployed_sa$rptdate <- bls_unemployed_sa$rptdate+months(1)-days(1)
+# bls_unemployed_sa$rptdate <- bls_unemployed_sa$rptdate + months(1)-days(1)
 # uberDF <- merge(uberDF, bls_unemployed_sa[,c("rptdate", "st", "perc_unemployed")], by=c("st", "rptdate"), all=TRUE)
 # uberDF <- merge(uberDF, ucNonMonetary[,c("rptdate","st","denial_sep_percent", "denial_non_percent", "denial_rate_overall", "denial_sep_rate", "denial_non_rate")], by=c("st", "rptdate"), all=TRUE)
 # 
