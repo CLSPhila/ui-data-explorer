@@ -1,5 +1,5 @@
 # Helper app to download and process data from the DOL website
-# THe downloads can be found here: http://ows.doleta.gov/unemploy/DataDownloads.asp
+# THe downloads can be found here: http://oui.doleta.gov/unemploy/DataDownloads.asp
 # For each download below, there is a data definition pdf that explains what each field is that is being sought
 
 library(RCurl)
@@ -52,10 +52,10 @@ getMinYear <- function (df) {
 # get data on overpayments and process them
 getOverpayments <- function() {
 
-  ucOverpaymentsRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar227.csv") #227 report
-  ucOverpaymentsEUC91 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ac227.csv") #227 report
-  ucOverpaymentsTEUC02 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at227.csv") #227 report
-  ucOverpaymentsEUC08 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au227.csv") #227 report
+  ucOverpaymentsRegular <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar227.csv") #227 report
+  ucOverpaymentsEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac227.csv") #227 report
+  ucOverpaymentsTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at227.csv") #227 report
+  ucOverpaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au227.csv") #227 report
   
   # just pull out the columns that we care about
   ucOverpaymentsRegular$regular_fraud_num <- ucOverpaymentsRegular$c1+ucOverpaymentsRegular$c2
@@ -236,11 +236,11 @@ getRecipiency <- function ()
   bls_unemployed$unemployed_avg<- ave(bls_unemployed$total_unemployed, bls_unemployed$state, FUN = function(x) round(rollmean(x, k=12, align="right", na.pad=T),0))
   
   
-  ucClaimsPaymentsRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar5159.csv") #5159 report
-  ucClaimsPaymentsExtended <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ae5159.csv") #5159 report
-  ucClaimsPaymentsEUC91 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ac5159.csv") #5159 report
-  ucClaimsPaymentsTEUC02 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at5159.csv") #5159 report
-  ucClaimsPaymentsEUC08 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au5159.csv") #5159 report
+  ucClaimsPaymentsRegular <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar5159.csv") #5159 report
+  ucClaimsPaymentsExtended <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ae5159.csv") #5159 report
+  ucClaimsPaymentsEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac5159.csv") #5159 report
+  ucClaimsPaymentsTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at5159.csv") #5159 report
+  ucClaimsPaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au5159.csv") #5159 report
   
   # EUC data from the 80s isn't available on the DOL website, but DOL provided a copy of those claims
   ucClaimsPaymentsEUC80s <- read.csv("EUC-1982-1987-USDOLData.csv")
@@ -309,11 +309,11 @@ getRecipiency <- function ()
 # sort through the non monetary determinations to get information about separation and non-separation issues
 getNonMonetaryDeterminations <- function()
 {
-  ucNonMonetaryRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar207.csv") #207 report
-  ucNonMonetaryExtended <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ae207.csv") #207 report
-  ucNonMonetaryEUC91 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ac207.csv") #207 report
-  ucNonMonetaryTEUC02 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at207.csv") #207 report
-  ucNonMonetaryEUC08 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au207.csv") #207 report
+  ucNonMonetaryRegular <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar207.csv") #207 report
+  ucNonMonetaryExtended <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ae207.csv") #207 report
+  ucNonMonetaryEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac207.csv") #207 report
+  ucNonMonetaryTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at207.csv") #207 report
+  ucNonMonetaryEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au207.csv") #207 report
   
   # name the columns that we care about for later code readability
   # EUC08 and TEUC appear to have the same structure as extended benefits, not euc91
@@ -414,19 +414,19 @@ getNonMonetaryDeterminations <- function()
 }
 
 
-ucFirstTimePaymentLapse <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9050.csv") # 9050 report
+ucFirstTimePaymentLapse <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9050.csv") # 9050 report
 
-ucAppealsTimeLapseLower <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9054l.csv") # 9054 report
-ucAppealsTimeLapseHigher <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9054h.csv") # 9054 report
+ucAppealsTimeLapseLower <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9054l.csv") # 9054 report
+ucAppealsTimeLapseHigher <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9054h.csv") # 9054 report
 
-ucAppealsCaseAgingLower <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9055l.csv") # 9055 report
-ucAppealsCaseAgingHigher <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9055h.csv") # 9055 report
+ucAppealsCaseAgingLower <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9055l.csv") # 9055 report
+ucAppealsCaseAgingHigher <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9055h.csv") # 9055 report
 
-ucBenefitAppealsRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar5130.csv") # 5130 report
-ucBenefitAppealsExtended <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ae5130.csv") # 5130 report
-ucBenefitAppealsEUC91x94 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ac5130.csv") # 5130 report
-ucBenefitAppealsEUC02x04 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at5130.csv") # 5130 report
-ucBenefitAppealsEUC08x13 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au5130.csv") # 5130 report
+ucBenefitAppealsRegular <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar5130.csv") # 5130 report
+ucBenefitAppealsExtended <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ae5130.csv") # 5130 report
+ucBenefitAppealsEUC91x94 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac5130.csv") # 5130 report
+ucBenefitAppealsEUC02x04 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at5130.csv") # 5130 report
+ucBenefitAppealsEUC08x13 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au5130.csv") # 5130 report
 
 
 # set the column names for the data that we're interested in
@@ -594,7 +594,7 @@ getUIMap <- function(usa,df,uiDate,dfColumn, stateText, reverseLevels)
   # get the end of the month
   uiDate <- ceiling_date(uiDate,"month") - days(1)
   # this is b/c the stats are on different release cycles--some release earlier and later in the month, some release quarterly
-  # so this allows us to pick a date that doesn't exist, but fall back to something that does
+  # so this alloui us to pick a date that doesn't exist, but fall back to something that does
   if(!(uiDate %in% df$rptdate))
     uiDate <- max(df$rptdate)
   
@@ -704,5 +704,6 @@ get50StateComparisonPlot <- function(dfData, startDate, endDate, measure, highli
 #   ggtitle("A 50-State Look at the Health of Unemployment Systems") 
 # 
 # ggsave("out2.png", plot=smPlot, device="png", width=15, height=50, units="in", limitsize=FALSE)
+
 
 
