@@ -1,17 +1,18 @@
 # Helper app to download and process data from the DOL website
-# THe downloads can be found here: http://ows.doleta.gov/unemploy/DataDownloads.asp
+# THe downloads can be found here: http://.doleta.gov/unemploy/DataDownloads.asp
 # For each download below, there is a data definition pdf that explains what each field is that is being sought
 
 library(RCurl)
 library(ggplot2)
-library(data.table)
 library(lubridate)
-library(dplyr)
-library(zoo)
+library(tidyverse)
 library(rgdal)
 library(leaflet)
 require(bit64)
+library(zoo)
 
+#library(data.table)
+#library(dplyr)
 
 downloadUCData <- function (URL) {
   
@@ -19,9 +20,9 @@ downloadUCData <- function (URL) {
   # on the file system, then download it
   csvFile <- file.path("data", basename(URL))
   if (file.exists(csvFile))
-      mydata <- read.csv(csvFile)
+      mydata <- read_csv(csvFile)
   else
-      mydata <- fread(URL)
+      mydata <- read_csv(URL)
   
   # convert dates to a date type
   mydata %>% 
@@ -30,7 +31,8 @@ downloadUCData <- function (URL) {
 
 # sets the names of specific columns in the 5130 dataset
 setBenefitAppealNames <- function(df) {
-  setnames(df, c("c9", "c13", "c10", "c14"), c("lower-filed", "lower-disposed", "higher-filed", "higher-disposed"))
+  df %>% 
+    rename(`lower_filed` = c9, `lower_disposed` = c13, `higher_filed` = c10, `higher_disposed` = c14)
 }
 
 # return a list of all of the states
@@ -52,10 +54,10 @@ getMinYear <- function (df) {
 # get data on overpayments and process them
 getOverpayments <- function() {
 
-  ucOverpaymentsRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar227.csv") #227 report
-  ucOverpaymentsEUC91 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ac227.csv") #227 report
-  ucOverpaymentsTEUC02 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at227.csv") #227 report
-  ucOverpaymentsEUC08 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au227.csv") #227 report
+  ucOverpaymentsRegular <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar227.csv") #227 report
+  ucOverpaymentsEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac227.csv") #227 report
+  ucOverpaymentsTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at227.csv") #227 report
+  ucOverpaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au227.csv") #227 report
 
   # cols that we want to keep
   overpayment_cols <- c("st","rptdate","regular_fraud_num","federal_fraud_num","regular_fraud_dol","federal_fraud_dol","regular_nonfraud_num","federal_nonfraud_num","regular_nonfraud_dol","federal_nonfraud_dol","state_tax_recovery","federal_tax_recovery", "outstanding", "recovered")
@@ -176,8 +178,9 @@ getOverpayments <- function() {
 }
 
 
-# get unemployment information from the BLS website and convert to a datatable.  This function takes a long
-# time to run.  Param nsa refers to the not-seasonally-adjusdted figures vs seasonally adjusted
+# get unemployment information from the BLS website and convert to a datatable.  
+# This function takes a long time to run.  
+# Param nsa refers to the not-seasonally-adjusdted figures vs seasonally adjusted
 get_bls_employment_data <- function(nsa=TRUE) {
   if (nsa)
     blsurl <- "https://www.bls.gov/web/laus/ststdnsadata.txt"
@@ -185,10 +188,7 @@ get_bls_employment_data <- function(nsa=TRUE) {
     blsurl <- "https://www.bls.gov/web/laus/ststdsadata.txt"
   tf <- tempfile()
   download.file(blsurl, tf)
-  #ststdnsadata <- curl::curl(blsurl) %>% readLines()
-  #fp <- file(tf)
-  #write(ststdnsadata, fp)
-  #close(fp)
+
   doc <- readLines(tf)
   doc <- sub('^ +', '', doc, perl=TRUE)
   doc <- gsub(',', '', doc, perl=TRUE)
@@ -221,19 +221,24 @@ get_bls_employment_data <- function(nsa=TRUE) {
       }
       else{
         i <- i + 1L
-        set(results, i, 1L, d[1])
-        set(results, i, 2L, as.integer(d[2]))
-        set(results, i, 3L, as.integer(d[3]))
-        set(results, i, 4L, as.numeric(d[4]))
-        set(results, i, 5L, as.integer(d[5]))
-        set(results, i, 6L, as.numeric(d[6]))
-        set(results, i, 7L, as.integer(d[7]))
-        set(results, i, 8L, as.numeric(d[8]))
-        set(results, i, 9L, curdate)
+        data.table::set(results, i, 1L, d[1])
+        data.table::set(results, i, 2L, as.integer(d[2]))
+        data.table::set(results, i, 3L, as.integer(d[3]))
+        data.table::set(results, i, 4L, as.numeric(d[4]))
+        data.table::set(results, i, 5L, as.integer(d[5]))
+        data.table::set(results, i, 6L, as.numeric(d[6]))
+        data.table::set(results, i, 7L, as.integer(d[7]))
+        data.table::set(results, i, 8L, as.numeric(d[8]))
+        data.table::set(results, i, 9L, curdate)
       }
     }
   }
   results <- results[-seq(i + 1L, n), ]
+  
+  results$state <- state.abb[match(results$state,state.name)]
+  
+  return(as.tibble(results))
+  
 }
 
 
@@ -246,12 +251,9 @@ getRecipiency <- function ()
 {
   
   # start by downloading the bls employment data to get unemployed per month
-  bls_unemployed <- get_bls_employment_data(nsa=TRUE)
-  
-  # add in the state abbreviations and make a new column with the last date of the month to match with DOL data
-  bls_unemployed <- bls_unemployed %>% 
+  bls_unemployed <- get_bls_employment_data(nsa=TRUE) %>% 
+    rename(st = state) %>% 
     mutate(
-      st = state.abb[match(state, state.name)],
       rptdate = ceiling_date(month, "month") - 1
     )
   
@@ -264,11 +266,11 @@ getRecipiency <- function ()
     ungroup()
   
   
-  ucClaimsPaymentsRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar5159.csv") #5159 report
-  ucClaimsPaymentsExtended <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ae5159.csv") #5159 report
-  ucClaimsPaymentsEUC91 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ac5159.csv") #5159 report
-  ucClaimsPaymentsTEUC02 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at5159.csv") #5159 report
-  ucClaimsPaymentsEUC08 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au5159.csv") #5159 report
+  ucClaimsPaymentsRegular <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar5159.csv") #5159 report
+  ucClaimsPaymentsExtended <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ae5159.csv") #5159 report
+  ucClaimsPaymentsEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac5159.csv") #5159 report
+  ucClaimsPaymentsTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at5159.csv") #5159 report
+  ucClaimsPaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au5159.csv") #5159 report
   
   # EUC data from the 80s isn't available on the DOL website, but DOL provided a copy of those claims
   ucClaimsPaymentsEUC80s <- read.csv("EUC-1982-1987-USDOLData.csv")
@@ -282,11 +284,18 @@ getRecipiency <- function ()
   euc91_cols <- c("euc91_state_intrastate", "euc91_state_liable", "euc91_ucfe_instrastate", "euc91_ufce_liable", "euc91_ucx_intrastate", "euc91_ucx_liable", "euc91_state_compensated", "euc91_ucfe_ucx_compensated")
   euc08_cols <- c("euc08_state_intrastate", "euc08_state_liable", "euc08_ucfe_instrastate", "euc08_ufce_liable", "euc08_ucx_intrastate", "euc08_ucx_liable", "euc08_state_compensated", "euc08_ucfe_ucx_compensated")
   teuc_cols <-  c("teuc02_state_intrastate", "teuc02_state_liable", "teuc02_ucfe_instrastate", "teuc02_ufce_liable", "teuc02_ucx_intrastate", "teuc02_ucx_liable", "teuc02_state_compensated")
-  setnames(ucClaimsPaymentsRegular, c("c21", "c24", "c27", "c30", "c33", "c36", "c45","c48"), reg_cols)
-  setnames(ucClaimsPaymentsExtended, c("c12", "c15", "c18", "c21", "c24", "c27","c35", "c37"), ext_cols)
-  setnames(ucClaimsPaymentsEUC91, c("c19", "c22", "c23", "c26", "c27", "c30", "c38","c42"), euc91_cols)
-  setnames(ucClaimsPaymentsTEUC02, c("c12", "c15", "c18", "c21", "c24", "c27","c35"),teuc_cols)
-  setnames(ucClaimsPaymentsEUC08, c("c12", "c15", "c18", "c21", "c24", "c27","c35", "c37"), euc08_cols)
+  
+  ucClaimsPaymentsRegular <- ucClaimsPaymentsRegular %>% 
+    rename_at(vars(c("c21", "c24", "c27", "c30", "c33", "c36", "c45","c48")), ~ reg_cols)
+  ucClaimsPaymentsExtended <- ucClaimsPaymentsExtended %>% 
+    rename_at(vars(c("c12", "c15", "c18", "c21", "c24", "c27","c35", "c37")), ~ext_cols)
+  
+  ucClaimsPaymentsEUC91 <- ucClaimsPaymentsEUC91 %>% 
+    rename_at(vars(c("c19", "c22", "c23", "c26", "c27", "c30", "c38","c42")), ~euc91_cols)
+  ucClaimsPaymentsTEUC02 <- ucClaimsPaymentsTEUC02 %>% 
+    rename_at(vars(c("c12", "c15", "c18", "c21", "c24", "c27","c35")),~teuc_cols)
+  ucClaimsPaymentsEUC08 <- ucClaimsPaymentsEUC08 %>% 
+    rename_at(vars(c("c12", "c15", "c18", "c21", "c24", "c27","c35", "c37")), ~euc08_cols)
   
   # merge the different datasets together and backfill with 0 if there is no data for a month
   ucRecipiency <- ucClaimsPaymentsRegular %>% select(all_of(c(all_cols, reg_cols))) %>% 
@@ -326,20 +335,20 @@ getRecipiency <- function ()
       total_week_mov_avg = rollmean(total_week, k = 12, align = "right", na.pad = T),
       total_compensated_mov_avg = rollmean(total_compensated, k = 12, align = "right", na.pad = T),
       total_state_compensated_mov_avg = rollmean(total_state_compensated, k = 12, align = "right", na.pad = T),
-      total_federal_compensated_mov_avg = rollmean(total_federal_compensated, k = 12, align = "right", na.pad = T),
+      total_federal_compensated_mov_avg = rollmean(total_federal_compensated, k = 12, align = "right", na.pad = T)
     ) %>% 
-    ungroup() %>% 
-    # try to get rid of NAs that show up as a crazy integer in integer64 cols
-    mutate(total_compensated_mov_avg = if_else(total_compensated_mov_avg==9218868437227407266, NA_integer64_, total_compensated_mov_avg),
-           total_state_compensated_mov_avg = if_else(total_state_compensated_mov_avg==9218868437227407266, NA_integer64_, total_state_compensated_mov_avg),
-           total_federal_compensated_mov_avg = if_else(total_federal_compensated_mov_avg==9218868437227407266, NA_integer64_, total_federal_compensated_mov_avg))
-  
+    ungroup() #%>% 
+    # # try to get rid of NAs that show up as a crazy integer in integer64 cols
+    # mutate(total_compensated_mov_avg = if_else(total_compensated_mov_avg==9218868437227407266, NA_integer64_, total_compensated_mov_avg),
+    #        total_state_compensated_mov_avg = if_else(total_state_compensated_mov_avg==9218868437227407266, NA_integer64_, total_state_compensated_mov_avg),
+    #        total_federal_compensated_mov_avg = if_else(total_federal_compensated_mov_avg==9218868437227407266, NA_integer64_, total_federal_compensated_mov_avg))
 
   # now combine with the BLS unemployed data
   ucRecipiency <- ucRecipiency %>% 
     left_join(bls_unemployed %>% select(c("st", "rptdate", "total_unemployed", "unemployed_avg")), 
               by = c("st", "rptdate"))
   
+
   
   # compute US Averages and add them into the df
   usAvg <- ucRecipiency %>% 
@@ -352,7 +361,11 @@ getRecipiency <- function ()
       # get recipiency rates
       recipiency_annual_reg = round(reg_total_week_mov_avg / unemployed_avg,3),
       recipiency_annual_total = round(total_week_mov_avg / unemployed_avg, 3)) %>% 
-    replace(is.na(.), 0)
+    replace(is.na(.), 0) %>% 
+    # select just the cols that we need
+    select(st,rptdate,total_week_mov_avg, unemployed_avg, recipiency_annual_reg, recipiency_annual_total, total_state_compensated_mov_avg,
+           total_week_mov_avg, total_compensated, total_federal_compensated_mov_avg, total_state_compensated, total_federal_compensated,
+           total_compensated_mov_avg)
 
   return(ucRecipiency)
 }
@@ -361,11 +374,11 @@ getRecipiency <- function ()
 # sort through the non monetary determinations to get information about separation and non-separation issues
 getNonMonetaryDeterminations <- function()
 {
-  ucNonMonetaryRegular <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar207.csv") #207 report
-  ucNonMonetaryExtended <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ae207.csv") #207 report
-  ucNonMonetaryEUC91 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ac207.csv") #207 report
-  ucNonMonetaryTEUC02 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/at207.csv") #207 report
-  ucNonMonetaryEUC08 <- downloadUCData("https://ows.doleta.gov/unemploy/csv/au207.csv") #207 report
+  ucNonMonetaryRegular <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar207.csv") #207 report
+  ucNonMonetaryExtended <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ae207.csv") #207 report
+  ucNonMonetaryEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac207.csv") #207 report
+  ucNonMonetaryTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at207.csv") #207 report
+  ucNonMonetaryEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au207.csv") #207 report
   
   # name the columns that we care about for later code readability
   # EUC08 and TEUC appear to have the same structure as extended benefits, not euc91
@@ -376,11 +389,16 @@ getNonMonetaryDeterminations <- function()
   euc08_cols <- c("euc08_state_total_determ", "euc08_ufce_total_determ", "euc08_ucx_total_determ", "euc08_state_determ_sep_total", "euc08_state_determ_sep_vol", "euc08_state_determ_sep_misconduct", "euc08_state_determ_sep_other", "euc08_state_denial_sep_total", "euc08_state_denial_sep_vol", "euc08_state_denial_sep_misconduct", "euc08_state_denial_sep_other", "euc08_state_determ_non_total", "euc08_state_determ_non_aa", "euc08_state_determ_non_refusework","euc08_state_determ_non_other",  "euc08_state_denial_non_total", "euc08_state_denial_non_aa","euc08_state_denial_non_refusework","euc08_state_denial_non_other")
   teuc_cols <- c("teuc_state_total_determ", "teuc_ufce_total_determ", "teuc_ucx_total_determ", "teuc_state_determ_sep_total", "teuc_state_determ_sep_vol", "teuc_state_determ_sep_misconduct", "teuc_state_determ_sep_other", "teuc_state_denial_sep_total", "teuc_state_denial_sep_vol", "teuc_state_denial_sep_misconduct", "teuc_state_denial_sep_other", "teuc_state_determ_non_total", "teuc_state_determ_non_aa", "teuc_state_determ_non_refusework","teuc_state_determ_non_other",  "teuc_state_denial_non_total", "teuc_state_denial_non_aa","teuc_state_denial_non_refusework","teuc_state_denial_non_other")
 
-  setnames(ucNonMonetaryRegular, c("c1", "c13", "c15", paste0("c", 17:37), "c45", paste0("c", 38:43), "c46", "c44"), reg_cols)
-  setnames(ucNonMonetaryExtended, c("c1", "c3", "c5", paste0("c", 7:22)), ext_cols)
-  setnames(ucNonMonetaryEUC91, c("c1", "c3", "c5", paste0("c", 7:26)), euc91_cols)
-  setnames(ucNonMonetaryTEUC02, c("c1", "c3", "c5", paste0("c", 7:22)),teuc_cols)
-  setnames(ucNonMonetaryEUC08, c("c1", "c3", "c5", paste0("c", 7:22)), euc08_cols)
+  ucNonMonetaryRegular <- ucNonMonetaryRegular %>% 
+    rename_at(vars(c("c1", "c13", "c15", paste0("c", 17:37), "c45", paste0("c", 38:43), "c46", "c44")), ~reg_cols)
+  ucNonMonetaryExtended <- ucNonMonetaryExtended %>% 
+    rename_at(vars(c("c1", "c3", "c5", paste0("c", 7:22))), ~ext_cols)
+  ucNonMonetaryEUC91 <- ucNonMonetaryEUC91 %>% 
+    rename_at(vars(c("c1", "c3", "c5", paste0("c", 7:26))), ~euc91_cols)
+  ucNonMonetaryTEUC02 <- ucNonMonetaryTEUC02 %>% 
+    rename_at(vars(c("c1", "c3", "c5", paste0("c", 7:22))), ~teuc_cols)
+  ucNonMonetaryEUC08 <- ucNonMonetaryEUC08 %>% 
+    rename_at(vars(c("c1", "c3", "c5", paste0("c", 7:22))), ~euc08_cols)
   
   # merge the different datasets together and backfill with 0 if there is no data for a month
   ucNonMonetary <- ucNonMonetaryRegular %>% 
@@ -475,7 +493,7 @@ getNonMonetaryDeterminations <- function()
     # for now, I am going to just set any proportion > 1 to 1.  But in the future, may make more sense
     # to capture 'total denials' and 'total determinations' by adding the subsets together.
     # this function looks at every "*percent" column and sets the max value to 1.
-    mutate_if(ends_with(c("percent", "rate")), ~if_else(. > 1, 1, .))
+    mutate_at(vars(ends_with(c("percent", "rate"))), ~if_else(. > 1, 1, .))
   
   
   # compute US Averages and add them into the df
@@ -493,12 +511,12 @@ getNonMonetaryDeterminations <- function()
 getUCFirstTimePaymentLapse <- function() {
   
   # download the data
-  ucFirstTimePaymentLapse <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9050.csv") # 9050 report
+  ucFirstTimePaymentLapse <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9050.csv") # 9050 report
 
   #set some names
-  setnames(ucFirstTimePaymentLapse, 
-           c("c1", "c9", "c17", "c25", "c33", "c41", "c49", "c57", "c65","c73","c81","c89"), 
-           c("Total", "x0x7", "x8x14", "x15x21", "x22x28", "x29x35", "x36x42","x43x49","x50x56","x57x63","x64x70","xOver70" ))
+  ucFirstTimePaymentLapse <- ucFirstTimePaymentLapse %>% 
+    rename_at(vars(c("c1", "c9", "c17", "c25", "c33", "c41", "c49", "c57", "c65","c73","c81","c89")), 
+           ~c("Total", "x0x7", "x8x14", "x15x21", "x22x28", "x29x35", "x36x42","x43x49","x50x56","x57x63","x64x70","xOver70" ))
   
   # calculate some values
   ucFirstTimePaymentLapse <- ucFirstTimePaymentLapse %>% 
@@ -537,17 +555,17 @@ getUCFirstTimePaymentLapse <- function() {
 }
 
 
-getUCFirstTimePaymentLapse <- function(ucBenefitAppealsRegular) {
+getUCAppealsTimeLapseLower <- function(ucBenefitAppealsRegular) {
 
   # get the data
-  ucAppealsTimeLapseLower <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9054l.csv") # 9054 report
-  ucAppealsCaseAgingLower <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9055l.csv") # 9055 report
+  ucAppealsTimeLapseLower <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9054l.csv") # 9054 report
+  ucAppealsCaseAgingLower <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9055l.csv") # 9055 report
   
   # set some names
-  setnames(ucAppealsTimeLapseLower, 
-           c("c1", "c4", "c7"), 
-           c("Total", "x0x30", "x31x45"))
-  setnames(ucAppealsCaseAgingLower, "c1", "Total")
+  ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
+    rename_at(vars(c("c1", "c4", "c7")), 
+           ~ c("Total", "x0x30", "x31x45"))
+  ucAppealsCaseAgingLower <- ucAppealsCaseAgingLower %>% rename(Total = c1)
   
   # calculate some values
   ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
@@ -561,7 +579,7 @@ getUCFirstTimePaymentLapse <- function(ucBenefitAppealsRegular) {
     full_join(ucAppealsCaseAgingLower %>% 
                 select(all_of(c("st","rptdate","Total"))), by=c("st", "rptdate")) %>% 
     full_join(ucBenefitAppealsRegular %>% 
-                select(all_of(c("st", "rptdate", "lower-filed","lower-disposed"))), by=c("st", "rptdate"))
+                select(all_of(c("st", "rptdate", "lower_filed","lower_disposed"))), by=c("st", "rptdate"))
 
   # compute US Averages  
   usAvg <- ucAppealsTimeLapseLower %>% 
@@ -576,7 +594,7 @@ getUCFirstTimePaymentLapse <- function(ucBenefitAppealsRegular) {
   # mgh: note to self - same.  We are making averges and then adding them to each row
   # setnames(refereeAvg, c("rptdate","shortAvg", "longAvg"))
   # refereeTimeliness <- merge(refereeTimeliness, refereeAvg, by="rptdate")
-  # refereeTimeliness <- refereeTimeliness[,c("st", "rptdate","Within30Days","Within45Days", "lower-filed","lower-disposed","Total", "shortAvg","longAvg")]
+  # refereeTimeliness <- refereeTimeliness[,c("st", "rptdate","Within30Days","Within45Days", "lower_filed","lower_disposed","Total", "shortAvg","longAvg")]
   # 
   # then merge in the same data, but as a separate "state" for US Avg
   return(ucAppealsTimeLapseLower)
@@ -585,12 +603,14 @@ getUCFirstTimePaymentLapse <- function(ucBenefitAppealsRegular) {
 getucAppealsTimeLapseHigher <- function() {
   
   # download data
-  ucAppealsTimeLapseHigher <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9054h.csv") # 9054 report
-  ucAppealsCaseAgingHigher <- downloadUCData("https://ows.doleta.gov/unemploy/csv/ar9055h.csv") # 9055 report
+  ucAppealsTimeLapseHigher <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9054h.csv") # 9054 report
+  ucAppealsCaseAgingHigher <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9055h.csv") # 9055 report
   
   # set some names
-  setnames(ucAppealsTimeLapseHigher, c("c1", "c4", "c7", "c10"), c("Total", "x0x45", "x46x60", "x61x75"))
-  setnames(ucAppealsCaseAgingHigher, "c1", "Total")
+  ucAppealsTimeLapseHigher <- ucAppealsTimeLapseHigher %>% 
+    rename_at(vars(c("c1", "c4", "c7", "c10")), ~c("Total", "x0x45", "x46x60", "x61x75"))
+  ucAppealsCaseAgingHigher <- ucAppealsCaseAgingHigher %>% 
+    rename(Total = c1)
   
   #calculate soome values
   ucAppealsTimeLapseHigher <- ucAppealsTimeLapseHigher %>% 
@@ -604,7 +624,7 @@ getucAppealsTimeLapseHigher <- function() {
               by=c("st", "rptdate")) %>% 
     # merge with ucbenefitappeal data, but not EUC stuff yet
     full_join(ucBenefitAppealsRegular %>% 
-                select(all_of(c("st", "rptdate", "higher-filed","higher-disposed"))),
+                select(all_of(c("st", "rptdate", "higher_filed","higher_disposed"))),
               by=c("st", "rptdate"))
   
   #compute US Averages
@@ -623,13 +643,13 @@ getucAppealsTimeLapseHigher <- function() {
   # 
   # # first merge in the average to each row
   # ucbrTimeliness <- merge(ucbrTimeliness, ucbrAvg, by="rptdate")
-  # ucbrTimeliness <- ucbrTimeliness[, c("st", "rptdate","Within45Days","Within75Days", "higher-filed","higher-disposed", "Total", "shortAvg","longAvg")]
+  # ucbrTimeliness <- ucbrTimeliness[, c("st", "rptdate","Within45Days","Within75Days", "higher_filed","higher_disposed", "Total", "shortAvg","longAvg")]
   # 
   # #then merge in the same data, but as a separate "state"
   # ucbrAvg$st <- "US"
   # ucbrAvg$Within45Days <- ucbrAvg$shortAvg
   # ucbrAvg$Within75Days <- ucbrAvg$longAvg
-  # ucbrAvg[c("higher-filed","higher-disposed", "Total")] <- NA
+  # ucbrAvg[c("higher_filed","higher_disposed", "Total")] <- NA
   # ucbrTimeliness <- rbind(ucbrTimeliness, ucbrAvg)
   # 
   
@@ -642,38 +662,49 @@ getUCBenefitAppeals <- function(url) {
   return(df)
 }
 
+# gets the employment/unemployment rate from BLS data
+getBLSEmploymentRateData <- function(...) {
+  # get unemployment data, rename a few columns, fix the rpt_date to match
+  # the dates of all of our other data (is this a problem?!)
+  bls_unemployed <- get_bls_employment_data(...) %>% 
+    rename(rptdate = month, 
+           st = state) %>% 
+    mutate(rptdate = ceiling_date(rptdate, "month") - 1)
+    
+
+  #compute US totals and US average.
+  # note that we first calculate the total of the "total" columns like total employed
+  # and the we redo the calculations for the US as a whole. This allows us to see the US
+  # as a whole 
+  usAvg <- bls_unemployed %>% 
+    group_by(rptdate) %>% 
+    summarize(across(one_of(c("pop", "total", "total_employed", "total_unemployed")), function(x) round(sum(x), 3))) %>% 
+    mutate(st = "US",
+           perc_unemployed = round(total_unemployed/total * 100, 1),
+           perc_employed = round(total_employed/pop * 100,1),
+           perc_pop = round(total/pop * 100,1)) 
+  
+  
+  bls_unemployed <- bls_unemployed %>% 
+    bind_rows(usAvg) %>% 
+    mutate(st = as.factor(st))
+  
+  return(bls_unemployed)
+}
 
 ucFirstTimePaymentLapse <- getUCFirstTimePaymentLapse()
 
 # get all of the appeals information
-ucBenefitAppealsRegular <- getUCBenefitAppeals("https://ows.doleta.gov/unemploy/csv/ar5130.csv") 
-ucBenefitAppealsExtended <- getUCBenefitAppeals("https://ows.doleta.gov/unemploy/csv/ae5130.csv") 
-ucBenefitAppealsEUC91x94 <- getUCBenefitAppeals("https://ows.doleta.gov/unemploy/csv/ac5130.csv") 
-ucBenefitAppealsEUC02x04 <- getUCBenefitAppeals("https://ows.doleta.gov/unemploy/csv/at5130.csv") 
-ucBenefitAppealsEUC08x13 <- getUCBenefitAppeals("https://ows.doleta.gov/unemploy/csv/au5130.csv") 
+ucBenefitAppealsRegular <- getUCBenefitAppeals("https://oui.doleta.gov/unemploy/csv/ar5130.csv") 
+ucBenefitAppealsExtended <- getUCBenefitAppeals("https://oui.doleta.gov/unemploy/csv/ae5130.csv") 
+ucBenefitAppealsEUC91x94 <- getUCBenefitAppeals("https://oui.doleta.gov/unemploy/csv/ac5130.csv") 
+ucBenefitAppealsEUC02x04 <- getUCBenefitAppeals("https://oui.doleta.gov/unemploy/csv/at5130.csv") 
+ucBenefitAppealsEUC08x13 <- getUCBenefitAppeals("https://oui.doleta.gov/unemploy/csv/au5130.csv") 
 
 ucAppealsTimeLapseLower <- getUCAppealsTimeLapseLower(ucBenefitAppealsRegular)
 ucAppealsTimeLapseHigher <- getucAppealsTimeLapseHigher()
 
-
-
-
-# get seasonally adjusted unemployment data and change state names to abbrs
-bls_unemployed_sa <- get_bls_employment_data(nsa=FALSE)
-bls_unemployed_sa$state <- state.abb[match(bls_unemployed_sa$state,state.name)]
-
-# calculate the US numbers
-bls_us <- aggregate(cbind(pop, total, total_employed, total_unemployed) ~ month, bls_unemployed_sa, FUN=function(x) round(sum(x),3))
-bls_us$state <- "US"
-bls_us$perc_unemployed <- round(bls_us$total_unemployed/bls_us$total * 100,1)
-bls_us$perc_employed <- round(bls_us$total_employed/bls_us$pop * 100,1)
-bls_us$perc_pop <- round(bls_us$total/bls_us$pop * 100,1)
-bls_us <- bls_us[c("state","pop","total", "perc_pop","total_employed","perc_employed","total_unemployed","perc_unemployed","month")]
-
-#now merge in us data, as a separate "state" and rename a few columns
-bls_unemployed_sa <- rbind(bls_unemployed_sa, bls_us)
-names(bls_unemployed_sa)[names(bls_unemployed_sa)=='state'] <- "st"
-names(bls_unemployed_sa)[names(bls_unemployed_sa)=='month'] <- "rptdate"
+bls_employed_sa <- getBLSEmploymentRateData(nsa = FALSE)
 
 
 # recession data; not implemented in the charting yet
@@ -689,12 +720,12 @@ recessions.df = read.table(textConnection(
   colClasses=c('Date', 'Date'), header=TRUE)
 
 
-# get the UC recipiency table
+# get UC recipiency and overpayments
 ucRecipiency <- getRecipiency()
-
 ucOverpayments <- getOverpayments()
 
 # add in the uc payments by month into the ucOverpayments data to get overpayments as a percent of annual costs
+### mgh: look into this section
 ucOverpayments <- merge(ucOverpayments, ucRecipiency[,c("st","rptdate","total_state_compensated", "total_compensated", "total_federal_compensated", "total_federal_compensated_mov_avg", "total_state_compensated_mov_avg", "total_compensated_mov_avg")], by=c("st", "rptdate"), all.x=TRUE)
 ucOverpayments$total_paid_annual_mov_avg <- ucOverpayments$total_compensated_mov_avg*12
 ucRecipiency$total_paid_annual_mov_avg <- ucRecipiency$total_compensated_mov_avg*12
@@ -703,18 +734,15 @@ ucOverpayments$outstanding_proportion <- round(ucOverpayments$outstanding / ucOv
 # get determination data
 ucNonMonetary <- getNonMonetaryDeterminations()
 
-#get the max dollars; use for scale of the graph
-maxOverpaymentDollars <- max(c(ucOverpayments$state_tax_recovery,ucOverpayments$federal_tax_recovery))
-maxOutstandingOverpayment <- max(ucOverpayments$outstanding)
-maxUIPayments <- max(ucRecipiency$total_compensated_mov_avg, na.rm=TRUE)
-maxOutstandingProportion <- max(ucOverpayments$outstanding_proportion, na.rm = TRUE)
-maxUnemployedRecipients <- max(ucRecipiency$total_week_mov_avg, ucRecipiency$unemployed_avg, na.rm = TRUE)
-maxUnemploymentRate <- max(bls_unemployed_sa$perc_unemployed)
-maxDenials <- max(ucNonMonetary$denial_rate_overall, na.rm = TRUE)
-maxSepDenials <- max(ucNonMonetary$denial_sep_misconduct_percent, ucNonMonetary$denial_sep_vol_percent, ucNonMonetary$denial_sep_other_percent, na.rm = TRUE)
-maxNonSepDenials <- max(ucNonMonetary$denial_non_aa_percent,ucNonMonetary$denial_non_income_percent, ucNonMonetary$denial_non_refusework_percent, ucNonMonetary$denial_non_reporting_percent, ucNonMonetary$denial_non_referrals_percent, ucNonMonetary$denial_non_other_percent, na.rm=TRUE)
-maxSepDenialRate <- max(ucNonMonetary$denial_sep_misconduct_rate, ucNonMonetary$denial_sep_vol_rate, ucNonMonetary$denial_sep_other_rate, na.rm=TRUE)
-maxNonSepDenialRate <- max(ucNonMonetary$denial_non_aa_rate,ucNonMonetary$denial_non_income_rate, ucNonMonetary$denial_non_refusework_rate, ucNonMonetary$denial_non_reporting_rate, ucNonMonetary$denial_non_referrals_rate, ucNonMonetary$denial_non_other_rate, na.rm=TRUE)
+
+# make long-uberdf
+uber_uc_df <- map_dfr(list(ucNonMonetary, ucOverpayments, ucRecipiency, ucFirstTimePaymentLapse, 
+             ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher, bls_employed_sa), 
+        function(x) { 
+          x %>% 
+            pivot_longer(cols = !one_of(c("rptdate", "st")), names_to = "metric", values_to = "value")})
+
+arrow::write_feather(uber_uc_df, "~/test_out.feather")
 
 tmp <- tempdir()
 unzip("cb_2015_us_state_20m.zip", exdir = tmp)
@@ -730,6 +758,21 @@ usa <- readOGR(dsn=tmp, layer="cb_2015_us_state_20m")
 # # this creates the color mapping
 #pal <- colorBin("Reds", NULL, bins = 7)
 pal <- colorNumeric("Reds",NULL)
+
+
+
+# graphing.... get the max dollars; use for scale of the graph
+maxOverpaymentDollars <- max(c(ucOverpayments$state_tax_recovery,ucOverpayments$federal_tax_recovery))
+maxOutstandingOverpayment <- max(ucOverpayments$outstanding)
+maxUIPayments <- max(ucRecipiency$total_compensated_mov_avg, na.rm=TRUE)
+maxOutstandingProportion <- max(ucOverpayments$outstanding_proportion, na.rm = TRUE)
+maxUnemployedRecipients <- max(ucRecipiency$total_week_mov_avg, ucRecipiency$unemployed_avg, na.rm = TRUE)
+maxUnemploymentRate <- max(bls_unemployed_sa$perc_unemployed)
+maxDenials <- max(ucNonMonetary$denial_rate_overall, na.rm = TRUE)
+maxSepDenials <- max(ucNonMonetary$denial_sep_misconduct_percent, ucNonMonetary$denial_sep_vol_percent, ucNonMonetary$denial_sep_other_percent, na.rm = TRUE)
+maxNonSepDenials <- max(ucNonMonetary$denial_non_aa_percent,ucNonMonetary$denial_non_income_percent, ucNonMonetary$denial_non_refusework_percent, ucNonMonetary$denial_non_reporting_percent, ucNonMonetary$denial_non_referrals_percent, ucNonMonetary$denial_non_other_percent, na.rm=TRUE)
+maxSepDenialRate <- max(ucNonMonetary$denial_sep_misconduct_rate, ucNonMonetary$denial_sep_vol_rate, ucNonMonetary$denial_sep_other_rate, na.rm=TRUE)
+maxNonSepDenialRate <- max(ucNonMonetary$denial_non_aa_rate,ucNonMonetary$denial_non_income_rate, ucNonMonetary$denial_non_refusework_rate, ucNonMonetary$denial_non_reporting_rate, ucNonMonetary$denial_non_referrals_rate, ucNonMonetary$denial_non_other_rate, na.rm=TRUE)
 
 getUIMap <- function(usa,df,uiDate,dfColumn, stateText, reverseLevels) 
 {
