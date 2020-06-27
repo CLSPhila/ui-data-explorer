@@ -19,7 +19,7 @@ library(tidyverse)
 source("helper.R")
 
 # for testing
-# input <- list(range = as.Date(c("2008-01-01", "2020-04-01")), state = "PA")
+# input <- list(range = as.Date(c("2008-01-01", "2020-05-30")), state = "PA")
 
 # read in the df of data that we need
 stored_data_location <- "~/unemployment_data.feather"
@@ -131,15 +131,17 @@ server <- function(input, output) {
   # render the plot
   output$uiplot <- renderPlot({
 
+    df <- unemployed_df %>% 
+      filter(st == input$state,
+             rptdate > (input$range[1]-10),
+             rptdate < (input$range[2]+10))
+    
     if (input$viewData == "monthlyUI")
     {
       
-      df <- unemployed_df %>% 
-        filter(st == input$state,
-               rptdate > (input$range[1]-10),
-               rptdate < (input$range[2]+10),
-               metric %in% c("total_compensated_mov_avg", "total_state_compensated_mov_avg"))
       
+      df <- df %>% 
+        filter(metric %in% c("total_compensated_mov_avg", "total_state_compensated_mov_avg"))
       
       uPlot <- getRibbonPlot(df, scaling = 1000000, xlab = "Date", ylab = "Total Paid",
                       caption = "12-month moving average of UI paid per month in both regular and federal UI programs.\nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",  
@@ -147,87 +149,76 @@ server <- function(input, output) {
                       breaks=c("total_state_compensated_mov_avg","total_compensated_mov_avg"),
                       labels=c("Regular Programs","Federal Programs"))
       
-      maxPlot <- max(unemployed_df$value/1000000)
+      maxPlot <- max(df$value/1000000)
       
     }
     
     else if (input$viewData == "recipBreakdown")
     {
-      ucMelt <- melt(subset(ucRecipiency, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","total_week_mov_avg","unemployed_avg")) ,id.vars="rptdate")
+      df <- df %>% 
+        filter(metric %in% c("total_week_mov_avg","unemployed_avg"))
       
-      uPlot <-  ggplot(ucMelt) +
-          geom_rect(data=recessions.df[recessions.df$Peak>"1979-12-31",], aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-          geom_line(data=ucMelt[ucMelt$variable=="total_week_mov_avg",], aes(rptdate, value, col=variable), size=2)+
-          geom_line(data=ucMelt[ucMelt$variable=="unemployed_avg",], aes(rptdate, value, col=variable ), size=2) +
-          reportTheme +
-          labs(x="Date", y="",
-               caption="Weekly continued claims and Total Unemployed by month.\nBoth numbers are smoothed over 12 month periods.  These are the two components of recipiency rate.", 
-               title=paste(input$state, "Recipiency Rate Breakdown from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
-          scale_y_continuous(labels=comma) +
-          scale_color_brewer(palette="Set1",
-                            breaks=c("total_week_mov_avg","unemployed_avg"),
-                            labels=c("Weekly Continued Claims","Monthy Unemployed (BLS)"))
-      
-      maxPlot <- maxUnemployedRecipients
+      uPlot <- getLinePlot(df, xlab = "Date", ylab = "", 
+                           caption = "Weekly continued claims and Total Unemployed by month.\nBoth numbers are smoothed over 12 month periods.  These are the two components of recipiency rate.",
+                           title = glue::glue("{input$state} Recipiency Rate Breakdown from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                           breaks=c("total_week_mov_avg","unemployed_avg"),
+                           labels=c("Weekly Continued Claims","Monthy Unemployed (BLS)"))
+        
+      maxPlot <- max(df$value)
       
     }
     
     else if (input$viewData == "uirate")
     {  
-        ucMelt <- melt(subset(bls_unemployed_sa, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","perc_unemployed")) ,id.vars="rptdate")
-        usMelt <- melt(subset(bls_unemployed_sa, st=="US" & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","perc_unemployed")) ,id.vars="rptdate")
+      df <- df %>% 
+        filter(metric %in% c("unemployment_rate_sa"))
+      df_us <- unemployed_df %>% 
+        filter(st == "US",
+               rptdate > (input$range[1]-10),
+               rptdate < (input$range[2]+10),
+               metric %in% c("unemployment_rate_sa"))
 
-        uPlot <-  ggplot(ucMelt) +
-        geom_rect(data=recessions.df[recessions.df$Peak>"1979-12-31",], aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-        geom_line(data=ucMelt[ucMelt$variable=="perc_unemployed",], aes(rptdate, value, col=variable), size=2)+
-        reportTheme +
-        geom_line(data=usMelt[usMelt$variable=="perc_unemployed",], aes(rptdate, value), size=1, linetype="dashed", color="black") +
-        geom_text(aes(x=as.Date(input$range[1]),y=as.numeric(usMelt[1,3]),label = "US Avg", vjust = -1, hjust=0), color="black") +
-        labs(x="Date", y="",
-             caption="Seasonally adjusted unemployed rate, based on BLS monthly report found here: https://www.bls.gov/web/laus/ststdsadata.txt.",
-             title=paste(input$state, "Unemployment Rate (SA) from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
-        scale_y_continuous(labels=comma) +
-        scale_color_brewer(palette="Set1",
-                         breaks=c("perc_unemployed"),
-                         labels=c("Seasonally adjusted unemployment rate"))
-    
-        maxPlot <- maxUnemploymentRate
+        uPlot <- getLinePlot(df, xlab = "Date", ylab = "",
+                             caption = "Seasonally adjusted unemployed rate, based on BLS monthly report found here: https://www.bls.gov/web/laus/ststdsadata.txt.",
+                             title = glue::glue("{input$state} Unemployment Rate (SA) from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                             breaks=c("perc_unemployed"),
+                             labels=c("Seasonally adjusted unemployment rate")) +
+          # add the us average line and label
+          geom_line(data = df_us, size = 1, linetype = "dashed", color = "black") +
+          annotate("text", x = min(df_us$rptdate), y = df_us %>% filter(rptdate == min(rptdate)) %>% pull(value), 
+                   label = "US Avg", vjust = -1, hjust = 0, fontface = "bold")
+        
+        maxPlot <- max(df$value)
     }
     
     else if (input$viewData == "overvPayments")
     {
-      ucMelt <- melt(subset(ucOverpayments, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","outstanding_proportion")) ,id.vars="rptdate")
       
+      df <- df %>% 
+        filter(metric %in% c("outstanding_proportion"))
       
-      uPlot = ggplot(ucMelt) +
-        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-        geom_point(aes(rptdate, value, col=variable), alpha=.9) +
-        reportTheme + 
-        stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
-        labs(x="Date", 
-             caption="Outstanding overpayment balance divided by the total benefits paid in all federal and state programs over the last 12 months.\n Data courtesy of the USDOL.  Reports used are ETA 227 and 5159, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
-             title=paste(input$state, "Overpayment Balance vs Montly UI Payments from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
-        scale_fill_brewer(palette="Set1")
-      
-      maxPlot <- maxOutstandingProportion
-      
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
+                     caption = "Outstanding overpayment balance divided by the total benefits paid in all federal and state programs over the last 12 months.\n Data courtesy of the USDOL.  Reports used are ETA 227 and 5159, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                     title = glue::glue("{input$state} Overpayment Balance vs Montly UI Payments from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                     breaks=c("outstanding_proportion"),
+                     labels=c("Overpayment Balance / Annual UI Payments"))
+        
+      maxPlot <- max(df$value)
     }
 
     else if (input$viewData == "fraudvNon")
     {
-      ucMelt <- melt(subset(ucOverpayments, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","fraud_num_percent")) ,id.vars="rptdate")
       
+      df <- df %>% 
+        filter(metric %in% c("fraud_num_percent"))
       
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Fraud Overpayments as a Percent of All Overpayments from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                            breaks=c("fraud_num_percent"),
+                            labels=c("% Fraud Overpayments")) + 
+        scale_y_continuous(labels = scales::percent)
       
-      uPlot = ggplot(ucMelt) +
-        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-        geom_point(aes(rptdate, value, col=variable), alpha=.9) +
-        reportTheme + 
-        stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
-        labs(x="Date", 
-             caption="Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
-             title=paste(input$state, "Fraud vs Non-Fraud Overpayments from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
-        scale_fill_brewer(palette="Set1")
       
       maxPlot <- 1
     }

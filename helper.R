@@ -139,6 +139,7 @@ get50StateComparisonPlot <- function(dfData, startDate, endDate, measure, highli
   return(plot)
 }
 
+# a plot with ribbons rather than lines to represent values (like a stacked bar, but a stacked line)
 getRibbonPlot <- function(df, scaling = 1, xlab = "Date", ylab, caption, title, ...) {
   df %>% 
     ggplot(aes(x = rptdate, y = value, ymin = 0, ymax = value, fill = metric)) +
@@ -157,3 +158,30 @@ getRibbonPlot <- function(df, scaling = 1, xlab = "Date", ylab, caption, title, 
     scale_y_continuous(labels = label_number(scale = 1/scaling, prefix = "$", suffix = ifelse(scaling == 1000000, "M", "")))
 }
 
+# line plot with lines representing each metric passed in
+getLinePlot <- function(df, xlab = "Date", ylab, caption, title, ...) {
+  df %>% 
+    ggplot(aes(x = rptdate, y = value, color = metric)) +
+    #geom_rect(data=recessions.df[recessions.df$Peak>"1979-12-31",], aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+    geom_line(size = 2) + 
+    reportTheme +
+    labs(x = xlab, y = ylab,
+         caption = caption, 
+         title= title) + 
+    scale_y_continuous(labels=comma) +
+    scale_color_brewer(palette="Set1", ...)
+}
+
+# point plot with smoothing
+getPointPlot <- function(df, xlab = "Date", ylab, caption, title, ...) {
+  df %>% 
+    ggplot(aes(x = rptdate, y = value, color = metric)) +
+    #geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+    geom_point() +
+    stat_smooth(span=.3, se = F) + 
+    reportTheme + 
+    labs(x=xlab, y = ylab,
+         caption = caption,
+         title= title) + 
+    scale_fill_brewer(palette="Set1", ...)
+}
