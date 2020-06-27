@@ -15,19 +15,19 @@ library(ggplot2)
 library(reshape2)
 library(scales)
 library(shinycssloaders)
-source("unemploymentDataProcessor.R")
+library(tidyverse)
+source("helper.R")
 
-maxDate <- max(ucFirstTimePaymentLapse$rptdate)
-minDate <- min(ucRecipiency$rptdate)
-states <- sort(getStates(ucbrTimeliness))
+# for testing
+# input <- list(range = as.Date(c("2008-01-01", "2020-04-01")), state = "PA")
 
-reportTheme <- theme_minimal() +
-  theme(plot.title = element_text(face="bold", hjust=.5, size=20),
-        legend.position="top",
-        legend.title = element_blank(),
-        axis.title = element_text(size=17, face="bold"),
-        axis.text = element_text(size=17))
+# read in the df of data that we need
+stored_data_location <- "~/unemployment_data.feather"
+unemployed_df <- arrow::read_feather(stored_data_location)
 
+maxDate <- max(unemployed_df$rptdate)
+minDate <- min(unemployed_df$rptdate)
+states <- sort(unique(unemployed_df$st))
 
 
 # Define UI for application that draws a histogram
@@ -38,15 +38,20 @@ ui <- fluidPage(
   # Sidebar with a file input 
   sidebarLayout(
     sidebarPanel(
+      # the input that allows a state to be chosen
       selectInput("state", 
                   label = "Choose a state",
                   choices = states,
                   selected = "PA"),
     
+      # the slider that allows for a date range
       sliderInput("range", 
                   label = "Years to View:",
-                  min = minDate, max = maxDate, value = c(maxDate - 3650, maxDate), timeFormat="%Y-%m"),
+                  # the default range is 10 years prior to the most recent date
+                  min = minDate, max = maxDate, value = c(maxDate - (10 * 365), maxDate), timeFormat="%m/%Y"),
       
+      # the list of data to view; shoudl rethink how to easily define new data sets rather than
+      # having to handcode each dataset here and in 10 other places
       selectInput("viewData",
                   label = 'Select Data to View',
                   size=17, selectize=FALSE,
@@ -66,26 +71,41 @@ ui <- fluidPage(
                               "--Non-Separation Denial Breakdown"="nonMonNonSep",
                               "--Non-Separation Denial Rates"="nonMonNonSepRate",
                               "Unemployment Rate (SA)"="uirate"),
+                  # the default selected is the recipiency Rate, but this coudl be anythign
                   selected = "recipRate"),
       
+      # allows for a constant y axis on the main charts, which allows state to state
+      # comparisons to be made.  
       checkboxInput("constant_y_axis", 
                     label="Constant y axis? (makes comparisons easier)",
                     value=TRUE),
       
-      tags$img(src="https://clsphila.org/sites/all/themes/clsphila_base/images/logo-50.svg")
+      tags$img(src="https://clsphila.org/wp-content/uploads/2019/02/CLS-Logo_120.png")
       
-    , width=3),
-    # Show something
+      # the width of the sidebar panel
+      , width=3),
+    
+    # the main panel
     mainPanel(
+
+      # specify the different panels and layouts
       tabsetPanel(
+        # the main panel; has a plot, data, and a download data button
         tabPanel("Data",
           withSpinner(plotOutput("uiplot")),
           downloadButton('data.csv', 'Download Data'),
           dataTableOutput("uidata")
         ),
+        # the 50-state on one plot tab
         tabPanel("50-State Overlay (one plot)", withSpinner(plotOutput("fiftyStatePlot"))),
+        
+        # the 50-state on different plots tab
         tabPanel("50-State Comparison (many plots)", withSpinner(plotOutput("smplot", height="900px"))),
+        
+        # chloropleth map
         tabPanel("Map",withSpinner(leafletOutput("uimap"))),
+        
+        # the about page, which may need to be rewritten
         tabPanel("About", br(), 
                  p("This page was created by ", a(href="https://www.clsphila.org" ,"Community Legal Services"), " to visualize the unemployment data made avaialble by the US Department of Labor and Bureau of Labor Statistics."),
                  p("The DOL Data can be found here: https://ows.doleta.gov/unemploy/DataDownloads.asp and the BLS data can be found ", a(href="https://www.bls.gov/web/laus/ststdsadata.txt", "here"), "and ", a(href="https://www.bls.gov/web/laus/ststdnsadata.txt", "here.")),
@@ -95,10 +115,11 @@ ui <- fluidPage(
       )
     )
   ),
+  
+  # a row at the bottom with links, etc...
   fluidRow(
     hr(),
-    HTML("This page is maintained by <a href=mailto:mhollander@clsphila.org>Michael Hollander</a> of <a href='clsphila.org' target=_blank>Community Legal Services</a>.  You can find the code for this page on github here:<a href='https://github.com/CLSPhila/ui-data-explorer' target=_blank>Github</a>.  All of the data for this website comes from <a href=https://ows.doleta.gov/unemploy/DataDownloads.asp target=_blank>the US Department of Labor</a>.")
-    
+    HTML("This page is maintained by <a href=mailto:hollander@gmail.com>Michael Hollander</a>, formerly of <a href='clsphila.org' target=_blank>Community Legal Services</a>.  You can find the code for this page on github here:<a href='https://github.com/CLSPhila/ui-data-explorer' target=_blank>Github</a>.  All of the data for this website comes from <a href=https://oui.doleta.gov/unemploy/DataDownloads.asp target=_blank>the US Department of Labor</a> and U.S. Bureau of Labor Statistics, through <a href='https://fred.stlouisfed.org/'>FRED/the Federal Reserve Bank of St. Louis.</a>")
   )
 )
 
@@ -113,24 +134,20 @@ server <- function(input, output) {
     if (input$viewData == "monthlyUI")
     {
       
-      ucMelt <- melt(subset(ucRecipiency, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","total_compensated_mov_avg", "total_state_compensated_mov_avg")) ,id.vars="rptdate")
-                                                                                                                                  
+      df <- unemployed_df %>% 
+        filter(st == input$state,
+               rptdate > (input$range[1]-10),
+               rptdate < (input$range[2]+10),
+               metric %in% c("total_compensated_mov_avg", "total_state_compensated_mov_avg"))
       
-      uPlot = ggplot(ucMelt) +
-        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-        geom_ribbon(data=ucMelt[ucMelt$variable=="total_compensated_mov_avg",],aes(x=rptdate, ymin=0, ymax=value/1000000, fill=variable), alpha=.9)+
-        geom_ribbon(data=ucMelt[ucMelt$variable=="total_state_compensated_mov_avg",], aes(x=rptdate, ymin=0, ymax=value/1000000, fill=variable), alpha=.9)+
-        geom_line(aes(rptdate, value/1000000, col=variable)) +
-        scale_color_discrete(guide=FALSE) +
-        reportTheme + 
-        labs(x="Date", y="Total Paid (Millions of $)",
-             caption="12-month moving average of UI paid per month in both regular and federal UI programs.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",  
-             title = paste(input$state, "Monthly UI Payments from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) +
-        scale_fill_brewer(palette="Set1",
-                          breaks=c("total_state_compensated_mov_avg","total_compensated_mov_avg"),
-                          labels=c("Regular Programs","Federal Programs"))
       
-      maxPlot <- maxUIPayments/1000000
+      uPlot <- getRibbonPlot(df, scaling = 1000000, xlab = "Date", ylab = "Total Paid",
+                      caption = "12-month moving average of UI paid per month in both regular and federal UI programs.\nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",  
+                      title = glue::glue("{input$state} Monthly UI Payments from {format.Date(input$range[1], 'm-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                      breaks=c("total_state_compensated_mov_avg","total_compensated_mov_avg"),
+                      labels=c("Regular Programs","Federal Programs"))
+      
+      maxPlot <- max(unemployed_df$value/1000000)
       
     }
     

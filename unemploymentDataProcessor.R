@@ -1,13 +1,11 @@
 # Helper app to download and process data from the DOL website
-# THe downloads can be found here: http://.doleta.gov/unemploy/DataDownloads.asp
+# THe downloads can be found here: http://oui.doleta.gov/unemploy/DataDownloads.asp
 # For each download below, there is a data definition pdf that explains what each field is that is being sought
 
 library(RCurl)
 library(ggplot2)
 library(lubridate)
 library(tidyverse)
-library(rgdal)
-library(leaflet)
 library(zoo)
 library(fredr)
 fredr_set_key(Sys.getenv("FRED_KEY"))
@@ -37,10 +35,6 @@ setBenefitAppealNames <- function(df) {
     rename(`lower_filed` = c9, `lower_disposed` = c13, `higher_filed` = c10, `higher_disposed` = c14)
 }
 
-# return a list of all of the states
-getStates <- function (df) {
-  return(unique(df$st))
-}
 
 # return the maximum year (as a string) from the df's Date column
 getMaxYear <- function (df) {

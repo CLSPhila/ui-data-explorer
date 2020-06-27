@@ -1,6 +1,11 @@
 #' helper.R
 #' A series of functions to help with the UI data explorer shiny app
 
+library(rgdal)
+library(leaflet)
+library(ggplot2)
+library(lubridate)
+
 tmp <- tempdir()
 unzip("cb_2015_us_state_20m.zip", exdir = tmp)
 
@@ -18,24 +23,25 @@ pal <- colorNumeric("Reds",NULL)
 
 
 # a df of the recessions; used for graphing
-recession_df <- data.frame(start = c("1969-12-01", "1973-11-01", "1980-01-01",  
-                                     "1981-07-01", "1990-07-01", "2001-03-01", "2007-12-01", "2020-02-01"),
-                           end = c("1970-11-01", "1975-03-01", "1980-07-01",
-                                   "1982-11-01", "1991-03-01", "2001-11-01", "2009-06-01", NA))
+recession_df <- data.frame(start = as.Date(c("1969-12-01", "1973-11-01", "1980-01-01",  
+                                     "1981-07-01", "1990-07-01", "2001-03-01", "2007-12-01", "2020-02-01")),
+                           end = as.Date(c("1970-11-01", "1975-03-01", "1980-07-01",
+                                   "1982-11-01", "1991-03-01", "2001-11-01", "2009-06-01", NA))) %>% 
+  replace(is.na(.), today())
 
 
 # graphing.... get the max dollars; use for scale of the graph
-maxOverpaymentDollars <- max(c(ucOverpayments$state_tax_recovery,ucOverpayments$federal_tax_recovery))
-maxOutstandingOverpayment <- max(ucOverpayments$outstanding)
-maxUIPayments <- max(ucRecipiency$total_compensated_mov_avg, na.rm=TRUE)
-maxOutstandingProportion <- max(ucOverpayments$outstanding_proportion, na.rm = TRUE)
-maxUnemployedRecipients <- max(ucRecipiency$total_week_mov_avg, ucRecipiency$unemployed_avg, na.rm = TRUE)
-maxUnemploymentRate <- max(bls_unemployed_sa$perc_unemployed)
-maxDenials <- max(ucNonMonetary$denial_rate_overall, na.rm = TRUE)
-maxSepDenials <- max(ucNonMonetary$denial_sep_misconduct_percent, ucNonMonetary$denial_sep_vol_percent, ucNonMonetary$denial_sep_other_percent, na.rm = TRUE)
-maxNonSepDenials <- max(ucNonMonetary$denial_non_aa_percent,ucNonMonetary$denial_non_income_percent, ucNonMonetary$denial_non_refusework_percent, ucNonMonetary$denial_non_reporting_percent, ucNonMonetary$denial_non_referrals_percent, ucNonMonetary$denial_non_other_percent, na.rm=TRUE)
-maxSepDenialRate <- max(ucNonMonetary$denial_sep_misconduct_rate, ucNonMonetary$denial_sep_vol_rate, ucNonMonetary$denial_sep_other_rate, na.rm=TRUE)
-maxNonSepDenialRate <- max(ucNonMonetary$denial_non_aa_rate,ucNonMonetary$denial_non_income_rate, ucNonMonetary$denial_non_refusework_rate, ucNonMonetary$denial_non_reporting_rate, ucNonMonetary$denial_non_referrals_rate, ucNonMonetary$denial_non_other_rate, na.rm=TRUE)
+# maxOverpaymentDollars <- max(c(ucOverpayments$state_tax_recovery,ucOverpayments$federal_tax_recovery))
+# maxOutstandingOverpayment <- max(ucOverpayments$outstanding)
+# maxUIPayments <- max(ucRecipiency$total_compensated_mov_avg, na.rm=TRUE)
+# maxOutstandingProportion <- max(ucOverpayments$outstanding_proportion, na.rm = TRUE)
+# maxUnemployedRecipients <- max(ucRecipiency$total_week_mov_avg, ucRecipiency$unemployed_avg, na.rm = TRUE)
+# maxUnemploymentRate <- max(bls_unemployed_sa$perc_unemployed)
+# maxDenials <- max(ucNonMonetary$denial_rate_overall, na.rm = TRUE)
+# maxSepDenials <- max(ucNonMonetary$denial_sep_misconduct_percent, ucNonMonetary$denial_sep_vol_percent, ucNonMonetary$denial_sep_other_percent, na.rm = TRUE)
+# maxNonSepDenials <- max(ucNonMonetary$denial_non_aa_percent,ucNonMonetary$denial_non_income_percent, ucNonMonetary$denial_non_refusework_percent, ucNonMonetary$denial_non_reporting_percent, ucNonMonetary$denial_non_referrals_percent, ucNonMonetary$denial_non_other_percent, na.rm=TRUE)
+# maxSepDenialRate <- max(ucNonMonetary$denial_sep_misconduct_rate, ucNonMonetary$denial_sep_vol_rate, ucNonMonetary$denial_sep_other_rate, na.rm=TRUE)
+# maxNonSepDenialRate <- max(ucNonMonetary$denial_non_aa_rate,ucNonMonetary$denial_non_income_rate, ucNonMonetary$denial_non_refusework_rate, ucNonMonetary$denial_non_reporting_rate, ucNonMonetary$denial_non_referrals_rate, ucNonMonetary$denial_non_other_rate, na.rm=TRUE)
 
 getUIMap <- function(usa,df,uiDate,dfColumn, stateText, reverseLevels) 
 {
@@ -82,6 +88,14 @@ getUIMap <- function(usa,df,uiDate,dfColumn, stateText, reverseLevels)
   return(uiMap)
 }
 
+reportTheme <- theme_minimal() +
+  theme(plot.title = element_text(face="bold", hjust=.5, size=20),
+        legend.position="top",
+        legend.title = element_blank(),
+        axis.title = element_text(size=17, face="bold"),
+        axis.text = element_text(size=17))
+
+
 # a function to generate small multiple plots of 50-state data, compared against the US average for a given measure
 # measure - the measure to graph
 getSMPlot <- function(dfData, startDate, endDate, measure, yLabel, plotTitle)
@@ -125,33 +139,21 @@ get50StateComparisonPlot <- function(dfData, startDate, endDate, measure, highli
   return(plot)
 }
 
-
-# # make an uber DF that has all of the measures that we want and then melt/do a facet_grid
-# uberDF <- ucRecipiency[,c("rptdate","st", "recipiency_annual_total")]
-# 
-# bls_unemployed_sa$rptdate <- bls_unemployed_sa$rptdate + months(1)-days(1)
-# uberDF <- merge(uberDF, bls_unemployed_sa[,c("rptdate", "st", "perc_unemployed")], by=c("st", "rptdate"), all=TRUE)
-# uberDF <- merge(uberDF, ucNonMonetary[,c("rptdate","st","denial_sep_percent", "denial_non_percent", "denial_rate_overall", "denial_sep_rate", "denial_non_rate")], by=c("st", "rptdate"), all=TRUE)
-# 
-# uberMelt <- melt(uberDF[,c("rptdate","st","perc_unemployed", "recipiency_annual_total", "denial_rate_overall", "denial_sep_rate", "denial_non_rate")],id.vars=c("st", "rptdate"))
-# uberMelt$variable <- factor(uberMelt$variable, levels=c("perc_unemployed", "recipiency_annual_total", "denial_rate_overall", "denial_sep_rate", "denial_non_rate"), labels=c("Unemp Rate", "Recipiency Rate", "Non-Mon Denial Rate", "Sep Denial Rate", "Non-Sep Denial Rate"))
-# 
-# #smPlot  <- ggplot(uberMelt[!(uberMelt$st %in% c("US","PR","VI","DC")) & !is.na(uberMelt$value),], aes_string(x="rptdate", y="value")) +
-# smPlot  <- ggplot(uberMelt[uberMelt$st %in% c("AK","PA") & !is.na(uberMelt$value),], aes_string(x="rptdate", y="value")) +
-#   geom_line(size=1.1, color="gray29") +
-#   facet_wrap(st ~ variable, ncol=5, scales="free_y", labeller=labeller(.cols=label_value, .multi_line=FALSE)) +
-#   geom_line(data=subset(dfData, rptdate > as.Date(startDate) & rptdate < as.Date(endDate) & st == "US", select=c("rptdate",measure)), aes_string(x="rptdate", y=measure), color="tomato3", linetype="dashed") +
-# #  geom_line(data=uberMelt[uberMelt$st=="US" & !is.na(uberMelt$value),c("rptdate", "variable", "value")], aes_string(x="rptdate", y="value"), color="tomato3", linetype="dashed") +
-#   theme_minimal() +
-#   theme(plot.title = element_text(face="bold", hjust=.5, size=20),
-#         legend.position="top",
-#         legend.title = element_blank(),
-#         axis.title = element_text(size=10, face="bold"),
-#         axis.text = element_text(size=10),
-#         strip.text.x = element_text(face="bold")
-#   ) +
-#   ggtitle("A 50-State Look at the Health of Unemployment Systems") 
-# 
-# ggsave("out2.png", plot=smPlot, device="png", width=15, height=50, units="in", limitsize=FALSE)
-
+getRibbonPlot <- function(df, scaling = 1, xlab = "Date", ylab, caption, title, ...) {
+  df %>% 
+    ggplot(aes(x = rptdate, y = value, ymin = 0, ymax = value, fill = metric)) +
+    # need to work on recession shading; it isn't working b/c of lims, I think, when the lim is in the middle of a recession
+    #geom_rect(inherit.aes = FALSE, data=recession_df, aes(xmin=start, xmax=end, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+    geom_ribbon(alpha=.9)+
+    geom_line() +
+    scale_color_discrete(guide=FALSE) +
+    lims(x = c(min(df$rptdate), max(df$rptdate))) +
+    reportTheme + 
+    labs(x = xlab, 
+         y = ylab, 
+         caption = caption,
+         title = title) +
+    scale_fill_brewer(palette="Set1", ...) +
+    scale_y_continuous(labels = label_number(scale = 1/scaling, prefix = "$", suffix = ifelse(scaling == 1000000, "M", "")))
+}
 
