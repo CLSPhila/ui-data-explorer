@@ -8,11 +8,13 @@ library(lubridate)
 library(tidyverse)
 library(rgdal)
 library(leaflet)
-require(bit64)
 library(zoo)
+library(fredr)
+fredr_set_key(Sys.getenv("FRED_KEY"))
 
 #library(data.table)
 #library(dplyr)
+#require(bit64)
 
 downloadUCData <- function (URL) {
   
@@ -177,92 +179,85 @@ getOverpayments <- function() {
   return(ucOverpayments)
 }
 
+# gets the selected series from FRED, adds in a state name, renames a few columns, and returns the DF
+# can be used in a map function to get all 50 states; will sleep if sleep is set to true
+# to avoid api limitations
+get_fred_series_with_state_id <- function(series, metric_name, sleep = FALSE, start_date = as.Date("1976-01-01")) {
+  
+  # get the data from fredr; use a try catch b/c some series don't exist and we 
+  # need to catch those and move on
+  df <- tryCatch({
+    fredr(series_id = series,
+          observation_start = start_date)
+  }, warning = function(c) {
+    print(glue::glue("{series} does not exist.  Moving on. {c}"))
+    return(NULL)
+  }, message = function(c) {
+    print(glue::glue("{series} does not exist.  Moving on.  {c}"))
+    return(NULL)
+  }, error = function(c) {
+    print(glue::glue("{series} does not exist.  Moving on. {c}"))
+    return(NULL)
+  })
+  
+  # if we got an error, then end the function here.
+  if(is.null(df)) return(df)
+  
+  # get the state abbreviation
+  state = get_state_from_series_id(series)
+  
+  # do a few mutations to make the data match the other data we have
+  df <- df %>% 
+    mutate(st = state,
+           metric = metric_name,
+           # I want the data on unemployment to match with the 
+           # other data we are collecting.  All other reports have a date
+           # of the last day of the month in question; the bls data has a date
+           # of the first day of the month; this normalizes everything
+           rptdate = ceiling_date(date, "month") - 1) %>% 
+    select(rptdate, st, metric, value)
+  
+  # sleep to avoid a rate limitation, if need be
+  if(sleep) Sys.sleep(1)
+  
+  return(df)
+}
 
-# get unemployment information from the BLS website and convert to a datatable.  
-# This function takes a long time to run.  
-# Param nsa refers to the not-seasonally-adjusdted figures vs seasonally adjusted
-get_bls_employment_data <- function(nsa=TRUE) {
-  if (nsa)
-    blsurl <- "https://www.bls.gov/web/laus/ststdnsadata.txt"
-  else
-    blsurl <- "https://www.bls.gov/web/laus/ststdsadata.txt"
-  tf <- tempfile()
-  download.file(blsurl, tf)
 
-  doc <- readLines(tf)
-  doc <- sub('^ +', '', doc, perl=TRUE)
-  doc <- gsub(',', '', doc, perl=TRUE)
-  doc <- gsub(' [.][.]+', '', doc, perl=TRUE)
-  cols <- strsplit(doc, '  +', perl=TRUE)
+# gets the state abbr from a fred series.  The one special case is the US, which we have
+# to rename to US from USA
+get_state_from_series_id <- function(series) {
+  state <- fredr_series_tags(series) %>% 
+    filter(group_id == "geo") %>% 
+    slice(n()) %>% 
+    pull(name) %>% 
+    toupper()
   
-  month.name <- format(ISOdate(1900, 1:12, 1), "%B")
-  results <- NULL
-  curdate <- NULL
-  n <- length(cols)
-  i <- 1L
-  for (d in cols){
-    if (length(d) == 1){
-      e = strsplit(d[1], ' ')[[1]]
-      if (e[1] %in% month.name){
-        curdate <- as.Date(paste(e[1], '1', e[2], sep=' '), "%B %d %Y")
-      }
-    }
-    else if (d[1] %in% state.name){
-      if (is.null(results)){
-        results <- data.frame(state=rep(d[1], n),
-                              pop=rep(as.integer(d[2]), n),
-                              total=rep(as.integer(d[3]), n),
-                              perc_pop=rep(as.numeric(d[4]), n),
-                              total_employed=rep(as.integer(d[5]), n),
-                              perc_employed=rep(as.numeric(d[6]), n),
-                              total_unemployed=rep(as.integer(d[7]), n),
-                              perc_unemployed=rep(as.numeric(d[8]), n),
-                              month=rep(curdate, n))
-      }
-      else{
-        i <- i + 1L
-        data.table::set(results, i, 1L, d[1])
-        data.table::set(results, i, 2L, as.integer(d[2]))
-        data.table::set(results, i, 3L, as.integer(d[3]))
-        data.table::set(results, i, 4L, as.numeric(d[4]))
-        data.table::set(results, i, 5L, as.integer(d[5]))
-        data.table::set(results, i, 6L, as.numeric(d[6]))
-        data.table::set(results, i, 7L, as.integer(d[7]))
-        data.table::set(results, i, 8L, as.numeric(d[8]))
-        data.table::set(results, i, 9L, curdate)
-      }
-    }
-  }
-  results <- results[-seq(i + 1L, n), ]
+  if(state == "USA") state = "US"
   
-  results$state <- state.abb[match(results$state,state.name)]
-  
-  return(as.tibble(results))
+  return(state)
   
 }
+
 
 
 # combine bls unemployed info with general unemployment continuing claims numbers to get a recipiency rate
 # generally speaking, recipiency rate is total continued claims in an average week / total unemployed over that week
 # the function below returns a df with a recipiency rate that is smoothed with 12 month moving averages.
 # it also calculates state, fed, and total recipiency rates separately so that you can see how much of the recipiency
-# rate is from federal programs like EB and EUC
-getRecipiency <- function ()
+# rate is from federal programs like EB and EUC.
+# accepts as a parameter bls_unemployment data
+getRecipiency <- function (bls_unemployed)
 {
   
-  # start by downloading the bls employment data to get unemployed per month
-  bls_unemployed <- get_bls_employment_data(nsa=TRUE) %>% 
-    rename(st = state) %>% 
-    mutate(
-      rptdate = ceiling_date(month, "month") - 1
-    )
   
-  
-  #arrange the BLS data by state then month and then do 12 month moving averages of the unemployed number
-  bls_unemployed <- bls_unemployed %>%
+  # take the bls unemployment data and just extract the data that we need, which includes getting a 
+  # 12 month moving averages of the unemployed number
+  bls_unemployed <- bls_unemployed %>% filter(endsWith(metric, "nsa")) %>% 
+    pivot_wider(names_from = metric, values_from = value) %>% 
     arrange(st, rptdate) %>% 
     group_by(st) %>% 
-    mutate(unemployed_avg = round(rollmean(total_unemployed, k=12, align="right", na.pad=T), 0)) %>% 
+    mutate(unemployed_avg = round(rollmean(total_unemployed_nsa, k=12, align="right", na.pad=T), 0)) %>% 
     ungroup()
   
   
@@ -345,7 +340,7 @@ getRecipiency <- function ()
 
   # now combine with the BLS unemployed data
   ucRecipiency <- ucRecipiency %>% 
-    left_join(bls_unemployed %>% select(c("st", "rptdate", "total_unemployed", "unemployed_avg")), 
+    left_join(bls_unemployed %>% select(c("st", "rptdate", "total_unemployed_nsa", "unemployed_avg")), 
               by = c("st", "rptdate"))
   
 
@@ -662,35 +657,16 @@ getUCBenefitAppeals <- function(url) {
   return(df)
 }
 
-# gets the employment/unemployment rate from BLS data
-getBLSEmploymentRateData <- function(...) {
-  # get unemployment data, rename a few columns, fix the rpt_date to match
-  # the dates of all of our other data (is this a problem?!)
-  bls_unemployed <- get_bls_employment_data(...) %>% 
-    rename(rptdate = month, 
-           st = state) %>% 
-    mutate(rptdate = ceiling_date(rptdate, "month") - 1)
-    
 
-  #compute US totals and US average.
-  # note that we first calculate the total of the "total" columns like total employed
-  # and the we redo the calculations for the US as a whole. This allows us to see the US
-  # as a whole 
-  usAvg <- bls_unemployed %>% 
-    group_by(rptdate) %>% 
-    summarize(across(one_of(c("pop", "total", "total_employed", "total_unemployed")), function(x) round(sum(x), 3))) %>% 
-    mutate(st = "US",
-           perc_unemployed = round(total_unemployed/total * 100, 1),
-           perc_employed = round(total_employed/pop * 100,1),
-           perc_pop = round(total/pop * 100,1)) 
-  
-  
-  bls_unemployed <- bls_unemployed %>% 
-    bind_rows(usAvg) %>% 
-    mutate(st = as.factor(st))
-  
-  return(bls_unemployed)
-}
+# gets the unemployment rate and total unemployed for all 50 states + DC + the US;
+# uses a sleep within each request (1sec) so it takes on the order of 5 minutes to retrieve all of the data that we want
+# without hitting a rate limit
+bls_unemployed <- bind_rows(
+  map_dfr(c("UNRATE", "DCUR", paste0(state.abb, "UR")), get_fred_series_with_state_id, "unemployment_rate_sa", sleep = TRUE),
+  map_dfr(c("UNRATENSA", "DCURN", paste0(state.abb, "URN")), get_fred_series_with_state_id, "unemployment_rate_nsa", sleep = TRUE),
+  map_dfr(c("UNEMPLOY", paste0("LASST", str_pad(1:56,width = 2, side = "left", pad = "0"), "0000000000004")), get_fred_series_with_state_id, "total_unemployed_sa", sleep = TRUE),
+  map_dfr(c("LNU03000000", paste0("LAUST", str_pad(1:56,width = 2, side = "left", pad = "0"), "0000000000004")), get_fred_series_with_state_id, "total_unemployed_nsa", sleep = TRUE))
+
 
 ucFirstTimePaymentLapse <- getUCFirstTimePaymentLapse()
 
@@ -704,24 +680,9 @@ ucBenefitAppealsEUC08x13 <- getUCBenefitAppeals("https://oui.doleta.gov/unemploy
 ucAppealsTimeLapseLower <- getUCAppealsTimeLapseLower(ucBenefitAppealsRegular)
 ucAppealsTimeLapseHigher <- getucAppealsTimeLapseHigher()
 
-bls_employed_sa <- getBLSEmploymentRateData(nsa = FALSE)
-
-
-# recession data; not implemented in the charting yet
-recessions.df = read.table(textConnection(
-  "Peak, Trough
-  1969-12-01, 1970-11-01
-  1973-11-01, 1975-03-01
-  1980-01-01, 1980-07-01
-  1981-07-01, 1982-11-01
-  1990-07-01, 1991-03-01
-  2001-03-01, 2001-11-01
-  2007-12-01, 2009-06-01"), sep=',',
-  colClasses=c('Date', 'Date'), header=TRUE)
-
 
 # get UC recipiency and overpayments
-ucRecipiency <- getRecipiency()
+ucRecipiency <- getRecipiency(bls_unemployed)
 ucOverpayments <- getOverpayments()
 
 # add in the uc payments by month into the ucOverpayments data to get overpayments as a percent of annual costs
@@ -736,159 +697,16 @@ ucNonMonetary <- getNonMonetaryDeterminations()
 
 
 # make long-uberdf
-uber_uc_df <- map_dfr(list(ucNonMonetary, ucOverpayments, ucRecipiency, ucFirstTimePaymentLapse, 
-             ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher, bls_employed_sa), 
+unemployment_df <- 
+  map_dfr(list(ucNonMonetary, ucOverpayments, ucRecipiency, ucFirstTimePaymentLapse, 
+             ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher), 
         function(x) { 
           x %>% 
-            pivot_longer(cols = !one_of(c("rptdate", "st")), names_to = "metric", values_to = "value")})
+            pivot_longer(cols = !one_of(c("rptdate", "st")), names_to = "metric", values_to = "value")}) %>% 
+  bind_rows(bls_unemployed)
 
-arrow::write_feather(uber_uc_df, "~/test_out.feather")
-
-tmp <- tempdir()
-unzip("cb_2015_us_state_20m.zip", exdir = tmp)
- 
-usa <- readOGR(dsn=tmp, layer="cb_2015_us_state_20m")
-# 
-# #add data to the usa dataframe
-# maxDate = max(ucRecipiency$rptdate)
-# # use a left join b/c there is no data for DC and PR in most cases
-# usa@data = usa@data %>%
-#   left_join(ucRecipiency[ucRecipiency$rptdate==maxDate,c("st","rptdate","recipiency_annual_total")], by=c("STUSPS"="st"))
-# 
-# # this creates the color mapping
-#pal <- colorBin("Reds", NULL, bins = 7)
-pal <- colorNumeric("Reds",NULL)
+arrow::write_feather(unemployment_df, "~/unemployment_data.feather")
 
 
-
-# graphing.... get the max dollars; use for scale of the graph
-maxOverpaymentDollars <- max(c(ucOverpayments$state_tax_recovery,ucOverpayments$federal_tax_recovery))
-maxOutstandingOverpayment <- max(ucOverpayments$outstanding)
-maxUIPayments <- max(ucRecipiency$total_compensated_mov_avg, na.rm=TRUE)
-maxOutstandingProportion <- max(ucOverpayments$outstanding_proportion, na.rm = TRUE)
-maxUnemployedRecipients <- max(ucRecipiency$total_week_mov_avg, ucRecipiency$unemployed_avg, na.rm = TRUE)
-maxUnemploymentRate <- max(bls_unemployed_sa$perc_unemployed)
-maxDenials <- max(ucNonMonetary$denial_rate_overall, na.rm = TRUE)
-maxSepDenials <- max(ucNonMonetary$denial_sep_misconduct_percent, ucNonMonetary$denial_sep_vol_percent, ucNonMonetary$denial_sep_other_percent, na.rm = TRUE)
-maxNonSepDenials <- max(ucNonMonetary$denial_non_aa_percent,ucNonMonetary$denial_non_income_percent, ucNonMonetary$denial_non_refusework_percent, ucNonMonetary$denial_non_reporting_percent, ucNonMonetary$denial_non_referrals_percent, ucNonMonetary$denial_non_other_percent, na.rm=TRUE)
-maxSepDenialRate <- max(ucNonMonetary$denial_sep_misconduct_rate, ucNonMonetary$denial_sep_vol_rate, ucNonMonetary$denial_sep_other_rate, na.rm=TRUE)
-maxNonSepDenialRate <- max(ucNonMonetary$denial_non_aa_rate,ucNonMonetary$denial_non_income_rate, ucNonMonetary$denial_non_refusework_rate, ucNonMonetary$denial_non_reporting_rate, ucNonMonetary$denial_non_referrals_rate, ucNonMonetary$denial_non_other_rate, na.rm=TRUE)
-
-getUIMap <- function(usa,df,uiDate,dfColumn, stateText, reverseLevels) 
-{
-  # the dates that come in can be anywhere in the month b/c of the way the date slider works, so we have to 
-  # get the end of the month
-  uiDate <- ceiling_date(uiDate,"month") - days(1)
-  # this is b/c the stats are on different release cycles--some release earlier and later in the month, some release quarterly
-  # so this allows us to pick a date that doesn't exist, but fall back to something that does
-  if(!(uiDate %in% df$rptdate))
-    uiDate <- max(df$rptdate)
-  
-  df <- subset(df, rptdate==uiDate, select=c("st","rptdate",dfColumn))
-  
-  # flop the measure col if reverse is true so that we can do the shading correctly when high is good
-  if (reverseLevels)
-    df$measureCol <- 1/df[[dfColumn]]
-  else
-    df$measureCol <- df[[dfColumn]]
-  
-  # use a left join b/c there is no data for DC and PR in most cases
-  usa@data = usa@data %>%
-    left_join(df, by=c("STUSPS"="st"), copy=TRUE)
-
-  
-  state_popup <- paste0(stateText,
-                        "<br><strong>", 
-                        usa$NAME, 
-                        "</strong>: ",
-                        usa[[dfColumn]])
-  
-
-  # print out the map.  The problem here is that the palettes are white->red as you go from bad->good, which
-  # means that we often will want to resort everything 
-  uiMap <- leaflet(data = usa) %>%
-    addProviderTiles("CartoDB.Positron") %>%
-    addPolygons(fillColor = ~pal(measureCol), 
-                fillOpacity = 0.8, 
-                color = "#BDBDC3", 
-                weight = 1, 
-                popup = state_popup) %>%
-    setView(lng = -93.85, lat = 37.45, zoom = 4)
-  
-
-  return(uiMap)
-}
-
-# a function to generate small multiple plots of 50-state data, compared against the US average for a given measure
-# measure - the measure to graph
-getSMPlot <- function(dfData, startDate, endDate, measure, yLabel, plotTitle)
-{ 
-  
-  # small multiple plot
-  smPlot  <- ggplot(subset(dfData, rptdate > as.Date(startDate) & rptdate < as.Date(endDate) & !(st %in% c("US","PR","VI","DC")), select=c("rptdate","st", measure)), aes_string(x="rptdate", y=measure)) +
-     geom_line(size=1.1, color="gray29") +
-     facet_wrap(~ st, ncol=5) +
-     geom_line(data=subset(dfData, rptdate > as.Date(startDate) & rptdate < as.Date(endDate) & st == "US", select=c("rptdate",measure)), aes_string(x="rptdate", y=measure), color="tomato3", linetype="dashed") +
-     theme_minimal() +
-     theme(plot.title = element_text(face="bold", hjust=.5, size=20),
-           legend.position="top",
-           legend.title = element_blank(),
-           axis.title = element_text(size=10, face="bold"),
-           axis.text = element_text(size=10),
-           strip.text.x = element_text(face="bold")
-     ) +
-    labs(x="Date", y=yLabel) + 
-    ggtitle(plotTitle) 
-  return(smPlot) 
-}
-
-
-# a function to generate a single state vs 50-state overview on one graphs
-# measure - the measure to graph
-get50StateComparisonPlot <- function(dfData, startDate, endDate, measure, highlightState, yLabel, plotTitle)
-{ 
-  plot <- ggplot(dfData[dfData$rptdate > as.Date(startDate) & dfData$rptdate < as.Date(endDate) & !(dfData$st %in% c("US","PR","VI","DC")), c("rptdate","st", measure)], aes_string(x="rptdate", y=measure, group="st")) +
-    geom_line(color="grey") +
-    geom_line(data=dfData[dfData$rptdate > as.Date(startDate) & dfData$rptdate < as.Date(endDate) & dfData$st==highlightState, c("rptdate", "st", measure)], color="tomato3", size=2) +
-    theme_minimal() +
-    theme(plot.title = element_text(face="bold", hjust=.5, size=20),
-          legend.position="top",
-          legend.title = element_blank(),
-          axis.title = element_text(size=17, face="bold"),
-          axis.text = element_text(size=17)
-    ) +
-    ggtitle(plotTitle) +
-    labs(x="Date", y=yLabel)
-  return(plot)
-}
-
-
-# # make an uber DF that has all of the measures that we want and then melt/do a facet_grid
-# uberDF <- ucRecipiency[,c("rptdate","st", "recipiency_annual_total")]
-# 
-# bls_unemployed_sa$rptdate <- bls_unemployed_sa$rptdate + months(1)-days(1)
-# uberDF <- merge(uberDF, bls_unemployed_sa[,c("rptdate", "st", "perc_unemployed")], by=c("st", "rptdate"), all=TRUE)
-# uberDF <- merge(uberDF, ucNonMonetary[,c("rptdate","st","denial_sep_percent", "denial_non_percent", "denial_rate_overall", "denial_sep_rate", "denial_non_rate")], by=c("st", "rptdate"), all=TRUE)
-# 
-# uberMelt <- melt(uberDF[,c("rptdate","st","perc_unemployed", "recipiency_annual_total", "denial_rate_overall", "denial_sep_rate", "denial_non_rate")],id.vars=c("st", "rptdate"))
-# uberMelt$variable <- factor(uberMelt$variable, levels=c("perc_unemployed", "recipiency_annual_total", "denial_rate_overall", "denial_sep_rate", "denial_non_rate"), labels=c("Unemp Rate", "Recipiency Rate", "Non-Mon Denial Rate", "Sep Denial Rate", "Non-Sep Denial Rate"))
-# 
-# #smPlot  <- ggplot(uberMelt[!(uberMelt$st %in% c("US","PR","VI","DC")) & !is.na(uberMelt$value),], aes_string(x="rptdate", y="value")) +
-# smPlot  <- ggplot(uberMelt[uberMelt$st %in% c("AK","PA") & !is.na(uberMelt$value),], aes_string(x="rptdate", y="value")) +
-#   geom_line(size=1.1, color="gray29") +
-#   facet_wrap(st ~ variable, ncol=5, scales="free_y", labeller=labeller(.cols=label_value, .multi_line=FALSE)) +
-#   geom_line(data=subset(dfData, rptdate > as.Date(startDate) & rptdate < as.Date(endDate) & st == "US", select=c("rptdate",measure)), aes_string(x="rptdate", y=measure), color="tomato3", linetype="dashed") +
-# #  geom_line(data=uberMelt[uberMelt$st=="US" & !is.na(uberMelt$value),c("rptdate", "variable", "value")], aes_string(x="rptdate", y="value"), color="tomato3", linetype="dashed") +
-#   theme_minimal() +
-#   theme(plot.title = element_text(face="bold", hjust=.5, size=20),
-#         legend.position="top",
-#         legend.title = element_blank(),
-#         axis.title = element_text(size=10, face="bold"),
-#         axis.text = element_text(size=10),
-#         strip.text.x = element_text(face="bold")
-#   ) +
-#   ggtitle("A 50-State Look at the Health of Unemployment Systems") 
-# 
-# ggsave("out2.png", plot=smPlot, device="png", width=15, height=50, units="in", limitsize=FALSE)
 
 
