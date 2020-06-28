@@ -510,16 +510,16 @@ getUCFirstTimePaymentLapse <- function() {
   # calculate some values
   ucFirstTimePaymentLapse <- ucFirstTimePaymentLapse %>% 
     mutate(
-      Within15Days = round((x0x7 + x8x14) / Total, 3),
-      Within35Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35) / Total, 3),
-      Within49Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42 + x43x49) / Total, 3),
-      Within70Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42+ x43x49 + 
+      first_time_payment_Within15Days = round((x0x7 + x8x14) / Total, 3),
+      first_time_payment_Within35Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35) / Total, 3),
+      first_time_payment_Within49Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42 + x43x49) / Total, 3),
+      first_time_payment_Within70Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42+ x43x49 + 
                               x50x56 + x57x63 + x64x70) / Total,3),
-      Over70Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42 + x43x49 + x50x56 + 
+      first_time_payment_Over70Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42 + x43x49 + x50x56 + 
                             x57x63 + x64x70 + xOver70) / Total,3)) %>% 
   
     # we only need to choose certain columns, so this isn't strictly necessary, but is a convenience
-    select(all_of(c("st","rptdate","Within15Days","Within35Days", "Within49Days", "Within70Days", "Total"))) 
+    select(all_of(c("st","rptdate","first_time_payment_Within15Days","first_time_payment_Within35Days", "first_time_payment_Within49Days", "first_time_payment_Within70Days", "Total"))) 
   
   #compute US Averages
   # compute US Averages and add them into the df
@@ -559,9 +559,9 @@ getUCAppealsTimeLapseLower <- function(ucBenefitAppealsRegular) {
   # calculate some values
   ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
     mutate(
-      Within30Days = round(x0x30 / Total, 3),
-      Within45Days = round((x0x30 + x31x45) / Total, 3)) %>% 
-    select(all_of(c("st","rptdate","Within30Days","Within45Days")))
+      lower_Within30Days = round(x0x30 / Total, 3),
+      lower_Within45Days = round((x0x30 + x31x45) / Total, 3)) %>% 
+    select(all_of(c("st","rptdate","lower_Within30Days","lower_Within45Days")))
   
   # need to add EUC and EB into this, but not now
   ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
@@ -604,9 +604,9 @@ getucAppealsTimeLapseHigher <- function() {
   #calculate soome values
   ucAppealsTimeLapseHigher <- ucAppealsTimeLapseHigher %>% 
     mutate(
-      Within45Days = round(x0x45 / Total,3),
-      Within75Days = round((x0x45 + x46x60 + x61x75) / Total,3)) %>% 
-    select(one_of(c("st","rptdate","Within45Days","Within75Days"))) %>% 
+      higher_Within45Days = round(x0x45 / Total,3),
+      higher_Within75Days = round((x0x45 + x46x60 + x61x75) / Total,3)) %>% 
+    select(one_of(c("st","rptdate","higher_Within45Days","higher_Within75Days"))) %>% 
     # merge with UCCaseAging Data
     full_join(ucAppealsCaseAgingHigher %>% 
                 select(all_of(c("st","rptdate","Total"))), 

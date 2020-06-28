@@ -135,7 +135,7 @@ server <- function(input, output) {
       filter(st == input$state,
              rptdate > (input$range[1]-10),
              rptdate < (input$range[2]+10))
-    
+
     if (input$viewData == "monthlyUI")
     {
       
@@ -143,11 +143,13 @@ server <- function(input, output) {
       df <- df %>% 
         filter(metric %in% c("total_compensated_mov_avg", "total_state_compensated_mov_avg"))
       
-      uPlot <- getRibbonPlot(df, scaling = 1000000, xlab = "Date", ylab = "Total Paid",
+      uPlot <- getRibbonPlot(df, xlab = "Date", ylab = "Total Paid",
                       caption = "12-month moving average of UI paid per month in both regular and federal UI programs.\nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",  
                       title = glue::glue("{input$state} Monthly UI Payments from {format.Date(input$range[1], 'm-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
                       breaks=c("total_state_compensated_mov_avg","total_compensated_mov_avg"),
-                      labels=c("Regular Programs","Federal Programs"))
+                      labels=c("Regular Programs","Federal Programs")) +
+        scale_y_continuous(labels = label_number(scale = 1/1000000, prefix = "$", suffix = "M"))
+      
       
       maxPlot <- max(df$value/1000000)
       
@@ -225,65 +227,56 @@ server <- function(input, output) {
     
     else if (input$viewData == "TOPS")
     {
-      ucMelt <- melt(subset(ucOverpayments, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","state_tax_recovery", "federal_tax_recovery")) ,id.vars="rptdate")
       
-        uPlot = ggplot(ucMelt) +
-        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-        geom_point(aes(rptdate, value/1000000, col=variable), alpha=.9) +
-        reportTheme + 
-        stat_smooth(span=.3, aes(rptdate, value/1000000, col=variable)) + 
-        labs(x="Date", 
-             y="Total Overpayment Recovery (millions of $)",
-             caption="Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
-             title=paste(input$state, "Tax Program Overpayment Recovery from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
-        scale_y_continuous(labels=scales::dollar) + 
-        scale_fill_brewer(palette="Set1")
+      df <- df %>% 
+        filter(metric %in% c("state_tax_recovery", "federal_tax_recovery"))
       
-      maxPlot <- maxOverpaymentDollars/1000000
+      # mgh: the pattern is totaly correct here, but the #s don't match the numbers on the website by a factor of 4ish
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "Total Overpayment Recovery",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Tax Program Overpayment Recovery from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                            breaks=c("state_tax_recovery", "federal_tax_recovery"),
+                            labels=c("State Tax Recover", "Federal Tax Recovery")) + 
+        scale_y_continuous(labels = label_number(scale = 1/1000000, prefix = "$", suffix = "M"))
+        
+      
+      maxPlot <- max(df$value)/1000000
       
     }
+    
     else if (input$viewData == "recipRate")
     {
      
      
-      ucMelt <- melt(subset(ucRecipiency, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","recipiency_annual_reg","recipiency_annual_total")) ,id.vars="rptdate")
+      df <- df %>% 
+        filter(metric %in% c("recipiency_annual_reg","recipiency_annual_total"))
+      
+      # mgh: something odd is going on with the coloring in this plot.  There are different colors for the fill and the legend
+      uPlot <- getRibbonPlot(df, xlab = "Date", ylab = "Recipiency Rate",
+                             caption = "Recipiency rate calculated by dividing 12 month moving average of unemployment continuing claims divided by 12 month moving average of total unemployed.\nData not seasonally adjusted.  \nSource: Continuing claims can be found in ETA report 5159, found here: https://ows.doleta.gov/unemploy/DataDownloads.asp.\nUnemployed numbers courtesy the BLS: https://www.bls.gov/web/laus/ststdnsadata.txt.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",  
+                             title = glue::glue("{input$state} Recipiency Rate from {format.Date(input$range[1], 'm-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                             breaks=c("recipiency_annual_reg","recipiency_annual_total"),
+                             labels=c("Regular Programs", "Federal Programs"))
        
-       
-       
-      uPlot = ggplot(ucMelt) +
-        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-        geom_ribbon(data=ucMelt[ucMelt$variable=="recipiency_annual_total",],aes(x=rptdate, ymin=0, ymax=value, fill=variable), alpha=.9)+
-         geom_ribbon(data=ucMelt[ucMelt$variable=="recipiency_annual_reg",], aes(x=rptdate, ymin=0, ymax=value, fill=variable), alpha=.9)+
-         geom_line(aes(rptdate, value, col=variable)) +
-         scale_color_discrete(guide=FALSE) +
-         reportTheme + 
-         labs(x="Date", y="Recipiency Rate",
-              caption="Recipiency rate calculated by dividing 12 month moving average of unemployment continuing claims divided by 12 month moving average of total unemployed.\nData not seasonally adjusted.  \nSource: Continuing claims can be found in ETA report 5159, found here: https://ows.doleta.gov/unemploy/DataDownloads.asp.\nUnemployed numbers courtesy the BLS: https://www.bls.gov/web/laus/ststdnsadata.txt.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",
-              title=paste(input$state, "Recipiency Rate from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) +
-         scale_fill_brewer(palette="Set1",
-                           breaks=c("recipiency_annual_reg","recipiency_annual_total"),
-                           labels=c("Regular Programs","Federal Programs"))
       
       maxPlot <- 1
     }
     
     else if (input$viewData == "overvRecovery")
     {
+      df <- df %>% 
+        filter(metric %in% c("outstanding", "recovered"))
       
-      ucMelt <- melt(subset(ucOverpayments, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","outstanding", "recovered")) ,id.vars="rptdate")
+      # mgh: the outstanding overpayments seem wrong - way too high
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Outstanding Overpayments vs $ Recovered from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                            breaks=c("outstanding", "recovered"),
+                            labels=c("Outstanding Overpayments", "Overpayments Recovered")) + 
+        scale_y_continuous(labels = label_number(scale = 1/1000000, prefix = "$", suffix = "M"))
       
-      uPlot = ggplot(ucMelt) +
-        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-        geom_point(aes(rptdate, value/1000000, col=variable), alpha=.9) +
-        reportTheme + 
-        stat_smooth(span=.3, aes(rptdate, value/1000000, col=variable)) + 
-        labs(x="Date", 
-             y="Millions of $",
-             caption="Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
-             title=paste(input$state, "Outstanding Overpayments vs $ Recovered from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
-        scale_fill_brewer(palette="Set1")
       
-      maxPlot <- maxOutstandingOverpayment/1000000
+      maxPlot <- max(df$value)/1000000
       
     }
     
@@ -291,162 +284,120 @@ server <- function(input, output) {
     else if (input$viewData == "nonMonDen")
     {
       
-      ucMelt <- melt(subset(ucNonMonetary, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","denial_sep_percent", "denial_non_percent", "denial_rate_overall")) ,id.vars="rptdate")
+      df <- df %>% 
+        filter(metric %in% c("denial_sep_percent", "denial_non_percent", "denial_rate_overall"))
       
-      uPlot = ggplot(ucMelt) +
-        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-        geom_point(aes(rptdate, value, col=variable), alpha=.9) +
-        reportTheme + 
-        stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
-        labs(x="Date", 
-             y="Proportion of total non-monetary determinations",
-             caption="Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
-             title=paste(input$state, "Proportion of Denials for Separation and Non-Separation Reasons in Non-Monetary Decisions", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
-        scale_color_brewer(palette="Set1", 
-                          breaks=c("denial_sep_percent", "denial_non_percent", "denial_rate_overall"),
-                          labels=c("Separation Denials", "Non-Separation Denials", "Total Denial Rate"))
-      
-      maxPlot <- maxDenials
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of non-monetary determinations",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Proportion of Denials for Separation and Non-Separation Reasons\n in Non-Monetary Decisions {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                            breaks=c("denial_sep_percent", "denial_non_percent", "denial_rate_overall"),
+                            labels=c("Separation Denials", "Non-Separation Denials", "Total Denial Rate"))
+
+      maxPlot <- max(df$value)
       
     }
 
     else if (input$viewData == "nonMonSep")
     {
       
-      ucMelt <- melt(subset(ucNonMonetary, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","denial_sep_misconduct_percent","denial_sep_vol_percent", "denial_sep_other_percent")) ,id.vars="rptdate")
+      df <- df %>% 
+        filter(metric %in% c("denial_sep_misconduct_percent","denial_sep_vol_percent", "denial_sep_other_percent"))
       
-      uPlot = ggplot(ucMelt) +
-        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-        geom_point(aes(rptdate, value, col=variable), alpha=.9) +
-        reportTheme + 
-        stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
-        labs(x="Date", 
-             y="Proportion of all separation denials ",
-             caption="Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
-             title=paste(input$state, "Proportion of Non-Monetary Separation Denials", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
-        scale_color_brewer(palette="Set1", 
-                           breaks=c("denial_sep_misconduct_percent","denial_sep_vol_percent", "denial_sep_other_percent"),
-                           labels=c("Misconduct", "Voluntary Quit", "Other"))
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of separation denials",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Proportion of Non-Monetary Separation Denials from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                            breaks=c("denial_sep_misconduct_percent","denial_sep_vol_percent", "denial_sep_other_percent"),
+                            labels=c("Misconduct", "Voluntary Quit", "Other"))
       
-      maxPlot <- maxSepDenials
-      
+      maxPlot <- max(df$value)
+  
     }
 
     else if (input$viewData == "nonMonSepRate")
     {
       
-      ucMelt <- melt(subset(ucNonMonetary, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate")) ,id.vars="rptdate")
+      df <- df %>% 
+        filter(metric %in% c("denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate"))
       
-      uPlot = ggplot(ucMelt) +
-        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-        geom_point(aes(rptdate, value, col=variable), alpha=.9) +
-        reportTheme + 
-        stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
-        labs(x="Date", 
-             y="Proportion of all separation denials ",
-             caption="Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
-             title=paste(input$state, "Non-Monetary Separation Denial Rate", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
-        scale_color_brewer(palette="Set1", 
-                           breaks=c("denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate"),
-                           labels=c("Misconduct", "Voluntary Quit", "Other"))
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of separation denials",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Non-Monetary Separation Denial Rate from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                            breaks=c("denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate"),
+                            labels=c("Misconduct", "Voluntary Quit", "Other"))
       
-      maxPlot <- maxSepDenialRate
-      
+      maxPlot <- max(df$value)
+
     }
     
     else if (input$viewData == "nonMonNonSep")
     {
       
-      ucMelt <- melt(subset(ucNonMonetary, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","denial_non_aa_percent","denial_non_income_percent", "denial_non_refusework_percent", "denial_non_reporting_percent", "denial_non_referrals_percent", "denial_non_other_percent")) ,id.vars="rptdate")
+      df <- df %>% 
+        filter(metric %in% c("denial_non_aa_percent","denial_non_income_percent", "denial_non_refusework_percent", "denial_non_reporting_percent", "denial_non_referrals_percent", "denial_non_other_percent"))
       
-      uPlot = ggplot(ucMelt) +
-        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-        geom_point(aes(rptdate, value, col=variable), alpha=.9) +
-        reportTheme + 
-        stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
-        labs(x="Date", 
-             y="Proportion of all non-separation denials ",
-             caption="Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
-             title=paste(input$state, "Proportion of Non-Monetary Non-Separation Denials", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
-        scale_color_brewer(palette="Set1", 
-                           breaks=c("denial_non_aa_percent","denial_non_income_percent", "denial_non_refusework_percent", "denial_non_reporting_percent", "denial_non_referrals_percent", "denial_non_other_percent"),
-                           labels=c("Able and Available", "Disqualifying Income", "Refusal of Suitable Work", "Reporting/Call Ins/Etc...", "Refusal of Referral", "Other"))
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of non-separation denials",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Proportion of Non-Monetary Non-Separation Denials from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                            breaks=c("denial_non_aa_percent","denial_non_income_percent", "denial_non_refusework_percent", "denial_non_reporting_percent", "denial_non_referrals_percent", "denial_non_other_percent"),
+                            labels=c("Able and Available", "Disqualifying Income", "Refusal of Suitable Work", "Reporting/Call Ins/Etc...", "Refusal of Referral", "Other"))
       
-      maxPlot <- maxNonSepDenials
-      
+      maxPlot <- max(df$value)
+
     }
 
     else if (input$viewData == "nonMonNonSepRate")
     {
+      df <- df %>% 
+        filter(metric %in% c("denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate"))
       
-      ucMelt <- melt(subset(ucNonMonetary, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=c("rptdate","denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate")) ,id.vars="rptdate")
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of non-separation denials",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Denial Rates for Non-Monetary Non-Separation Denials from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                            breaks=c("denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate"),
+                            labels=c("Able and Available", "Disqualifying Income", "Refusal of Suitable Work", "Reporting/Call Ins/Etc...", "Refusal of Referral", "Other"))
       
-      uPlot = ggplot(ucMelt) +
-        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-        geom_point(aes(rptdate, value, col=variable), alpha=.9) +
-        reportTheme + 
-        stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
-        labs(x="Date", 
-             y="Proportion of all non-separation denials ",
-             caption="Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
-             title=paste(input$state, "Denial Rates for Non-Monetary Non-Separation Denials", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
-        scale_color_brewer(palette="Set1", 
-                           breaks=c("denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate"),
-                           labels=c("Able and Available", "Disqualifying Income", "Refusal of Suitable Work", "Reporting/Call Ins/Etc...", "Refusal of Referral", "Other"))
-      
-      maxPlot <- maxNonSepDenialRate
+      max_plot <- max(df$value)
       
     }
     
-    else
-    {
-      uiTable <- switch(input$viewData,
-                        "lowerAuthority" = refereeTimeliness,
-                        "firstPay" = paymentTimeliness,
-                        "higherAuthority" = ucbrTimeliness)
-  
-      plotCols <- switch(input$viewData,
-                        "lowerAuthority" = c("rptdate", "Within30Days", "Within45Days"),
-                        "firstPay" = c("rptdate","Within15Days","Within35Days"),
-                        "higherAuthority" = c("rptdate","Within45Days","Within75Days"))
-  
-      line1 <- switch(input$viewData,
-                         "lowerAuthority" = c(.6,"30-day threshold"),
-                         "firstPay" = c(.87,"15-day threshold"),
-                         "higherAuthority" = c(.4,"45-day threshold"))
+    else if (input$viewData == "lowerAuthority") {
+      df <- df %>% 
+        filter(metric %in% c("lower_Within30Days", "lower_Within45Days"))
       
-      
-      
-      line2 <- switch(input$viewData,
-                      "lowerAuthority" = c(.8,"45-day threshold"),
-                      "firstPay" = c(.93,"35-day threshold"),
-                      "higherAuthority" = c(.8,"75-day threshold"))
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
+                            caption = "Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Lower Authority Decision Timeliness from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}")) %>% 
+        add_line_with_label(x = min(df$rptdate), y = .6, label = "30-day threshold") %>% 
+        add_line_with_label(x = min(df$rptdate), y = .8, label = "45-day threshold") 
 
-      plotTitle <- switch(input$viewData,
-                      "lowerAuthority" = "Lower Authority Decision Timeliness",
-                      "firstPay" = "First Payment Timeliness",
-                      "higherAuthority" = "Higher Authority Decision Timeliness")
+      maxPlot <- 1
       
-      uiTable <- melt(subset(uiTable, st==input$state & rptdate > input$range[1]-10 & rptdate < input$range[2]+10, select=plotCols) ,id.vars="rptdate")
-  
-      # loess smoothing; .3 chosen arbitrarily to make the line a bit more responsive to data points.  
-      uPlot <- ggplot(uiTable) +
-        geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-        geom_point(aes(rptdate, value, col=variable), alpha=.9) +
-        reportTheme + 
-        stat_smooth(span=.3, aes(rptdate, value, col=variable)) + 
-        labs(x="Date", 
-             caption="Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
-             title=paste(input$state, plotTitle, "from", format.Date(input$range[1],"%Y-%m"), "to", format.Date(input$range[2],"%Y-%m"))) + 
-        geom_hline(aes(yintercept=as.numeric(line1[1])), linetype="dashed") +
-        geom_text(aes(x=as.Date(input$range[1]),y=as.numeric(line1[1]),label = line1[2], vjust = -1, hjust=0), color="black") +
-        geom_hline(aes(yintercept=as.numeric(line2[1])), linetype="dashed") +
-        geom_text(aes(x=as.Date(input$range[1]),y=as.numeric(line2[1]),label = line2[2], vjust = -1, hjust=0), color="black") +
-        scale_fill_brewer(palette="Set1")
+    } else if(input$viewData == "firstPay") {
+      df <- df %>% 
+        filter(metric %in% c("first_time_payment_Within15Days", "first_time_payment_Within35Days"))
+      
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
+                            caption = "Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} First Payment Timeliness from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}")) %>% 
+        add_line_with_label(x = min(df$rptdate), y = .87, label = "15-day threshold") %>% 
+        add_line_with_label(x = min(df$rptdate), y = .93, label = "35-day threshold") 
       
       maxPlot <- 1
-
+      
+    } else if(input$viewData == "higherAuthority") {
+      df <- df %>% 
+        filter(metric %in% c("higher_Within45Days", "higher_Within75Days"))
+      
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
+                            caption = "Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Higher Authority Decision Timeliness from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}")) %>% 
+        add_line_with_label(x = min(df$rptdate), y = .4, label = "45-day threshold") %>% 
+        add_line_with_label(x = min(df$rptdate), y = .8, label = "75-day threshold") 
+      
+      maxPlot <- 1
     }
+
+
     
     # constant scaling on the y axis for easier state comparison; scaling on x axis so we can scale to ranges with no recession
     if (input$constant_y_axis)

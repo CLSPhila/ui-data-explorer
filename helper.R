@@ -140,22 +140,21 @@ get50StateComparisonPlot <- function(dfData, startDate, endDate, measure, highli
 }
 
 # a plot with ribbons rather than lines to represent values (like a stacked bar, but a stacked line)
-getRibbonPlot <- function(df, scaling = 1, xlab = "Date", ylab, caption, title, ...) {
+getRibbonPlot <- function(df, xlab = "Date", ylab, caption, title, ...) {
   df %>% 
     ggplot(aes(x = rptdate, y = value, ymin = 0, ymax = value, fill = metric)) +
     # need to work on recession shading; it isn't working b/c of lims, I think, when the lim is in the middle of a recession
     #geom_rect(inherit.aes = FALSE, data=recession_df, aes(xmin=start, xmax=end, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
     geom_ribbon(alpha=.9)+
     geom_line() +
-    scale_color_discrete(guide=FALSE) +
+    #scale_color_discrete(guide=FALSE) +
     lims(x = c(min(df$rptdate), max(df$rptdate))) +
     reportTheme + 
     labs(x = xlab, 
          y = ylab, 
          caption = caption,
          title = title) +
-    scale_fill_brewer(palette="Set1", ...) +
-    scale_y_continuous(labels = label_number(scale = 1/scaling, prefix = "$", suffix = ifelse(scaling == 1000000, "M", "")))
+    scale_fill_brewer(palette="Set1", ...)
 }
 
 # line plot with lines representing each metric passed in
@@ -184,4 +183,12 @@ getPointPlot <- function(df, xlab = "Date", ylab, caption, title, ...) {
          caption = caption,
          title= title) + 
     scale_fill_brewer(palette="Set1", ...)
+}
+
+
+add_line_with_label <- function(plot, x, y, label) {
+  plot + 
+    geom_hline(yintercept = y, linetype = "dashed") +
+    annotate("text", y = y, x = x, label = label, vjust = -.8, hjust=0)
+    
 }
