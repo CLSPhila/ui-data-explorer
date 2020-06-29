@@ -12,7 +12,6 @@
 library(shiny)
 library(DT)
 library(ggplot2)
-library(reshape2)
 library(scales)
 library(shinycssloaders)
 library(tidyverse)
@@ -127,11 +126,13 @@ ui <- fluidPage(
 
 # Define server logic required to draw page
 server <- function(input, output) {
+
+  
   
   # render the plot
   output$uiplot <- renderPlot({
 
-    df <- unemployed_df %>% 
+    df <- unemployed_df %>%
       filter(st == input$state,
              rptdate > (input$range[1]-10),
              rptdate < (input$range[2]+10))
@@ -139,9 +140,10 @@ server <- function(input, output) {
     if (input$viewData == "monthlyUI")
     {
       
-      
+      metric_filter = c("total_compensated_mov_avg", "total_state_compensated_mov_avg")
       df <- df %>% 
-        filter(metric %in% c("total_compensated_mov_avg", "total_state_compensated_mov_avg"))
+        filter(metric %in% metric_filter) %>% 
+        mutate(metric = factor(metric, labels = metric_filter))
       
       uPlot <- getRibbonPlot(df, xlab = "Date", ylab = "Total Paid",
                       caption = "12-month moving average of UI paid per month in both regular and federal UI programs.\nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",  
@@ -151,29 +153,28 @@ server <- function(input, output) {
         scale_y_continuous(labels = label_number(scale = 1/1000000, prefix = "$", suffix = "M"))
       
       
-      maxPlot <- max(df$value/1000000)
-      
     }
     
     else if (input$viewData == "recipBreakdown")
     {
+      metric_filter = c("total_week_mov_avg","unemployed_avg") 
       df <- df %>% 
-        filter(metric %in% c("total_week_mov_avg","unemployed_avg"))
+        filter(metric %in% metric_filter)
       
       uPlot <- getLinePlot(df, xlab = "Date", ylab = "", 
                            caption = "Weekly continued claims and Total Unemployed by month.\nBoth numbers are smoothed over 12 month periods.  These are the two components of recipiency rate.",
                            title = glue::glue("{input$state} Recipiency Rate Breakdown from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
                            breaks=c("total_week_mov_avg","unemployed_avg"),
                            labels=c("Weekly Continued Claims","Monthy Unemployed (BLS)"))
-        
-      maxPlot <- max(df$value)
       
     }
     
     else if (input$viewData == "uirate")
     {  
+      
+      metric_filter = c("unemployment_rate_sa")
       df <- df %>% 
-        filter(metric %in% c("unemployment_rate_sa"))
+        filter(metric %in% metric_filter)
       df_us <- unemployed_df %>% 
         filter(st == "US",
                rptdate > (input$range[1]-10),
@@ -189,30 +190,28 @@ server <- function(input, output) {
           geom_line(data = df_us, size = 1, linetype = "dashed", color = "black") +
           annotate("text", x = min(df_us$rptdate), y = df_us %>% filter(rptdate == min(rptdate)) %>% pull(value), 
                    label = "US Avg", vjust = -1, hjust = 0, fontface = "bold")
-        
-        maxPlot <- max(df$value)
     }
     
     else if (input$viewData == "overvPayments")
     {
       
+      metric_filter = c("outstanding_proportion")
       df <- df %>% 
-        filter(metric %in% c("outstanding_proportion"))
+        filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
                      caption = "Outstanding overpayment balance divided by the total benefits paid in all federal and state programs over the last 12 months.\n Data courtesy of the USDOL.  Reports used are ETA 227 and 5159, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
                      title = glue::glue("{input$state} Overpayment Balance vs Montly UI Payments from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
                      breaks=c("outstanding_proportion"),
                      labels=c("Overpayment Balance / Annual UI Payments"))
-        
-      maxPlot <- max(df$value)
     }
 
     else if (input$viewData == "fraudvNon")
     {
       
+      metric_filter = c("fraud_num_percent")
       df <- df %>% 
-        filter(metric %in% c("fraud_num_percent"))
+        filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
@@ -221,15 +220,14 @@ server <- function(input, output) {
                             labels=c("% Fraud Overpayments")) + 
         scale_y_continuous(labels = scales::percent)
       
-      
-      maxPlot <- 1
     }
     
     else if (input$viewData == "TOPS")
     {
       
+      metric_filter = c("state_tax_recovery", "federal_tax_recovery")
       df <- df %>% 
-        filter(metric %in% c("state_tax_recovery", "federal_tax_recovery"))
+        filter(metric %in% metric_filter)
       
       # mgh: the pattern is totaly correct here, but the #s don't match the numbers on the website by a factor of 4ish
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "Total Overpayment Recovery",
@@ -240,32 +238,29 @@ server <- function(input, output) {
         scale_y_continuous(labels = label_number(scale = 1/1000000, prefix = "$", suffix = "M"))
         
       
-      maxPlot <- max(df$value)/1000000
-      
     }
     
     else if (input$viewData == "recipRate")
     {
-     
-     
+      metric_filter = c("recipiency_annual_reg", "recipiency_annual_total")
       df <- df %>% 
-        filter(metric %in% c("recipiency_annual_reg","recipiency_annual_total"))
+        filter(metric %in% metric_filter) %>% 
+        mutate(metric = factor(metric, labels = c("recipiency_annual_total", "recipiency_annual_reg")))
       
-      # mgh: something odd is going on with the coloring in this plot.  There are different colors for the fill and the legend
       uPlot <- getRibbonPlot(df, xlab = "Date", ylab = "Recipiency Rate",
                              caption = "Recipiency rate calculated by dividing 12 month moving average of unemployment continuing claims divided by 12 month moving average of total unemployed.\nData not seasonally adjusted.  \nSource: Continuing claims can be found in ETA report 5159, found here: https://ows.doleta.gov/unemploy/DataDownloads.asp.\nUnemployed numbers courtesy the BLS: https://www.bls.gov/web/laus/ststdnsadata.txt.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",  
-                             title = glue::glue("{input$state} Recipiency Rate from {format.Date(input$range[1], 'm-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                             title = glue::glue("{input$state} Recipiency Rate from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
                              breaks=c("recipiency_annual_reg","recipiency_annual_total"),
                              labels=c("Regular Programs", "Federal Programs"))
        
       
-      maxPlot <- 1
     }
     
     else if (input$viewData == "overvRecovery")
     {
+      metric_filter = c("outstanding", "recovered")
       df <- df %>% 
-        filter(metric %in% c("outstanding", "recovered"))
+        filter(metric %in% metric_filter)
       
       # mgh: the outstanding overpayments seem wrong - way too high
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
@@ -276,79 +271,75 @@ server <- function(input, output) {
         scale_y_continuous(labels = label_number(scale = 1/1000000, prefix = "$", suffix = "M"))
       
       
-      maxPlot <- max(df$value)/1000000
-      
     }
     
     # Non-Monetary denials.  Show a graph of separation denial % and non-separation denial %
     else if (input$viewData == "nonMonDen")
     {
       
+      metric_filter = c("denial_sep_percent", "denial_non_percent", "denial_rate_overall")
       df <- df %>% 
-        filter(metric %in% c("denial_sep_percent", "denial_non_percent", "denial_rate_overall"))
+        filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of non-monetary determinations",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Proportion of Denials for Separation and Non-Separation Reasons\n in Non-Monetary Decisions {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
                             breaks=c("denial_sep_percent", "denial_non_percent", "denial_rate_overall"),
                             labels=c("Separation Denials", "Non-Separation Denials", "Total Denial Rate"))
-
-      maxPlot <- max(df$value)
-      
+  
     }
 
     else if (input$viewData == "nonMonSep")
     {
       
+      metric_filter = c("denial_sep_misconduct_percent","denial_sep_vol_percent", "denial_sep_other_percent")
       df <- df %>% 
-        filter(metric %in% c("denial_sep_misconduct_percent","denial_sep_vol_percent", "denial_sep_other_percent"))
+        filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of separation denials",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Proportion of Non-Monetary Separation Denials from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
                             breaks=c("denial_sep_misconduct_percent","denial_sep_vol_percent", "denial_sep_other_percent"),
                             labels=c("Misconduct", "Voluntary Quit", "Other"))
-      
-      maxPlot <- max(df$value)
-  
+    
     }
 
     else if (input$viewData == "nonMonSepRate")
     {
       
+      metric_filter = c("denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate")
       df <- df %>% 
-        filter(metric %in% c("denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate"))
+        filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of separation denials",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Non-Monetary Separation Denial Rate from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
                             breaks=c("denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate"),
                             labels=c("Misconduct", "Voluntary Quit", "Other"))
-      
-      maxPlot <- max(df$value)
-
+    
     }
     
     else if (input$viewData == "nonMonNonSep")
     {
       
+      metric_filter = c("denial_non_aa_percent","denial_non_income_percent", "denial_non_refusework_percent", "denial_non_reporting_percent", "denial_non_referrals_percent", "denial_non_other_percent")
       df <- df %>% 
-        filter(metric %in% c("denial_non_aa_percent","denial_non_income_percent", "denial_non_refusework_percent", "denial_non_reporting_percent", "denial_non_referrals_percent", "denial_non_other_percent"))
+        filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of non-separation denials",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Proportion of Non-Monetary Non-Separation Denials from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
                             breaks=c("denial_non_aa_percent","denial_non_income_percent", "denial_non_refusework_percent", "denial_non_reporting_percent", "denial_non_referrals_percent", "denial_non_other_percent"),
                             labels=c("Able and Available", "Disqualifying Income", "Refusal of Suitable Work", "Reporting/Call Ins/Etc...", "Refusal of Referral", "Other"))
-      
-      maxPlot <- max(df$value)
-
+    
     }
 
     else if (input$viewData == "nonMonNonSepRate")
     {
+      
+      metric_filter = c("denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate")
       df <- df %>% 
-        filter(metric %in% c("denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate"))
+        filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of non-separation denials",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
@@ -356,13 +347,14 @@ server <- function(input, output) {
                             breaks=c("denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate"),
                             labels=c("Able and Available", "Disqualifying Income", "Refusal of Suitable Work", "Reporting/Call Ins/Etc...", "Refusal of Referral", "Other"))
       
-      max_plot <- max(df$value)
-      
+    
     }
     
     else if (input$viewData == "lowerAuthority") {
+      
+      metric_filter = c("lower_Within30Days", "lower_Within45Days")
       df <- df %>% 
-        filter(metric %in% c("lower_Within30Days", "lower_Within45Days"))
+        filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
                             caption = "Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
@@ -370,11 +362,11 @@ server <- function(input, output) {
         add_line_with_label(x = min(df$rptdate), y = .6, label = "30-day threshold") %>% 
         add_line_with_label(x = min(df$rptdate), y = .8, label = "45-day threshold") 
 
-      maxPlot <- 1
       
     } else if(input$viewData == "firstPay") {
+      metric_filter = c("first_time_payment_Within15Days", "first_time_payment_Within35Days")
       df <- df %>% 
-        filter(metric %in% c("first_time_payment_Within15Days", "first_time_payment_Within35Days"))
+        filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
                             caption = "Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
@@ -382,11 +374,12 @@ server <- function(input, output) {
         add_line_with_label(x = min(df$rptdate), y = .87, label = "15-day threshold") %>% 
         add_line_with_label(x = min(df$rptdate), y = .93, label = "35-day threshold") 
       
-      maxPlot <- 1
       
     } else if(input$viewData == "higherAuthority") {
+      
+      metric_filter = c("higher_Within45Days", "higher_Within75Days")
       df <- df %>% 
-        filter(metric %in% c("higher_Within45Days", "higher_Within75Days"))
+        filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
                             caption = "Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
@@ -394,7 +387,6 @@ server <- function(input, output) {
         add_line_with_label(x = min(df$rptdate), y = .4, label = "45-day threshold") %>% 
         add_line_with_label(x = min(df$rptdate), y = .8, label = "75-day threshold") 
       
-      maxPlot <- 1
     }
 
 
@@ -402,8 +394,16 @@ server <- function(input, output) {
     # constant scaling on the y axis for easier state comparison; scaling on x axis so we can scale to ranges with no recession
     if (input$constant_y_axis)
     {
-      uPlot <- uPlot + coord_cartesian(ylim=c(0,maxPlot),
-                                       xlim=c(as.Date(input$range[1]),as.Date(input$range[2])))
+      
+      # this represents the highest y value of all of the states for this metric
+      ymax = max(df %>% 
+        filter(metric %in% metric_filter,
+               rptdate > (input$range[1]-10),
+               rptdate < (input$range[2]+10)) %>% 
+        select(value))
+      
+      uPlot <- uPlot + coord_cartesian(ylim=c(0, ymax),
+                                       xlim=c(as.Date(input$range[1]), as.Date(input$range[2])))
     }
     else
     {
@@ -416,294 +416,199 @@ server <- function(input, output) {
   # render the data table
   output$uidata <- renderDataTable({
     
+    df <- unemployed_df %>% 
+      filter(st == input$state,
+             rptdate > (input$range[1]-10),
+             rptdate < (input$range[2]+10))
+    
     
     if (input$viewData == "monthlyUI")
     {
-      uiDT <- DT::datatable(ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1,
-                                           c("st","rptdate", "total_state_compensated_mov_avg", "total_federal_compensated_mov_avg", "total_state_compensated", "total_federal_compensated", "total_paid_annual_mov_avg")], 
-                            options=list(
-                              pageLength = 12,
-                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
-                              order = list(1,'desc'),
-                              searching=FALSE
-                            ), 
-                            colnames=c("State","Report Date", "State UI Payments (Monthly, mov avg)", "Federal UI Payments (Monthly, mov avg)", "State UI Payments (Monthly)", "Federal UI Payments (Monthly)", "Annual UI Payments (mov avg)"),
-                            class="stripe",
-                            rownames=FALSE
-      )%>% formatCurrency(3:7, '$')
+      
+      col_list = c("total_state_compensated_mov_avg", "total_federal_compensated_mov_avg", "total_state_compensated", "total_federal_compensated", "total_paid_annual_mov_avg")
+      names_list <- c("State","Report Date", "State UI Payments (Monthly, mov avg)", "Federal UI Payments (Monthly, mov avg)", "State UI Payments (Monthly)", "Federal UI Payments (Monthly)", "Annual UI Payments (mov avg)")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list) %>% 
+        formatCurrency(3:7, '$')
       
     }
     
     else if (input$viewData == "overvPayments")
     {
       
-      uiDT <- DT::datatable(ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
-                                         c("st","rptdate", "outstanding_proportion", "outstanding", "total_paid_annual_mov_avg")], 
-                            options=list(
-                              pageLength = 12,
-                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
-                              order = list(1,'desc'),
-                              searching=FALSE
-                            ), 
-                            colnames=c("State","Report Date", "Outstanding balance / Annual UI Payments", "Outstanding Overpayment Balance", "Annual UI Payments"),
-                            class="stripe",
-                            rownames=FALSE
-      )%>% formatCurrency(4:5, '$')
+      col_list <- c("outstanding_proportion", "outstanding", "total_paid_annual_mov_avg")
+      names_list <- c("State","Report Date", "Outstanding balance / Annual UI Payments", "Outstanding Overpayment Balance", "Annual UI Payments")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list) %>% 
+        formatCurrency(4:5, '$')
     }
     
     else if (input$viewData == "fraudvNon")
     {
-      uiDT <- DT::datatable(ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
-                                         c("st","rptdate", "fraud_num_percent", "regular_fraud_num", "federal_fraud_num","regular_nonfraud_num","federal_nonfraud_num")],
-                            options=list(
-                              pageLength = 12,
-                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
-                              order = list(1,'desc'),
-                              searching=FALSE
-                            ), 
-                            colnames=c("State","Report Date", "Fraud as % of Total Overpayments", "Regular UI Fraud", "Federal UI Fraud", "Regular UI Non-Fraud", "Federal UI Non-Fraud"),
-                            class="nowrap stripe",
-                            rownames=FALSE
-      )
+      
+      col_list <- c("fraud_num_percent", "regular_fraud_num", "federal_fraud_num", "regular_nonfraud_num", "federal_nonfraud_num")
+      names_list <- c("State","Report Date", "Fraud as % of Total Overpayments", "Regular UI Fraud", "Federal UI Fraud", "Regular UI Non-Fraud", "Federal UI Non-Fraud")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe")
+      
       
     }
 
     else if (input$viewData == "TOPS")
     {
-      uiDT <- DT::datatable(ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
-                                           c("st","rptdate", "state_tax_recovery", "federal_tax_recovery")],
-                            options=list(
-                              pageLength = 12,
-                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
-                              order = list(1,'desc'),
-                              searching=FALSE
-                            ), 
-                            colnames=c("State","Report Date", "State Tax Recovery", "Federal Tax Recovery"),
-                            class="nowrap stripe",
-                            rownames=FALSE
-      ) %>% formatCurrency(3:4, '$')
+      col_list <- c("state_tax_recovery", "federal_tax_recovery")
+      names_list <- c("State","Report Date", "State Tax Recovery", "Federal Tax Recovery")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
+        formatCurrency(3:4, '$')
     }
     
     else if (input$viewData == "overvRecovery")
     {
-      
-      uiDT <- DT::datatable(ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
-                                           c("st","rptdate", "outstanding", "recovered")],
-                            options=list(
-                              pageLength = 12,
-                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
-                              order = list(1,'desc'),
-                              searching=FALSE
-                            ), 
-                            colnames=c("State","Report Date", "Outstanding Owed", "Recovered"),
-                            class="nowrap stripe",
-                            rownames=FALSE
-      ) %>% formatCurrency(3:4, '$')
+      col_list <- c("outstanding", "recovered")
+      names_list <- c("State","Report Date", "Outstanding Owed", "Recovered")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
+        formatCurrency(3:4, '$')
       
     }
 
     else if (input$viewData == "nonMonDen")
     { 
-      
-      uiDT <- DT::datatable(ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1,
-                                           c("st","rptdate", "determ_total", "denial_sep_total", "denial_non_total", "denial_sep_percent", "denial_non_percent", "denial_rate_overall")],
-                            options=list(
-                              pageLength = 12,
-                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
-                              order = list(1,'desc'),
-                              searching=FALSE
-                            ), 
-                            colnames=c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Non-Separation Denials", "Separation Denial Rate", "Non-Separation Denial Rate", "Overall Denial Rate"),
-                            class="nowrap stripe",
-                            rownames=FALSE
-      ) 
+      col_list <- c("determ_total", "denial_sep_total", "denial_non_total", "denial_sep_percent", "denial_non_percent", "denial_rate_overall")
+      names_list <- c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Non-Separation Denials", "Separation Denial Rate", "Non-Separation Denial Rate", "Overall Denial Rate")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe")
     }
+    
     else if (input$viewData == "nonMonSep")
     {
-      
-      uiDT <- DT::datatable(ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1,
-                                          c("st","rptdate", "determ_total", "denial_sep_total", "denial_sep_misconduct_percent","denial_sep_vol_percent", "denial_sep_other_percent")],
-                            options=list(
-                              pageLength = 12,
-                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
-                              order = list(1,'desc'),
-                              searching=FALSE
-                            ), 
-                            colnames=c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Misconduct %", "Voluntary Quit %", "Other %"),
-                            class="nowrap stripe",
-                            rownames=FALSE
-      ) 
+      col_list <- c("determ_total", "denial_sep_total", "denial_sep_misconduct_percent","denial_sep_vol_percent", "denial_sep_other_percent")
+      names_list <- c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Misconduct %", "Voluntary Quit %", "Other %")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe")
     }
 
     else if (input$viewData == "nonMonSepRate")
     {
-      
-      uiDT <- DT::datatable(ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1,
-                                          c("st","rptdate", "determ_total", "denial_sep_total", "denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate")],
-                            options=list(
-                              pageLength = 12,
-                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
-                              order = list(1,'desc'),
-                              searching=FALSE
-                            ), 
-                            colnames=c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Misconduct Denial Rate", "Voluntary Quit Denial Rate", "Other Denial Rate"),
-                            class="nowrap stripe",
-                            rownames=FALSE
-      ) 
+      col_list <- c("determ_total", "denial_sep_total", "denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate")
+      names_list <- c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Misconduct Denial Rate", "Voluntary Quit Denial Rate", "Other Denial Rate")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe")
     }
     
     else if (input$viewData == "nonMonNonSep")
     {
-        
-      uiDT <- DT::datatable(ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1,
-                                         c("st","rptdate", "determ_total", "denial_non_total", "denial_non_aa_percent","denial_non_income_percent", "denial_non_refusework_percent", "denial_non_reporting_percent", "denial_non_referrals_percent", "denial_non_other_percent")],
-                            options=list(
-                            pageLength = 12,
-                            lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
-                            order = list(1,'desc'),
-                            searching=FALSE
-                            ), 
-                            colnames=c("State","Report Date", "Total Non-Mon Determinations", "Non-Separation Denials", "A&A %", "Disqualifying Income %", "Refusal of Suitable Work %", "Reporting/call In/etc..", "Refuse Referral", "Other"),
-                            class="nowrap stripe",
-                            rownames=FALSE
-      )
-    
+      col_list <- c("determ_total", "denial_non_total", "denial_non_aa_percent","denial_non_income_percent", "denial_non_refusework_percent", "denial_non_reporting_percent", "denial_non_referrals_percent", "denial_non_other_percent")
+      names_list <- c("State","Report Date", "Total Non-Mon Determinations", "Non-Separation Denials", "A&A %", "Disqualifying Income %", "Refusal of Suitable Work %", "Reporting/call In/etc..", "Refuse Referral", "Other")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe")
     }
 
     else if (input$viewData == "nonMonNonSepRate")
     {
-      
-      uiDT <- DT::datatable(ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1,
-                                          c("st","rptdate", "denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate")],
-                            options=list(
-                              pageLength = 12,
-                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
-                              order = list(1,'desc'),
-                              searching=FALSE
-                            ), 
-                            colnames=c("State","Report Date", "A&A %", "Disqualifying Income %", "Refusal of Suitable Work %", "Reporting/call In/etc..", "Refuse Referral", "Other"),
-                            class="nowrap stripe",
-                            rownames=FALSE
-      )
-      
+      col_list <- c("denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate")
+      names_list <- c("State","Report Date", "A&A %", "Disqualifying Income %", "Refusal of Suitable Work %", "Reporting/call In/etc..", "Refuse Referral", "Other")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe")
     }
     
     else if (input$viewData == "recipBreakdown")
     {
-      uiDT <- DT::datatable(ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1,
-                                         c("st","rptdate","total_week_mov_avg", "unemployed_avg", "recipiency_annual_total")],
-                            options=list(
-                              pageLength = 12,
-                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
-                              order = list(1,'desc'),
-                              searching=FALSE
-                            ), 
-                            colnames=c("State","Report Date", "Weekly Continuing Claims (12-mo moving avg)","Total Unemployed (12-mo moving avg)", "Recipiency (State + Fed)"),
-                            class="stripe",
-                            rownames=FALSE
-      ) %>% formatCurrency(columns=c(3:4), currency='', digits=0)
+      col_list <- c("total_week_mov_avg", "unemployed_avg", "recipiency_annual_total")
+      names_list <- c("State","Report Date", "Weekly Continuing Claims (12-mo moving avg)","Total Unemployed (12-mo moving avg)", "Recipiency (State + Fed)")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "stripe") %>%
+        formatCurrency(columns=c(3:4), currency='', digits=0)
       
       
     }
 
     else if (input$viewData == "uirate")
     {
-      uiDT <- DT::datatable(bls_unemployed_sa[bls_unemployed_sa$st==input$state & bls_unemployed_sa$rptdate > input$range[1]-1 & bls_unemployed_sa$rptdate < input$range[2]+1,
-                                         c("st","rptdate","pop", "total", "total_unemployed", "perc_unemployed")],
-                            options=list(
-                              pageLength = 12,
-                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
-                              order = list(1,'desc'),
-                              searching=FALSE
-                            ), 
-                            colnames=c("State","Month", "Civilian Non-Inst. Pop","Labor Force", "Unemployed", "% Unemployed"),
-                            class="stripe",
-                            rownames=FALSE
-      ) %>% formatCurrency(columns=c(3:5), currency='', digits=0)
+      ## mgh: missing a few values - civilian non-inst population; labor force; can get from BLS?
+      col_list <- c("pop", "total", "total_unemployed_sa", "unemployment_rate_sa")
+      names_list <- c("State","Month", "Civilian Non-Inst. Pop","Labor Force", "Unemployed (SA)", "% Unemployed (SA)")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list) %>% 
+        formatCurrency(columns=c(3:5), currency='', digits=0)
       
     }
     
     else if (input$viewData == "recipRate")
     {
-        uiDT <- DT::datatable(ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1,
-                                           c("st","rptdate","recipiency_annual_reg","recipiency_annual_total")],
-                            options=list(
-                              pageLength = 12,
-                              lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
-                              order = list(1,'desc'),
-                              searching=FALSE
-                            ), 
-                            colnames=c("State","Report Date", "Regular Programs", "Regular + Federal Programs"),
-                            class="nowrap stripe",
-                            rownames=FALSE
-      )
+      col_list <- c("recipiency_annual_reg","recipiency_annual_total")
+      names_list <- c("State","Report Date", "Regular Programs", "Regular + Federal Programs")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe")
+    }
+    
+    else if (input$viewData == "lowerAuthority") {
+      
+      # mgh: is lower total correct?  and also us averages
+      col_list <- c("lower_Within30Days", "lower_Within45Days", "lower_filed", "lower_disposed", "lower_total")
+      names_list <- c("State", "Date", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending", "US 30 Day Avg" ,"US 45 Day Avg")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe") %>% 
+        append_rowcallback(.6, .8)
+      
+      
+    } else if (input$viewData == "firstPay") {
+      # mgh: need to think about how to add in US averages
+      col_list <- c("first_time_payment_Within15Days", "first_time_payment_Within35Days", "first_time_payment_total")
+      names_list <- c("State", "Date", "Within 15 Days", "Within 35 Days", "Total Paid", "US 15 Day Avg", "US 35 Day Avg")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe") %>% 
+        append_rowcallback(.87, .93)
+      
+      
+    } else if (input$viewData == "higherAuthority") {
+      # mgh: same: us averages and is higher_total correct?
+      col_list <- c("higher_Within45Days", "higher_Within75Days", "higher_filed", "higher_disposed", "higher_total")
+      names_list <- c("State", "Date", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending", "US 45 Day Avg", "US 75 Day Avg")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe") %>% 
+        append_rowcallback(.4, .8)
       
     }
-    else 
-    {
-      uiTable <- switch(input$viewData,
-                        "lowerAuthority" = refereeTimeliness,
-                        "firstPay" = paymentTimeliness[,c("st","rptdate","Within15Days","Within35Days","Total","Avg15Day","Avg35Day")],
-                        "higherAuthority" = ucbrTimeliness)
       
-      uiCols <- switch(input$viewData,
-                        "lowerAuthority" = c("State", "Date", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending", "US 30 Day Avg" ,"US 45 Day Avg"),
-                        "firstPay" = c("State", "Date", "Within 15 Days", "Within 35 Days", "Total Paid", "US 15 Day Avg", "US 35 Day Avg"),
-                        "higherAuthority" = c("State", "Date", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending", "US 45 Day Avg", "US 75 Day Avg"))
-      
-      thresholds <- switch(input$viewData,
-                           "lowerAuthority" = c(.6,.8),
-                           "firstPay" = c(.87,.93),
-                           "higherAuthority" = c(.4,.8)) 
-                           
-      
-      
-                        
-      # only return the data from the requested state and within the selected input range
-      uiDT <- DT::datatable(uiTable[uiTable$st==input$state & uiTable$rptdate > input$range[1]-1 & uiTable$rptdate < input$range[2]+1,],
-                            options=list(
-                                          pageLength = 12,
-                                          lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
-                                          order = list(1,'desc'),
-                                          searching=FALSE,
-                                          rowCallback = DT::JS(
-                                            paste('function (row,data) { if(parseFloat(data[2]) < ', as.numeric(thresholds[1]), ') { $("td:eq(2)",row).css("color","red").css("font-weight", "bold"); } if(parseFloat(data[3]) <', as.numeric(thresholds[2]),  ') { $("td:eq(3)",row).css("color","red").css("font-weight", "bold"); }  }')
-                          
-                                          )
-                            ), 
-                            colnames=uiCols,
-                            class="nowrap stripe",
-                            rownames=FALSE
-      )
-    }
     return(uiDT)
   })
 
-  output$data.csv = downloadHandler('data.csv', content = function(file) { 
-        df <- switch(input$viewData,
-                        "monthlyUI" = ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1,
-                                                             c("st","rptdate", "total_state_compensated_mov_avg", "total_federal_compensated_mov_avg", "total_state_compensated", "total_federal_compensated", "total_paid_annual_mov_avg")],
-                        "overvPayments" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
-                                                          c("st","rptdate", "outstanding_proportion", "outstanding", "total_paid_annual_mov_avg")],
-                        "lowerAuthority" = refereeTimeliness[refereeTimeliness$st==input$state & refereeTimeliness$rptdate > input$range[1]-1 & refereeTimeliness$rptdate < input$range[2]+1,],
-                        "firstPay" = paymentTimeliness[paymentTimeliness$st==input$state & paymentTimeliness$rptdate > input$range[1]-1 & paymentTimeliness$rptdate < input$range[2]+1,],
-                        "higherAuthority" = ucbrTimeliness[ucbrTimeliness$st==input$state & ucbrTimeliness$rptdate > input$range[1]-1 & ucbrTimeliness$rptdate < input$range[2]+1,], 
-                        "fraudvNon" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1,
-                                                                          c("st","rptdate", "fraud_num_percent", "regular_fraud_num", "federal_fraud_num","regular_nonfraud_num","federal_nonfraud_num")],
-                        "TOPS" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1, c("st","rptdate", "state_tax_recovery", "federal_tax_recovery")],
-                        "overvRecovery" = ucOverpayments[ucOverpayments$st==input$state & ucOverpayments$rptdate > input$range[1]-1 & ucOverpayments$rptdate < input$range[2]+1, c("st","rptdate", "outstanding", "recovered")],
-                        "nonMonDen" = ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1, c("st","rptdate", "determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other")],
-                        "nonMonSep" = ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1, c("st","rptdate", "determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other")],
-                        "nonMonSepRate" = ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1, c("st","rptdate", "determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other")],
-                        "nonMonNonSep" = ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1, c("st","rptdate", "determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other")],
-                        "nonMonNonSepRate" = ucNonMonetary[ucNonMonetary$st==input$state & ucNonMonetary$rptdate > input$range[1]-1 & ucNonMonetary$rptdate < input$range[2]+1, c("st","rptdate", "determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other")],
-                        "uirate" = bls_unemployed_sa[bls_unemployed_sa$st==input$state & bls_unemployed_sa$rptdate > input$range[1]-1 & bls_unemployed_sa$rptdate < input$range[2]+1,c("st","rptdate","pop","total","unemployed","perc_unemployed")],
-                        "recipRate" = ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1, c("st","rptdate","recipiency_annual_reg","recipiency_annual_total")],
-                        "recipBreakdown" = ucRecipiency[ucRecipiency$st==input$state & ucRecipiency$rptdate > input$range[1]-1 & ucRecipiency$rptdate < input$range[2]+1, c("st","rptdate","total_week_mov_avg","unemployed_avg","recipiency_annual_total")]
-        ) 
-        
 
-        write.csv(df[rev(order(df$rptdate)),], file, row.names=FALSE)
+  output$data.csv = downloadHandler('data.csv', content = function(file) { 
+    
+    
+    # set vars to use for the datatable and download
+    col_list <- switch(input$viewData,
+                       "monthlyUI" = c("total_state_compensated_mov_avg", "total_federal_compensated_mov_avg", "total_state_compensated", "total_federal_compensated", "total_paid_annual_mov_avg"),
+                       "overvPayments" = c("outstanding_proportion", "outstanding", "total_paid_annual_mov_avg"),
+                       "fraudvNon" = c("fraud_num_percent", "regular_fraud_num", "federal_fraud_num","regular_nonfraud_num","federal_nonfraud_num"),
+                       "TOPS" = c("state_tax_recovery", "federal_tax_recovery"),
+                       "overvRecovery" = c("outstanding", "recovered"),
+                       "nonMonDen" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
+                       "nonMonSep" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
+                       "nonMonSepRate" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
+                       "nonMonNonSep" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
+                       "nonMonNonSepRate" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
+                       "uirate" = c("pop","total","unemployed","perc_unemployed"),
+                       "recipRate" = c("recipiency_annual_reg","recipiency_annual_total"),
+                       "recipBreakdown" = c("total_week_mov_avg","unemployed_avg","recipiency_annual_total"),
+                       "lowerAuthority" = c("lower_Within30Days", "lower_Within45Days", "lower_filed", "lower_disposed", "lower_total"),
+                       "firstPay" = c("first_time_payment_Within15Days", "first_time_payment_Within35Days", "first_time_payment_total"),
+                       "higherAuthority" = c("higher_Within45Days", "higher_Within75Days", "higher_filed", "higher_disposed", "higher_total"), 
+    )
+    
+    
+    names_list <- switch(input$viewData,
+                         "monthlyUI" = c("State","Report Date", "State UI Payments (Monthly, mov avg)", "Federal UI Payments (Monthly, mov avg)", "State UI Payments (Monthly)", "Federal UI Payments (Monthly)", "Annual UI Payments (mov avg)"),
+                         "overvPayments" = c("State","Report Date", "Outstanding balance / Annual UI Payments", "Outstanding Overpayment Balance", "Annual UI Payments"),
+                         "fraudvNon" = c("State","Report Date", "Fraud as % of Total Overpayments", "Regular UI Fraud", "Federal UI Fraud", "Regular UI Non-Fraud", "Federal UI Non-Fraud"),
+                         "TOPS" = c("State","Report Date", "State Tax Recovery", "Federal Tax Recovery"),
+                         "overvRecovery" = c("State","Report Date", "Outstanding Owed", "Recovered"),
+                         "nonMonDen" = c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Non-Separation Denials", "Separation Denial Rate", "Non-Separation Denial Rate", "Overall Denial Rate"),
+                         "nonMonSep" = c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Misconduct %", "Voluntary Quit %", "Other %"),
+                         "NonMonSepRate" = c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Misconduct Denial Rate", "Voluntary Quit Denial Rate", "Other Denial Rate"),
+                         "NonMonNonSep" = c("State","Report Date", "Total Non-Mon Determinations", "Non-Separation Denials", "A&A %", "Disqualifying Income %", "Refusal of Suitable Work %", "Reporting/call In/etc..", "Refuse Referral", "Other"),
+                         "NonMonNonSepRate" = c("State","Report Date", "A&A %", "Disqualifying Income %", "Refusal of Suitable Work %", "Reporting/call In/etc..", "Refuse Referral", "Other"),
+                         "uiRate" = c("State","Report Date", "Weekly Continuing Claims (12-mo moving avg)","Total Unemployed (12-mo moving avg)", "Recipiency (State + Fed)"),
+                         "recipRate" = c("State","Month", "Civilian Non-Inst. Pop","Labor Force", "Unemployed (SA)", "% Unemployed (SA)"),
+                         "recipBreakdown" = c("State","Report Date", "Regular Programs", "Regular + Federal Programs"),
+                         "lowerAuthority" = c("State", "Date", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending", "US 30 Day Avg" ,"US 45 Day Avg"),
+                         "first_pay" = c("State", "Date", "Within 15 Days", "Within 35 Days", "Total Paid", "US 15 Day Avg", "US 35 Day Avg"),
+                         "higherAuthority" = c("State", "Date", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending", "US 45 Day Avg", "US 75 Day Avg"))
+    
+    df <- unemployed_df %>% 
+      filter(st == input$state,
+             rptdate > (input$range[1]-10),
+             rptdate < (input$range[2]+10),
+             metric %in% col_list) %>% 
+      arrange(desc(rptdate))
+    write.csv(df, file, row.names=FALSE)
   })
     
   # render the proper leaflet map

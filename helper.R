@@ -141,27 +141,27 @@ get50StateComparisonPlot <- function(dfData, startDate, endDate, measure, highli
 
 # a plot with ribbons rather than lines to represent values (like a stacked bar, but a stacked line)
 getRibbonPlot <- function(df, xlab = "Date", ylab, caption, title, ...) {
+  
   df %>% 
-    ggplot(aes(x = rptdate, y = value, ymin = 0, ymax = value, fill = metric)) +
-    # need to work on recession shading; it isn't working b/c of lims, I think, when the lim is in the middle of a recession
-    #geom_rect(inherit.aes = FALSE, data=recession_df, aes(xmin=start, xmax=end, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-    geom_ribbon(alpha=.9)+
+    ggplot(aes(x = rptdate, y = value, ymin = 0, ymax = value, fill = metric, group = desc(metric))) +
+    geom_rect(inherit.aes = FALSE, data=recession_df, aes(xmin=start, xmax=end, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+    geom_ribbon(alpha=.9) +
     geom_line() +
-    #scale_color_discrete(guide=FALSE) +
-    lims(x = c(min(df$rptdate), max(df$rptdate))) +
-    reportTheme + 
-    labs(x = xlab, 
-         y = ylab, 
-         caption = caption,
-         title = title) +
-    scale_fill_brewer(palette="Set1", ...)
+    #scale_color_discrete(guide = FALSE) +
+    #scale_fill_discrete(...)
+    scale_fill_brewer(palette="Set1", ...) +
+    reportTheme +
+    labs(x = xlab,
+        y = ylab,
+        caption = caption,
+        title = title)
 }
 
 # line plot with lines representing each metric passed in
 getLinePlot <- function(df, xlab = "Date", ylab, caption, title, ...) {
   df %>% 
     ggplot(aes(x = rptdate, y = value, color = metric)) +
-    #geom_rect(data=recessions.df[recessions.df$Peak>"1979-12-31",], aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+    geom_rect(inherit.aes = FALSE, data=recession_df, aes(xmin=start, xmax=end, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
     geom_line(size = 2) + 
     reportTheme +
     labs(x = xlab, y = ylab,
@@ -175,7 +175,7 @@ getLinePlot <- function(df, xlab = "Date", ylab, caption, title, ...) {
 getPointPlot <- function(df, xlab = "Date", ylab, caption, title, ...) {
   df %>% 
     ggplot(aes(x = rptdate, y = value, color = metric)) +
-    #geom_rect(data=recessions.df, aes(xmin=Peak, xmax=Trough, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+    geom_rect(inherit.aes = FALSE, data=recession_df, aes(xmin=start, xmax=end, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
     geom_point() +
     stat_smooth(span=.3, se = F) + 
     reportTheme + 
@@ -192,3 +192,40 @@ add_line_with_label <- function(plot, x, y, label) {
     annotate("text", y = y, x = x, label = label, vjust = -.8, hjust=0)
     
 }
+
+# gets a wide table for printing, with the columns in a specific order
+get_wide_UI_table <- function(df, col_list) {
+  df %>% 
+    filter(metric %in% col_list) %>% 
+    pivot_wider(names_from = metric, values_from = value) %>% 
+    select(st, rptdate, one_of(col_list))
+}
+
+# gets a DT::datatable for printing
+get_UI_DT_datable <- function(df, col_list, names_list, class = "stripe") { 
+  DT::datatable(get_wide_UI_table(df, col_list), 
+                options = list(
+                  pageLength = 12,
+                  lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
+                  order = list(1,'desc'),
+                  searching = FALSE
+                ), 
+                colnames= names_list,
+                class = class,
+                rownames = FALSE)
+}
+
+
+append_rowcallback <- function(dt, lim_a, lim_b) {
+  
+  dt$x$options <- append(uiDT$x$options, 
+                           list(rowCallback = 
+                                  DT::JS(paste('function (row,data) { if(parseFloat(data[2]) < ', 
+                                               lim_a, 
+                                               ') { $("td:eq(2)",row).css("color","red").css("font-weight", "bold"); } if(parseFloat(data[3]) <', 
+                                               lim_b,  
+                                               ') { $("td:eq(3)",row).css("color","red").css("font-weight", "bold"); }  }'))))
+  
+  return(dt)
+}
+                         

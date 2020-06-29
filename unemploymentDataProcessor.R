@@ -519,7 +519,7 @@ getUCFirstTimePaymentLapse <- function() {
                             x57x63 + x64x70 + xOver70) / Total,3)) %>% 
   
     # we only need to choose certain columns, so this isn't strictly necessary, but is a convenience
-    select(all_of(c("st","rptdate","first_time_payment_Within15Days","first_time_payment_Within35Days", "first_time_payment_Within49Days", "first_time_payment_Within70Days", "Total"))) 
+    select(all_of(c("st","rptdate","first_time_payment_Within15Days","first_time_payment_Within35Days", "first_time_payment_Within49Days", "first_time_payment_Within70Days", "first_time_payment_total"))) 
   
   #compute US Averages
   # compute US Averages and add them into the df
@@ -568,7 +568,8 @@ getUCAppealsTimeLapseLower <- function(ucBenefitAppealsRegular) {
     full_join(ucAppealsCaseAgingLower %>% 
                 select(all_of(c("st","rptdate","Total"))), by=c("st", "rptdate")) %>% 
     full_join(ucBenefitAppealsRegular %>% 
-                select(all_of(c("st", "rptdate", "lower_filed","lower_disposed"))), by=c("st", "rptdate"))
+                select(all_of(c("st", "rptdate", "lower_filed","lower_disposed"))), by=c("st", "rptdate")) %>% 
+    rename(lower_total = Total)
 
   # compute US Averages  
   usAvg <- ucAppealsTimeLapseLower %>% 
@@ -614,7 +615,8 @@ getucAppealsTimeLapseHigher <- function() {
     # merge with ucbenefitappeal data, but not EUC stuff yet
     full_join(ucBenefitAppealsRegular %>% 
                 select(all_of(c("st", "rptdate", "higher_filed","higher_disposed"))),
-              by=c("st", "rptdate"))
+              by=c("st", "rptdate")) %>% 
+    rename(higher_total = Total)
   
   #compute US Averages
   usAvg <- ucAppealsTimeLapseHigher %>% 
@@ -697,7 +699,9 @@ unemployment_df <-
         function(x) { 
           x %>% 
             pivot_longer(cols = !one_of(c("rptdate", "st")), names_to = "metric", values_to = "value")}) %>% 
-  bind_rows(bls_unemployed)
+  bind_rows(bls_unemployed) %>% 
+  # there are a few repeat metrics that get thrown in there by accident; get rid of them:
+  distinct()
 
 arrow::write_feather(unemployment_df, "~/unemployment_data.feather")
 
