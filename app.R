@@ -143,7 +143,7 @@ server <- function(input, output) {
       metric_filter = c("total_compensated_mov_avg", "total_state_compensated_mov_avg")
       df <- df %>% 
         filter(metric %in% metric_filter) %>% 
-        mutate(metric = factor(metric, labels = metric_filter))
+        mutate(metric = factor(metric, labels = metric_filter, ordered = TRUE))
       
       uPlot <- getRibbonPlot(df, xlab = "Date", ylab = "Total Paid",
                       caption = "12-month moving average of UI paid per month in both regular and federal UI programs.\nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",  
@@ -240,12 +240,14 @@ server <- function(input, output) {
       
     }
     
+    
+    ## mgh: I can't figure out how to reverse the orders of geoms here.  shit.
     else if (input$viewData == "recipRate")
     {
       metric_filter = c("recipiency_annual_reg", "recipiency_annual_total")
       df <- df %>% 
         filter(metric %in% metric_filter) %>% 
-        mutate(metric = factor(metric, labels = c("recipiency_annual_total", "recipiency_annual_reg")))
+        mutate(metric = factor(metric, labels = metric_filter, ordered = TRUE))
       
       uPlot <- getRibbonPlot(df, xlab = "Date", ylab = "Recipiency Rate",
                              caption = "Recipiency rate calculated by dividing 12 month moving average of unemployment continuing claims divided by 12 month moving average of total unemployed.\nData not seasonally adjusted.  \nSource: Continuing claims can be found in ETA report 5159, found here: https://ows.doleta.gov/unemploy/DataDownloads.asp.\nUnemployed numbers courtesy the BLS: https://www.bls.gov/web/laus/ststdnsadata.txt.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",  
@@ -534,26 +536,22 @@ server <- function(input, output) {
       
       # mgh: is lower total correct?  and also us averages
       col_list <- c("lower_Within30Days", "lower_Within45Days", "lower_filed", "lower_disposed", "lower_total")
-      names_list <- c("State", "Date", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending", "US 30 Day Avg" ,"US 45 Day Avg")
-      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe") %>% 
-        append_rowcallback(.6, .8)
+      names_list <- c("State", "Date", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending")#, "US 30 Day Avg" ,"US 45 Day Avg")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .6, lim_b = .8)
       
       
     } else if (input$viewData == "firstPay") {
       # mgh: need to think about how to add in US averages
       col_list <- c("first_time_payment_Within15Days", "first_time_payment_Within35Days", "first_time_payment_total")
-      names_list <- c("State", "Date", "Within 15 Days", "Within 35 Days", "Total Paid", "US 15 Day Avg", "US 35 Day Avg")
-      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe") %>% 
-        append_rowcallback(.87, .93)
+      names_list <- c("State", "Date", "Within 15 Days", "Within 35 Days", "Total Paid") #, "US 15 Day Avg", "US 35 Day Avg")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .87, lim_b = .93)
       
       
     } else if (input$viewData == "higherAuthority") {
       # mgh: same: us averages and is higher_total correct?
       col_list <- c("higher_Within45Days", "higher_Within75Days", "higher_filed", "higher_disposed", "higher_total")
-      names_list <- c("State", "Date", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending", "US 45 Day Avg", "US 75 Day Avg")
-      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe") %>% 
-        append_rowcallback(.4, .8)
-      
+      names_list <- c("State", "Date", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending") #, "US 45 Day Avg", "US 75 Day Avg")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .4, lim_b = .8)
     }
       
     return(uiDT)

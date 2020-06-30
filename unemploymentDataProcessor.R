@@ -505,18 +505,18 @@ getUCFirstTimePaymentLapse <- function() {
   #set some names
   ucFirstTimePaymentLapse <- ucFirstTimePaymentLapse %>% 
     rename_at(vars(c("c1", "c9", "c17", "c25", "c33", "c41", "c49", "c57", "c65","c73","c81","c89")), 
-           ~c("Total", "x0x7", "x8x14", "x15x21", "x22x28", "x29x35", "x36x42","x43x49","x50x56","x57x63","x64x70","xOver70" ))
+           ~c("first_time_payment_total", "x0x7", "x8x14", "x15x21", "x22x28", "x29x35", "x36x42","x43x49","x50x56","x57x63","x64x70","xOver70" ))
   
   # calculate some values
   ucFirstTimePaymentLapse <- ucFirstTimePaymentLapse %>% 
     mutate(
-      first_time_payment_Within15Days = round((x0x7 + x8x14) / Total, 3),
-      first_time_payment_Within35Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35) / Total, 3),
-      first_time_payment_Within49Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42 + x43x49) / Total, 3),
+      first_time_payment_Within15Days = round((x0x7 + x8x14) / first_time_payment_total, 3),
+      first_time_payment_Within35Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35) / first_time_payment_total, 3),
+      first_time_payment_Within49Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42 + x43x49) / first_time_payment_total, 3),
       first_time_payment_Within70Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42+ x43x49 + 
-                              x50x56 + x57x63 + x64x70) / Total,3),
+                              x50x56 + x57x63 + x64x70) / first_time_payment_total,3),
       first_time_payment_Over70Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42 + x43x49 + x50x56 + 
-                            x57x63 + x64x70 + xOver70) / Total,3)) %>% 
+                            x57x63 + x64x70 + xOver70) / first_time_payment_total, 3)) %>% 
   
     # we only need to choose certain columns, so this isn't strictly necessary, but is a convenience
     select(all_of(c("st","rptdate","first_time_payment_Within15Days","first_time_payment_Within35Days", "first_time_payment_Within49Days", "first_time_payment_Within70Days", "first_time_payment_total"))) 
@@ -526,7 +526,7 @@ getUCFirstTimePaymentLapse <- function() {
   usAvg <- ucFirstTimePaymentLapse %>% 
     group_by(rptdate) %>% 
     summarize(across(where(is.numeric), function(x) round(mean(x), 3))) %>% 
-    mutate(Total = NA) # this is ported from earlier code; I'm not sure why I did this back then
+    mutate(first_time_payment_total = NA) # this is ported from earlier code; I'm not sure why I did this back then
   
   ucFirstTimePaymentLapse <- ucFirstTimePaymentLapse %>% 
     bind_rows(usAvg %>% mutate(st = "US")) %>% 
@@ -554,7 +554,7 @@ getUCAppealsTimeLapseLower <- function(ucBenefitAppealsRegular) {
   ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
     rename_at(vars(c("c1", "c4", "c7")), 
            ~ c("Total", "x0x30", "x31x45"))
-  ucAppealsCaseAgingLower <- ucAppealsCaseAgingLower %>% rename(Total = c1)
+  ucAppealsCaseAgingLower <- ucAppealsCaseAgingLower %>% rename(lower_total = c1)
   
   # calculate some values
   ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
@@ -566,16 +566,15 @@ getUCAppealsTimeLapseLower <- function(ucBenefitAppealsRegular) {
   # need to add EUC and EB into this, but not now
   ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
     full_join(ucAppealsCaseAgingLower %>% 
-                select(all_of(c("st","rptdate","Total"))), by=c("st", "rptdate")) %>% 
+                select(all_of(c("st","rptdate","lower_total"))), by=c("st", "rptdate")) %>% 
     full_join(ucBenefitAppealsRegular %>% 
-                select(all_of(c("st", "rptdate", "lower_filed","lower_disposed"))), by=c("st", "rptdate")) %>% 
-    rename(lower_total = Total)
+                select(all_of(c("st", "rptdate", "lower_filed","lower_disposed"))), by=c("st", "rptdate"))
 
   # compute US Averages  
   usAvg <- ucAppealsTimeLapseLower %>% 
     group_by(rptdate) %>% 
     summarize(across(where(is.numeric), function(x) round(mean(x), 3))) %>% 
-    mutate(Total = NA) # this is ported from earlier code; I'm not sure why I did this back then
+    mutate(lower_total = NA) # this is ported from earlier code; I'm not sure why I did this back then
   
   ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
     bind_rows(usAvg %>% mutate(st = "US")) %>% 
@@ -600,7 +599,7 @@ getucAppealsTimeLapseHigher <- function() {
   ucAppealsTimeLapseHigher <- ucAppealsTimeLapseHigher %>% 
     rename_at(vars(c("c1", "c4", "c7", "c10")), ~c("Total", "x0x45", "x46x60", "x61x75"))
   ucAppealsCaseAgingHigher <- ucAppealsCaseAgingHigher %>% 
-    rename(Total = c1)
+    rename(higher_total = c1)
   
   #calculate soome values
   ucAppealsTimeLapseHigher <- ucAppealsTimeLapseHigher %>% 
@@ -610,19 +609,18 @@ getucAppealsTimeLapseHigher <- function() {
     select(one_of(c("st","rptdate","higher_Within45Days","higher_Within75Days"))) %>% 
     # merge with UCCaseAging Data
     full_join(ucAppealsCaseAgingHigher %>% 
-                select(all_of(c("st","rptdate","Total"))), 
+                select(all_of(c("st","rptdate","higher_total"))), 
               by=c("st", "rptdate")) %>% 
     # merge with ucbenefitappeal data, but not EUC stuff yet
     full_join(ucBenefitAppealsRegular %>% 
                 select(all_of(c("st", "rptdate", "higher_filed","higher_disposed"))),
-              by=c("st", "rptdate")) %>% 
-    rename(higher_total = Total)
+              by=c("st", "rptdate"))
   
   #compute US Averages
   usAvg <- ucAppealsTimeLapseHigher %>% 
     group_by(rptdate) %>% 
     summarize(across(where(is.numeric), function(x) round(mean(x), 3))) %>% 
-    mutate(Total = NA) # this is ported from earlier code; I'm not sure why I did this back then
+    mutate(higher_total = NA) # this is ported from earlier code; I'm not sure why I did this back then
   
   ucAppealsTimeLapseHigher <- ucAppealsTimeLapseHigher %>% 
     bind_rows(usAvg %>% mutate(st = "US")) %>% 
@@ -683,7 +681,13 @@ ucOverpayments <- getOverpayments()
 
 # add in the uc payments by month into the ucOverpayments data to get overpayments as a percent of annual costs
 ### mgh: look into this section
-ucOverpayments <- merge(ucOverpayments, ucRecipiency[,c("st","rptdate","total_state_compensated", "total_compensated", "total_federal_compensated", "total_federal_compensated_mov_avg", "total_state_compensated_mov_avg", "total_compensated_mov_avg")], by=c("st", "rptdate"), all.x=TRUE)
+ucOverpayments <- ucOverpayments %>% 
+  left_join(ucRecipiency %>% 
+              select(vars(one_of(
+                c("st","rptdate","total_state_compensated", "total_compensated", 
+                  "total_federal_compensated", "total_federal_compensated_mov_avg", 
+                  "total_state_compensated_mov_avg", "total_compensated_mov_avg")))), 
+            by=c("st", "rptdate"))
 ucOverpayments$total_paid_annual_mov_avg <- ucOverpayments$total_compensated_mov_avg*12
 ucRecipiency$total_paid_annual_mov_avg <- ucRecipiency$total_compensated_mov_avg*12
 ucOverpayments$outstanding_proportion <- round(ucOverpayments$outstanding / ucOverpayments$total_paid_annual_mov_avg,4)

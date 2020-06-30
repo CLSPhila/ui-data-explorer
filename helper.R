@@ -143,7 +143,7 @@ get50StateComparisonPlot <- function(dfData, startDate, endDate, measure, highli
 getRibbonPlot <- function(df, xlab = "Date", ylab, caption, title, ...) {
   
   df %>% 
-    ggplot(aes(x = rptdate, y = value, ymin = 0, ymax = value, fill = metric, group = desc(metric))) +
+    ggplot(aes(x = rptdate, y = value, ymin = 0, ymax = value, fill = metric)) +
     geom_rect(inherit.aes = FALSE, data=recession_df, aes(xmin=start, xmax=end, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
     geom_ribbon(alpha=.9) +
     geom_line() +
@@ -202,30 +202,31 @@ get_wide_UI_table <- function(df, col_list) {
 }
 
 # gets a DT::datatable for printing
-get_UI_DT_datable <- function(df, col_list, names_list, class = "stripe") { 
+get_UI_DT_datable <- function(df, col_list, names_list, class = "stripe", lim_a = NULL, lim_b = NULL) {
+ 
+  # deal with callbacks when we want one to highlight rows that don't comply with a federal standard
+  rowCallback <- NA
+  if (!is.null(lim_a) & !is.null(lim_b)) {
+    rowCallback <- DT::JS(paste('function (row,data) { if(parseFloat(data[2]) < ', 
+                                lim_a, 
+                                ') { $("td:eq(2)",row).css("color","red").css("font-weight", "bold"); } if(parseFloat(data[3]) <', 
+                                lim_b,  
+                                ') { $("td:eq(3)",row).css("color","red").css("font-weight", "bold"); }  }'))
+  }
+  
+  # filter out rows where there isn't complete information.  This would include when
+  # data is given our quarterly, but we also have some non-quarterly information we could
+  # display: mgh!
+
   DT::datatable(get_wide_UI_table(df, col_list), 
                 options = list(
                   pageLength = 12,
                   lengthMenu = list(c(12, 24, 48, -1),c("12", "24", "48", 'All')),
                   order = list(1,'desc'),
-                  searching = FALSE
+                  searching = FALSE, 
+                  rowCallback = rowCallback
                 ), 
                 colnames= names_list,
                 class = class,
                 rownames = FALSE)
 }
-
-
-append_rowcallback <- function(dt, lim_a, lim_b) {
-  
-  dt$x$options <- append(uiDT$x$options, 
-                           list(rowCallback = 
-                                  DT::JS(paste('function (row,data) { if(parseFloat(data[2]) < ', 
-                                               lim_a, 
-                                               ') { $("td:eq(2)",row).css("color","red").css("font-weight", "bold"); } if(parseFloat(data[3]) <', 
-                                               lim_b,  
-                                               ') { $("td:eq(3)",row).css("color","red").css("font-weight", "bold"); }  }'))))
-  
-  return(dt)
-}
-                         
