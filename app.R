@@ -518,7 +518,7 @@ server <- function(input, output) {
     else if (input$viewData == "uirate")
     {
       ## mgh: missing a few values - civilian non-inst population; labor force; can get from BLS?
-      col_list <- c("pop", "total", "total_unemployed_sa", "unemployment_rate_sa")
+      col_list <- c("civilian_non_insitutionalized_population_sa", "labor_force_sa", "total_unemployed_sa", "unemployment_rate_sa")
       names_list <- c("State","Month", "Civilian Non-Inst. Pop","Labor Force", "Unemployed (SA)", "% Unemployed (SA)")
       uiDT <- get_UI_DT_datable(df, col_list, names_list) %>% 
         formatCurrency(columns=c(3:5), currency='', digits=0)

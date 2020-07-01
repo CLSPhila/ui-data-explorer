@@ -655,11 +655,20 @@ getUCBenefitAppeals <- function(url) {
 # gets the unemployment rate and total unemployed for all 50 states + DC + the US;
 # uses a sleep within each request (1sec) so it takes on the order of 5 minutes to retrieve all of the data that we want
 # without hitting a rate limit
+labor_force_info <- bind_rows(
+  map_dfr(c("CLF16OV", "DCLF", paste0(state.abb, "LF")), get_fred_series_with_state_id, "labor_force_sa", sleep = TRUE),
+  map_dfr(c("CIVPART", paste0("LBSSA", str_pad(1:56,width = 2, side = "left", pad = "0"))), get_fred_series_with_state_id, "labor_force_participation_rate_sa", sleep = TRUE)
+) %>% 
+  pivot_wider(names_from = metric, values_from = value) %>% 
+  mutate(civilian_non_insitutionalized_population_sa = 100 * labor_force_sa / labor_force_participation_rate_sa) %>% 
+  pivot_longer(cols = 3:5, names_to = "metric") %>% view
+
 bls_unemployed <- bind_rows(
   map_dfr(c("UNRATE", "DCUR", paste0(state.abb, "UR")), get_fred_series_with_state_id, "unemployment_rate_sa", sleep = TRUE),
   map_dfr(c("UNRATENSA", "DCURN", paste0(state.abb, "URN")), get_fred_series_with_state_id, "unemployment_rate_nsa", sleep = TRUE),
   map_dfr(c("UNEMPLOY", paste0("LASST", str_pad(1:56,width = 2, side = "left", pad = "0"), "0000000000004")), get_fred_series_with_state_id, "total_unemployed_sa", sleep = TRUE),
-  map_dfr(c("LNU03000000", paste0("LAUST", str_pad(1:56,width = 2, side = "left", pad = "0"), "0000000000004")), get_fred_series_with_state_id, "total_unemployed_nsa", sleep = TRUE))
+  map_dfr(c("LNU03000000", paste0("LAUST", str_pad(1:56,width = 2, side = "left", pad = "0"), "0000000000004")), get_fred_series_with_state_id, "total_unemployed_nsa", sleep = TRUE),
+  labor_force_info)
 
 
 ucFirstTimePaymentLapse <- getUCFirstTimePaymentLapse()

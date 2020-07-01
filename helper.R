@@ -198,7 +198,11 @@ get_wide_UI_table <- function(df, col_list) {
   df %>% 
     filter(metric %in% col_list) %>% 
     pivot_wider(names_from = metric, values_from = value) %>% 
-    select(st, rptdate, one_of(col_list))
+    select(st, rptdate, one_of(col_list)) %>%
+    # remove rows that don't have complete data; this happens most
+    # frequently for tables with data that is quarterly since some data in the DT
+    # may also be produced monthly.  we only want the quarterly info
+    na.omit()
 }
 
 # gets a DT::datatable for printing
@@ -214,10 +218,6 @@ get_UI_DT_datable <- function(df, col_list, names_list, class = "stripe", lim_a 
                                 ') { $("td:eq(3)",row).css("color","red").css("font-weight", "bold"); }  }'))
   }
   
-  # filter out rows where there isn't complete information.  This would include when
-  # data is given our quarterly, but we also have some non-quarterly information we could
-  # display: mgh!
-
   DT::datatable(get_wide_UI_table(df, col_list), 
                 options = list(
                   pageLength = 12,
