@@ -448,13 +448,16 @@ server <- function(input, output) {
       
       col_list <- c("fraud_num_percent", "regular_fraud_num", "federal_fraud_num", "regular_nonfraud_num", "federal_nonfraud_num")
       names_list <- c("State","Report Date", "Fraud as % of Total Overpayments", "Regular UI Fraud", "Federal UI Fraud", "Regular UI Non-Fraud", "Federal UI Non-Fraud")
-      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
+        formatRound(columns = c(4:7), digits = 0)
+      
       
       
     }
 
     else if (input$viewData == "TOPS")
     {
+      ## mgh: federal_tax_recovery seems wrong; state seems wrong; check RI for state numbers
       col_list <- c("state_tax_recovery", "federal_tax_recovery")
       names_list <- c("State","Report Date", "State Tax Recovery", "Federal Tax Recovery")
       uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
@@ -474,21 +477,28 @@ server <- function(input, output) {
     { 
       col_list <- c("determ_total", "denial_sep_total", "denial_non_total", "denial_sep_percent", "denial_non_percent", "denial_rate_overall")
       names_list <- c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Non-Separation Denials", "Separation Denial Rate", "Non-Separation Denial Rate", "Overall Denial Rate")
-      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
+        formatRound(columns = c(3:5), digits = 0)
+      
     }
     
     else if (input$viewData == "nonMonSep")
     {
       col_list <- c("determ_total", "denial_sep_total", "denial_sep_misconduct_percent","denial_sep_vol_percent", "denial_sep_other_percent")
       names_list <- c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Misconduct %", "Voluntary Quit %", "Other %")
-      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
+        formatRound(columns = c(3:4), digits = 0)
+      
     }
 
     else if (input$viewData == "nonMonSepRate")
     {
+      
+      ## mgh: note for RI we get NA rather than 0 for other in many instances; that shouldn't be
       col_list <- c("determ_total", "denial_sep_total", "denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate")
       names_list <- c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Misconduct Denial Rate", "Voluntary Quit Denial Rate", "Other Denial Rate")
-      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
+        formatRound(columns = c(3:4), digits = 0)
     }
     
     else if (input$viewData == "nonMonNonSep")
@@ -500,6 +510,8 @@ server <- function(input, output) {
 
     else if (input$viewData == "nonMonNonSepRate")
     {
+      ## mgh: two problems: 1 we are missing lots of data b/c Refuse Referral is NA not 0
+      # 2: we are missing a loess line
       col_list <- c("denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate")
       names_list <- c("State","Report Date", "A&A %", "Disqualifying Income %", "Refusal of Suitable Work %", "Reporting/call In/etc..", "Refuse Referral", "Other")
       uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe")
@@ -521,7 +533,7 @@ server <- function(input, output) {
       col_list <- c("civilian_non_insitutionalized_population_sa", "labor_force_sa", "total_unemployed_sa", "unemployment_rate_sa")
       names_list <- c("State","Month", "Civilian Non-Inst. Pop","Labor Force", "Unemployed (SA)", "% Unemployed (SA)")
       uiDT <- get_UI_DT_datable(df, col_list, names_list) %>% 
-        formatCurrency(columns=c(3:5), currency='', digits=0)
+        formatRound(columns=c(3:5), digits=0)
       
     }
     
@@ -537,21 +549,25 @@ server <- function(input, output) {
       # mgh: is lower total correct?  and also us averages
       col_list <- c("lower_Within30Days", "lower_Within45Days", "lower_filed", "lower_disposed", "lower_total")
       names_list <- c("State", "Date", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending")#, "US 30 Day Avg" ,"US 45 Day Avg")
-      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .6, lim_b = .8)
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .6, lim_b = .8) %>% 
+        formatRound(columns = c(5:7), digits = 0)
       
       
     } else if (input$viewData == "firstPay") {
       # mgh: need to think about how to add in US averages
       col_list <- c("first_time_payment_Within15Days", "first_time_payment_Within35Days", "first_time_payment_total")
       names_list <- c("State", "Date", "Within 15 Days", "Within 35 Days", "Total Paid") #, "US 15 Day Avg", "US 35 Day Avg")
-      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .87, lim_b = .93)
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .87, lim_b = .93) %>% 
+        formatRound(columns = c(5), digits = 0)
       
       
     } else if (input$viewData == "higherAuthority") {
       # mgh: same: us averages and is higher_total correct?
       col_list <- c("higher_Within45Days", "higher_Within75Days", "higher_filed", "higher_disposed", "higher_total")
       names_list <- c("State", "Date", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending") #, "US 45 Day Avg", "US 75 Day Avg")
-      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .4, lim_b = .8)
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .4, lim_b = .8) %>% 
+        formatRound(columns = c(5:7), digits = 0)
+      
     }
       
     return(uiDT)

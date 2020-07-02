@@ -118,7 +118,7 @@ getOverpayments <- function() {
     select(one_of(all_cols, detection_cols, recovery_cols))
   
   # join the four dfs together and do some calculaations
-  
+  ###mghxxx
   combine_ucOverpaymentDFs <- function(overpayment_df, extension_df, 
                                        all_cols, overpayment_cols) {
     df <- overpayment_df %>% 
@@ -482,7 +482,8 @@ getNonMonetaryDeterminations <- function()
     # for now, I am going to just set any proportion > 1 to 1.  But in the future, may make more sense
     # to capture 'total denials' and 'total determinations' by adding the subsets together.
     # this function looks at every "*percent" column and sets the max value to 1.
-    mutate_at(vars(ends_with(c("percent", "rate"))), ~if_else(. > 1, 1, .))
+    mutate_at(vars(ends_with(c("percent", "rate"))), ~if_else(. > 1, 1, .)) %>% 
+    mutate_at(vars(ends_with(c("percent", "rate"))), ~if_else(is.na(.), 0, .))
   
   
   # compute US Averages and add them into the df
@@ -661,7 +662,7 @@ labor_force_info <- bind_rows(
 ) %>% 
   pivot_wider(names_from = metric, values_from = value) %>% 
   mutate(civilian_non_insitutionalized_population_sa = 100 * labor_force_sa / labor_force_participation_rate_sa) %>% 
-  pivot_longer(cols = 3:5, names_to = "metric") %>% view
+  pivot_longer(cols = 3:5, names_to = "metric")
 
 bls_unemployed <- bind_rows(
   map_dfr(c("UNRATE", "DCUR", paste0(state.abb, "UR")), get_fred_series_with_state_id, "unemployment_rate_sa", sleep = TRUE),
@@ -692,10 +693,10 @@ ucOverpayments <- getOverpayments()
 ### mgh: look into this section
 ucOverpayments <- ucOverpayments %>% 
   left_join(ucRecipiency %>% 
-              select(vars(one_of(
+              select(all_of(
                 c("st","rptdate","total_state_compensated", "total_compensated", 
                   "total_federal_compensated", "total_federal_compensated_mov_avg", 
-                  "total_state_compensated_mov_avg", "total_compensated_mov_avg")))), 
+                  "total_state_compensated_mov_avg", "total_compensated_mov_avg"))), 
             by=c("st", "rptdate"))
 ucOverpayments$total_paid_annual_mov_avg <- ucOverpayments$total_compensated_mov_avg*12
 ucRecipiency$total_paid_annual_mov_avg <- ucRecipiency$total_compensated_mov_avg*12
