@@ -58,8 +58,8 @@ getOverpayments <- function() {
   # cols that we want to keep
   overpayment_cols <- c("st","rptdate","regular_fraud_num","federal_fraud_num","regular_fraud_dol","federal_fraud_dol","regular_nonfraud_num","federal_nonfraud_num","regular_nonfraud_dol","federal_nonfraud_dol","state_tax_recovery","federal_tax_recovery", "outstanding", "recovered")
   all_cols <- c("st","rptdate")
-  detection_cols <- c("yfederal_fraud_num","yfederal_fraud_dol","yfederal_nonfraud_num","yfederal_nonfraud_dol", "youtstanding", "yrecovered")
-  recovery_cols <- c("ystate_tax_recovery","yfederal_tax_recovery")
+  detection_cols <- c("federal_fraud_num","federal_fraud_dol","federal_nonfraud_num","federal_nonfraud_dol", "outstanding", "recovered")
+  recovery_cols <- c("state_tax_recovery","federal_tax_recovery")
   
   
   # just pull out the columns that we care about
@@ -78,82 +78,63 @@ getOverpayments <- function() {
       outstanding = c35 + c36 + c276 + c37 + c38 + c277,
       recovered = c206 + c207 + c278 + c208 + c209 + c279
     ) %>% 
-    select(one_of(overpayment_cols))
+    select(one_of(overpayment_cols)) %>%
+    pivot_longer(cols = -c(st, rptdate), names_to = "metric", values_to = "value")
     
   ucOverpaymentsEUC91 <- ucOverpaymentsEUC91 %>% 
     mutate( 
-      yfederal_fraud_num = c1 + c2,
-      yfederal_fraud_dol = c3 + c4,
-      yfederal_nonfraud_num = c5 + c6,
-      yfederal_nonfraud_dol = c7 + c8,
-      youtstanding = c9 + c10 + c11 + c12,
-      yrecovered = c13 + c14 + c15 + c16
+      federal_fraud_num = c1 + c2,
+      federal_fraud_dol = c3 + c4,
+      federal_nonfraud_num = c5 + c6,
+      federal_nonfraud_dol = c7 + c8,
+      outstanding = c9 + c10 + c11 + c12,
+      recovered = c13 + c14 + c15 + c16
     ) %>% 
-    select(one_of(all_cols, detection_cols))
+    select(one_of(all_cols, detection_cols)) %>% 
+    pivot_longer(cols = -c(st, rptdate), names_to = "metric", values_to = "valueEUC91")
+  
   
   ucOverpaymentsTEUC02 <- ucOverpaymentsTEUC02 %>% 
     mutate(
-      yfederal_fraud_num = c1 + c2,
-      yfederal_fraud_dol = c3 + c4,
-      yfederal_nonfraud_num = c27 + c28,
-      yfederal_nonfraud_dol = c29 + c30,
-      ystate_tax_recovery = c210 + c211 + c212 + c213,
-      yfederal_tax_recovery = c214 + c215 + c216 + c217,
-      youtstanding = c35 + c36 + c37 + c38,
-      yrecovered = c206 + c207 + c208 + c209,
+      federal_fraud_num = c1 + c2,
+      federal_fraud_dol = c3 + c4,
+      federal_nonfraud_num = c27 + c28,
+      federal_nonfraud_dol = c29 + c30,
+      state_tax_recovery = c210 + c211 + c212 + c213,
+      federal_tax_recovery = c214 + c215 + c216 + c217,
+      outstanding = c35 + c36 + c37 + c38,
+      recovered = c206 + c207 + c208 + c209,
     ) %>% 
-    select(one_of(all_cols, detection_cols, recovery_cols))
+    select(one_of(all_cols, detection_cols, recovery_cols)) %>% 
+    pivot_longer(cols = -c(st, rptdate), names_to = "metric", values_to = "valueTEUC02")
+  
   
   ucOverpaymentsEUC08 <- ucOverpaymentsEUC08 %>% 
     mutate(
-      yfederal_fraud_num = c1 + c2,
-      yfederal_fraud_dol = c3 + c4,
-      yfederal_nonfraud_num = c27 + c28,
-      yfederal_nonfraud_dol = c29 + c30,
-      ystate_tax_recovery = c210 + c211 + c212 + c213,
-      yfederal_tax_recovery = c214 + c215 + c216 + c217,
-      youtstanding = c35 + c36 + c37 + c38,
-      yrecovered = c206 + c207 + c208 + c209,
+      federal_fraud_num = c1 + c2,
+      federal_fraud_dol = c3 + c4,
+      federal_nonfraud_num = c27 + c28,
+      federal_nonfraud_dol = c29 + c30,
+      state_tax_recovery = c210 + c211 + c212 + c213,
+      federal_tax_recovery = c214 + c215 + c216 + c217,
+      outstanding = c35 + c36 + c37 + c38,
+      recovered = c206 + c207 + c208 + c209,
     ) %>% 
-    select(one_of(all_cols, detection_cols, recovery_cols))
+    select(one_of(all_cols, detection_cols, recovery_cols)) %>% 
+    pivot_longer(cols = -c(st, rptdate), names_to = "metric", values_to = "valueEUC08")
   
-  # join the four dfs together and do some calculaations
-  ###mghxxx
-  combine_ucOverpaymentDFs <- function(overpayment_df, extension_df, 
-                                       all_cols, overpayment_cols) {
-    df <- overpayment_df %>% 
-      left_join(extension_df, by = all_cols) %>% 
-      rowwise() %>% 
-      mutate(
-        federal_fraud_num = sum(federal_fraud_num, yfederal_fraud_num, na.rm = T),
-        federal_fraud_dol = sum(federal_fraud_dol, yfederal_fraud_dol, na.rm = T),
-        federal_nonfraud_num = sum(federal_nonfraud_num, yfederal_nonfraud_num, na.rm = T),
-        federal_nonfraud_dol = sum(federal_nonfraud_dol,yfederal_nonfraud_dol, na.rm = T),
-        outstanding = sum(outstanding, youtstanding, na.rm = T),
-        recovered = sum(recovered, yrecovered, na.rm = T)
-      ) %>% 
-      ungroup() 
-
-    # for some of the extensions, we track state_tax_recovery as well
-    if("ystate_tax_recovery" %in% colnames(extension_df)) {
-      df <- df %>% 
-        rowwise() %>% 
-        mutate(
-          state_tax_recovery = sum(state_tax_recovery, ystate_tax_recovery, na.rm = T),
-          federal_tax_recovery = sum(federal_tax_recovery, yfederal_tax_recovery, na.rm = T)
-        ) %>% 
-        ungroup()
-    }
-    
-    # keep only some columns
-    df %>% 
-      select(one_of(overpayment_cols))
-  }
-  
-  ucOverpayments <- ucOverpaymentsRegular %>% 
-    combine_ucOverpaymentDFs(ucOverpaymentsEUC91, all_cols, overpayment_cols) %>% 
-    combine_ucOverpaymentDFs(ucOverpaymentsTEUC02, all_cols, overpayment_cols) %>% 
-    combine_ucOverpaymentDFs(ucOverpaymentsEUC08, all_cols, overpayment_cols)
+  # combine the data sets
+  ucOverPayments <- ucOverpaymentsRegular %>% 
+    left_join(ucOverpaymentsEUC91, by = c("st", "rptdate", "metric")) %>% 
+    left_join(ucOverpaymentsTEUC02, by = c("st", "rptdate", "metric")) %>% 
+    left_join(ucOverpaymentsEUC08, by = c("st", "rptdate", "metric")) %>%
+    rowwise() %>% 
+    # add up all of the like metrics per month per st (e.g. outstanding = outstandingregular + outstanting EUC02, etc....)
+    mutate(total = sum(value, valueEUC91, valueEUC08, valueTEUC02, na.rm = T)) %>% 
+    # remove all of the intermediate columns that we don't need anymore
+    select(-value, -valueEUC91, -valueEUC08, -valueTEUC02) %>% 
+    # and make a wide table again that has everything we want - total outstanding, etc...
+    pivot_wider(names_from = "metric", values_from = "total")
   
   
   # compute US Averages and add them into the df

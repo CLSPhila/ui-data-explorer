@@ -229,7 +229,6 @@ server <- function(input, output) {
       df <- df %>% 
         filter(metric %in% metric_filter)
       
-      # mgh: the pattern is totaly correct here, but the #s don't match the numbers on the website by a factor of 4ish
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "Total Overpayment Recovery",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Tax Program Overpayment Recovery from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
@@ -264,7 +263,6 @@ server <- function(input, output) {
       df <- df %>% 
         filter(metric %in% metric_filter)
       
-      # mgh: the outstanding overpayments seem wrong - way too high
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Outstanding Overpayments vs $ Recovered from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
@@ -457,7 +455,6 @@ server <- function(input, output) {
 
     else if (input$viewData == "TOPS")
     {
-      ## mgh: federal_tax_recovery seems wrong; state seems wrong; check RI for state numbers
       col_list <- c("state_tax_recovery", "federal_tax_recovery")
       names_list <- c("State","Report Date", "State Tax Recovery", "Federal Tax Recovery")
       uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
@@ -494,7 +491,6 @@ server <- function(input, output) {
     else if (input$viewData == "nonMonSepRate")
     {
       
-      ## mgh: note for RI we get NA rather than 0 for other in many instances; that shouldn't be
       col_list <- c("determ_total", "denial_sep_total", "denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate")
       names_list <- c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Misconduct Denial Rate", "Voluntary Quit Denial Rate", "Other Denial Rate")
       uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
@@ -574,8 +570,33 @@ server <- function(input, output) {
   })
 
 
-  output$data.csv = downloadHandler('data.csv', content = function(file) { 
+  output$data.csv = downloadHandler(
+    filename = function() {
+      # get an appropriate filename
+      filename <- switch(input$viewData,
+                         "monthlyUI" = "Monthly_UI_Payments",
+                         "overvPayments" = "Monthly_UI_Overpayments_v_UI_Payments",
+                         "fraudvNon" = "Monthly_UI_Fraud_and_Non_Fraud_Overpayments",
+                         "TOPS" = "UI_Tax_Offset_Program_Data",
+                         "overvRecovery" = "Monthly_UI_Overpayments_v_Overpayment_Recovery",
+                         "nonMonDen" = "Monthly_UI_Non_Monetary_Denials",
+                         "nonMonSep" = "Monthly_UI_Non_Monetary_Separation_Denials",
+                         "NonMonSepRate" = "Monthly_UI_Non_Monetary_Separation_Rates",
+                         "NonMonNonSep" = "Monthly_Non_Monetary_Non_Separation_Denials",
+                         "NonMonNonSepRate" = "Monthly_Non_Monetary_Non_Separation_Rates",
+                         "uiRate" = "Monthly_UI_Rate",
+                         "recipRate" = "Monthly_UI_Recipiency_Rate",
+                         "recipBreakdown" = "Monthly_UI_Recipiency_Rate_Breakdown",
+                         "lowerAuthority" = "Monthly_Lower_Authority_Appeal_Decision_Timeliness",
+                         "first_pay" = "Monthly_First_Time_Payment_Timeliness",
+                         "higherAuthority" = "Monthly_Higher_Authority_Appeal_Decision_Timeliness")
+      
+      # add in the state name and dates to the filename
+      filename = glue::glue("{input$state}_{filename}_{format(input$range[1], '%Y-%m')}_to_{format(input$range[2], '%Y-%m')}.csv")
+      return(filename)
+    },
     
+    content = function(file) { 
     
     # set vars to use for the datatable and download
     col_list <- switch(input$viewData,
@@ -616,6 +637,7 @@ server <- function(input, output) {
                          "first_pay" = c("State", "Date", "Within 15 Days", "Within 35 Days", "Total Paid", "US 15 Day Avg", "US 35 Day Avg"),
                          "higherAuthority" = c("State", "Date", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending", "US 45 Day Avg", "US 75 Day Avg"))
     
+      
     df <- unemployed_df %>% 
       filter(st == input$state,
              rptdate > (input$range[1]-10),
