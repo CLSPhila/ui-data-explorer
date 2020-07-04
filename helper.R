@@ -98,15 +98,29 @@ reportTheme <- theme_minimal() +
 
 # a function to generate small multiple plots of 50-state data, compared against the US average for a given measure
 # measure - the measure to graph
-getSMPlot <- function(dfData, startDate, endDate, measure, yLabel, plotTitle)
+getSMPlot <- function(df, startDate, endDate, measure, yLabel, plotTitle, ...)
 { 
   
+  # start by filtering the df to the right time period and to the right metric
+  df <- df %>% 
+    filter(rptdate > startDate, 
+           rptdate < endDate, 
+           metric == measure)
+  
   # small multiple plot
-  smPlot  <- ggplot(subset(dfData, rptdate > as.Date(startDate) & rptdate < as.Date(endDate) & !(st %in% c("US","PR","VI","DC")), select=c("rptdate","st", measure)), aes_string(x="rptdate", y=measure)) +
-    geom_line(size=1.1, color="gray29") +
-    facet_wrap(~ st, ncol=5) +
-    geom_line(data=subset(dfData, rptdate > as.Date(startDate) & rptdate < as.Date(endDate) & st == "US", select=c("rptdate",measure)), aes_string(x="rptdate", y=measure), color="tomato3", linetype="dashed") +
+  smPlot  <- df %>% 
+    filter(!st %in% ("US")) %>% 
+    ggplot(aes(x = rptdate, y = value)) +
+    geom_line(size = 1.1, color = "gray29") +
+    facet_wrap(vars(st), ncol = 5, scales = "free_y") +
+    geom_line(data = df %>% 
+                filter(st == "US") %>% 
+                select(-st), 
+              aes(x = rptdate, y = value), color="tomato3", linetype="dashed") +
     theme_minimal() +
+    scale_y_continuous(breaks = scales::pretty_breaks(n = 3, min.n = 2), 
+                       labels = label_number(...)) +
+    scale_x_date(breaks = scales::pretty_breaks(n = 4, min.n = 2)) +
     theme(plot.title = element_text(face="bold", hjust=.5, size=20),
           legend.position="top",
           legend.title = element_blank(),
@@ -114,8 +128,9 @@ getSMPlot <- function(dfData, startDate, endDate, measure, yLabel, plotTitle)
           axis.text = element_text(size=10),
           strip.text.x = element_text(face="bold")
     ) +
-    labs(x="Date", y=yLabel) + 
-    ggtitle(plotTitle) 
+    labs(x="Date", 
+         y=yLabel, 
+         title = plotTitle) 
   return(smPlot) 
 }
 

@@ -92,7 +92,7 @@ ui <- fluidPage(
         # the main panel; has a plot, data, and a download data button
         tabPanel("Data",
           withSpinner(plotOutput("uiplot")),
-          downloadButton('data.csv', 'Download Data'),
+          downloadButton('downloader', 'Download Data'),
           dataTableOutput("uidata")
         ),
         # the 50-state on one plot tab
@@ -179,7 +179,7 @@ server <- function(input, output) {
         filter(st == "US",
                rptdate > (input$range[1]-10),
                rptdate < (input$range[2]+10),
-               metric %in% c("unemployment_rate_sa"))
+               metric %in% metric_filter)
 
         uPlot <- getLinePlot(df, xlab = "Date", ylab = "",
                              caption = "Seasonally adjusted unemployed rate, based on BLS monthly report found here: https://www.bls.gov/web/laus/ststdsadata.txt.",
@@ -570,7 +570,7 @@ server <- function(input, output) {
   })
 
 
-  output$data.csv = downloadHandler(
+  output$downloader = downloadHandler(
     filename = function() {
       # get an appropriate filename
       filename <- switch(input$viewData,
@@ -581,14 +581,14 @@ server <- function(input, output) {
                          "overvRecovery" = "Monthly_UI_Overpayments_v_Overpayment_Recovery",
                          "nonMonDen" = "Monthly_UI_Non_Monetary_Denials",
                          "nonMonSep" = "Monthly_UI_Non_Monetary_Separation_Denials",
-                         "NonMonSepRate" = "Monthly_UI_Non_Monetary_Separation_Rates",
-                         "NonMonNonSep" = "Monthly_Non_Monetary_Non_Separation_Denials",
-                         "NonMonNonSepRate" = "Monthly_Non_Monetary_Non_Separation_Rates",
-                         "uiRate" = "Monthly_UI_Rate",
+                         "nonMonSepRate" = "Monthly_UI_Non_Monetary_Separation_Rates",
+                         "nonMonNonSep" = "Monthly_Non_Monetary_Non_Separation_Denials",
+                         "nonMonNonSepRate" = "Monthly_Non_Monetary_Non_Separation_Rates",
+                         "uirate" = "Monthly_UI_Rate",
                          "recipRate" = "Monthly_UI_Recipiency_Rate",
                          "recipBreakdown" = "Monthly_UI_Recipiency_Rate_Breakdown",
                          "lowerAuthority" = "Monthly_Lower_Authority_Appeal_Decision_Timeliness",
-                         "first_pay" = "Monthly_First_Time_Payment_Timeliness",
+                         "firstPay" = "Monthly_First_Time_Payment_Timeliness",
                          "higherAuthority" = "Monthly_Higher_Authority_Appeal_Decision_Timeliness")
       
       # add in the state name and dates to the filename
@@ -610,40 +610,64 @@ server <- function(input, output) {
                        "nonMonSepRate" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
                        "nonMonNonSep" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
                        "nonMonNonSepRate" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
-                       "uirate" = c("pop","total","unemployed","perc_unemployed"),
+                       "uirate" = c("civilian_non_insitutionalized_population_sa", "labor_force_sa", "total_unemployed_sa", "unemployment_rate_sa"),
                        "recipRate" = c("recipiency_annual_reg","recipiency_annual_total"),
                        "recipBreakdown" = c("total_week_mov_avg","unemployed_avg","recipiency_annual_total"),
                        "lowerAuthority" = c("lower_Within30Days", "lower_Within45Days", "lower_filed", "lower_disposed", "lower_total"),
                        "firstPay" = c("first_time_payment_Within15Days", "first_time_payment_Within35Days", "first_time_payment_total"),
                        "higherAuthority" = c("higher_Within45Days", "higher_Within75Days", "higher_filed", "higher_disposed", "higher_total"), 
     )
+    col_list <- c("st", "rptdate", col_list)
     
     
     names_list <- switch(input$viewData,
-                         "monthlyUI" = c("State","Report Date", "State UI Payments (Monthly, mov avg)", "Federal UI Payments (Monthly, mov avg)", "State UI Payments (Monthly)", "Federal UI Payments (Monthly)", "Annual UI Payments (mov avg)"),
-                         "overvPayments" = c("State","Report Date", "Outstanding balance / Annual UI Payments", "Outstanding Overpayment Balance", "Annual UI Payments"),
-                         "fraudvNon" = c("State","Report Date", "Fraud as % of Total Overpayments", "Regular UI Fraud", "Federal UI Fraud", "Regular UI Non-Fraud", "Federal UI Non-Fraud"),
-                         "TOPS" = c("State","Report Date", "State Tax Recovery", "Federal Tax Recovery"),
-                         "overvRecovery" = c("State","Report Date", "Outstanding Owed", "Recovered"),
-                         "nonMonDen" = c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Non-Separation Denials", "Separation Denial Rate", "Non-Separation Denial Rate", "Overall Denial Rate"),
-                         "nonMonSep" = c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Misconduct %", "Voluntary Quit %", "Other %"),
-                         "NonMonSepRate" = c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Misconduct Denial Rate", "Voluntary Quit Denial Rate", "Other Denial Rate"),
-                         "NonMonNonSep" = c("State","Report Date", "Total Non-Mon Determinations", "Non-Separation Denials", "A&A %", "Disqualifying Income %", "Refusal of Suitable Work %", "Reporting/call In/etc..", "Refuse Referral", "Other"),
-                         "NonMonNonSepRate" = c("State","Report Date", "A&A %", "Disqualifying Income %", "Refusal of Suitable Work %", "Reporting/call In/etc..", "Refuse Referral", "Other"),
-                         "uiRate" = c("State","Report Date", "Weekly Continuing Claims (12-mo moving avg)","Total Unemployed (12-mo moving avg)", "Recipiency (State + Fed)"),
-                         "recipRate" = c("State","Month", "Civilian Non-Inst. Pop","Labor Force", "Unemployed (SA)", "% Unemployed (SA)"),
-                         "recipBreakdown" = c("State","Report Date", "Regular Programs", "Regular + Federal Programs"),
-                         "lowerAuthority" = c("State", "Date", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending", "US 30 Day Avg" ,"US 45 Day Avg"),
-                         "first_pay" = c("State", "Date", "Within 15 Days", "Within 35 Days", "Total Paid", "US 15 Day Avg", "US 35 Day Avg"),
-                         "higherAuthority" = c("State", "Date", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending", "US 45 Day Avg", "US 75 Day Avg"))
+                         "monthlyUI" = c("State UI Payments (Monthly, mov avg)", "Federal UI Payments (Monthly, mov avg)", "State UI Payments (Monthly)", "Federal UI Payments (Monthly)", "Annual UI Payments (mov avg)"),
+                         "overvPayments" = c("Outstanding balance / Annual UI Payments", "Outstanding Overpayment Balance", "Annual UI Payments"),
+                         "fraudvNon" = c("Fraud as % of Total Overpayments", "Regular UI Fraud", "Federal UI Fraud", "Regular UI Non-Fraud", "Federal UI Non-Fraud"),
+                         "TOPS" = c("State Tax Recovery", "Federal Tax Recovery"),
+                         "overvRecovery" = c("Outstanding Owed", "Recovered"),
+                         "nonMonDen" = c("Total Determinations", "Separation-Voluntary Quit Determinations", "Separation-Misconduct Determinations", "Separation-Other Determinations", 
+                                         "Non-monetary Able & Available Determations", "Non-monetary Disqualifying Income Determations", "Non-monetary Refusal of Suitable Work Determations", "Non-monetary Reporting/Call-ins/Etc Determations", "Non-monetary Refusal of Referral Determations", "Non-monetary Other Determations", 
+                                         "Total Separation Denials", "Total Non-Separation Denials", "Separation-Misconduct Denials", "Separation-Voluntaray Quit Denials", "Separation-Other Denials", 
+                                         "Non-monetary Able & Available Denials", "Non-monetary Disqualifying Income Denials", "Non-monetary Refusal of Suitable Work Denials", "Non-monetary Reporting/Call-ins/Etc Denials", "Non-monetary Refusal of Referral Denials", "Non-monetary Other Denials"),
+                         "nonMonSep" = c("Total Determinations", "Separation-Voluntary Quit Determinations", "Separation-Misconduct Determinations", "Separation-Other Determinations", 
+                                         "Non-monetary Able & Available Determations", "Non-monetary Disqualifying Income Determations", "Non-monetary Refusal of Suitable Work Determations", "Non-monetary Reporting/Call-ins/Etc Determations", "Non-monetary Refusal of Referral Determations", "Non-monetary Other Determations", 
+                                         "Total Separation Denials", "Total Non-Separation Denials", "Separation-Misconduct Denials", "Separation-Voluntaray Quit Denials", "Separation-Other Denials", 
+                                         "Non-monetary Able & Available Denials", "Non-monetary Disqualifying Income Denials", "Non-monetary Refusal of Suitable Work Denials", "Non-monetary Reporting/Call-ins/Etc Denials", "Non-monetary Refusal of Referral Denials", "Non-monetary Other Denials"),
+                         "nonMonSepRate" = c("Total Determinations", "Separation-Voluntary Quit Determinations", "Separation-Misconduct Determinations", "Separation-Other Determinations", 
+                                             "Non-monetary Able & Available Determations", "Non-monetary Disqualifying Income Determations", "Non-monetary Refusal of Suitable Work Determations", "Non-monetary Reporting/Call-ins/Etc Determations", "Non-monetary Refusal of Referral Determations", "Non-monetary Other Determations", 
+                                             "Total Separation Denials", "Total Non-Separation Denials", "Separation-Misconduct Denials", "Separation-Voluntaray Quit Denials", "Separation-Other Denials", 
+                                             "Non-monetary Able & Available Denials", "Non-monetary Disqualifying Income Denials", "Non-monetary Refusal of Suitable Work Denials", "Non-monetary Reporting/Call-ins/Etc Denials", "Non-monetary Refusal of Referral Denials", "Non-monetary Other Denials"),
+                         "nonMonNonSep" = c("Total Determinations", "Separation-Voluntary Quit Determinations", "Separation-Misconduct Determinations", "Separation-Other Determinations", 
+                                            "Non-monetary Able & Available Determations", "Non-monetary Disqualifying Income Determations", "Non-monetary Refusal of Suitable Work Determations", "Non-monetary Reporting/Call-ins/Etc Determations", "Non-monetary Refusal of Referral Determations", "Non-monetary Other Determations", 
+                                            "Total Separation Denials", "Total Non-Separation Denials", "Separation-Misconduct Denials", "Separation-Voluntaray Quit Denials", "Separation-Other Denials", 
+                                            "Non-monetary Able & Available Denials", "Non-monetary Disqualifying Income Denials", "Non-monetary Refusal of Suitable Work Denials", "Non-monetary Reporting/Call-ins/Etc Denials", "Non-monetary Refusal of Referral Denials", "Non-monetary Other Denials"),
+                         "nonMonNonSepRate" = c("Total Determinations", "Separation-Voluntary Quit Determinations", "Separation-Misconduct Determinations", "Separation-Other Determinations", 
+                                                "Non-monetary Able & Available Determations", "Non-monetary Disqualifying Income Determations", "Non-monetary Refusal of Suitable Work Determations", "Non-monetary Reporting/Call-ins/Etc Determations", "Non-monetary Refusal of Referral Determations", "Non-monetary Other Determations", 
+                                                "Total Separation Denials", "Total Non-Separation Denials", "Separation-Misconduct Denials", "Separation-Voluntaray Quit Denials", "Separation-Other Denials", 
+                                                "Non-monetary Able & Available Denials", "Non-monetary Disqualifying Income Denials", "Non-monetary Refusal of Suitable Work Denials", "Non-monetary Reporting/Call-ins/Etc Denials", "Non-monetary Refusal of Referral Denials", "Non-monetary Other Denials"),
+                         "uirate" = c("Civilian Non-Institutionalized Population", "Labor Force", "Unemployed", "Unemployment Rate"),
+                         "recipRate" = c("Annual Recipiency Rate (Regular UI)","Annual Recipiency Rate (Regular + Federal)"),
+                         "recipBreakdown" = c("Weekly Continuing Claims (12-mo moving avg)", "Total Unemployed (12-mo moving avg)", "Recipiency Rate (state + federal programs)"),
+                         "lowerAuthority" = c("Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending"),
+                         "firstPay" = c("Within 15 Days", "Within 35 Days", "Total Paid"),
+                         "higherAuthority" = c("Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending"))
+    names_list <- c("State", "Report Date", names_list)
     
-      
     df <- unemployed_df %>% 
       filter(st == input$state,
              rptdate > (input$range[1]-10),
              rptdate < (input$range[2]+10),
              metric %in% col_list) %>% 
-      arrange(desc(rptdate))
+      pivot_wider(names_from = metric, values_from = value) %>% 
+      rename_at(vars(all_of(col_list)), ~c(names_list)) %>% 
+      arrange(desc(`Report Date`)) %>% 
+      # remove rows that don't have complete data; this happens most
+      # frequently for tables with data that is quarterly since some data in the DT
+      # may also be produced monthly.  we only want the quarterly info
+      na.omit()
+    
+    
     write.csv(df, file, row.names=FALSE)
   })
     
@@ -674,22 +698,22 @@ server <- function(input, output) {
   # render the small multiple plot
   output$smplot <- renderPlot({
     smPlot <- switch(input$viewData,
-                    "monthlyUI" = getSMPlot(ucRecipiency,input$range[1], input$range[2], "total_compensated_mov_avg", "Montly UI Payments","50-state Comparison of Total Monthly UI Payments"),
-                    "overvPayments" = getSMPlot(ucOverpayments, input$range[1], input$range[2], "outstanding_proportion", "Overpayment Balance/Annual UI Payments","50-state Comparison of Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually"),
-                    "fraudvNon" = getSMPlot(ucOverpayments,input$range[1], input$range[2], "fraud_num_percent", "Fraud/Non-Fraud","50-state Comparison of Fraud vs Non-Fraud UI Overpayemnts"),
-                    "overvRecovery" = getSMPlot(ucOverpayments,input$range[1], input$range[2], "outstanding", "Overpayment Balance","50-state Comparison of Outstanding UI Overpayment Balance"),
-                    "nonMonDen" = getSMPlot(ucNonMonetary,input$range[1], input$range[2], "denial_rate_overall", "Non-Monetary Denial Rate","50-state Comparison of Denial Rates for Non-Monetary Reasons"),
-                    "nonMonSep" = getSMPlot(ucNonMonetary,input$range[1], input$range[2], "denial_sep_percent", "Proportion of all Non-Monetary Determinations","50-state Comparison of Denials for Separation Reasons"),
-                    "nonMonSepRate" = getSMPlot(ucNonMonetary,input$range[1], input$range[2], "denial_sep_rate", "Non-Monetary Separation Denial Rate","50-state Comparison of Denial Rate for Separation Reasons"),
-                    "nonMonNonSep" = getSMPlot(ucNonMonetary,input$range[1], input$range[2], "denial_non_percent", "Proportion of all Non-Monetary Determinations","50-state Comparison of Denials for Non-Separation Reasons"),
-                    "nonMonNonSepRate" = getSMPlot(ucNonMonetary,input$range[1], input$range[2], "denial_non_rate", "Non-Monetary Non-Separation Denial Rate","50-state Comparison of Denial Rate for Non-Separation Reasons"),
-                    "TOPS" = getSMPlot(ucOverpayments,input$range[1], input$range[2], "federal_tax_recovery", "Fed Tax Intercept $","50-state Comparison of Fed Tax Intercepts (Quarterly)"),
-                    "recipRate" = getSMPlot(ucRecipiency, input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rate"),
-                    "recipBreakdown" = getSMPlot(ucRecipiency,input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rates"),
-                    "uirate" = getSMPlot(bls_unemployed_sa,input$range[1], input$range[2], "perc_unemployed", "Unemployment Rate","50-state Comparison of SA Unemployment Rates"),
-                    "lowerAuthority" = getSMPlot(refereeTimeliness,input$range[1], input$range[2], "Within45Days", "Proportion of Decisions Within 45 Days","50-state Comparison of First Level Appeal Decisions within 45 Days"),
-                    "firstPay" = getSMPlot(paymentTimeliness,input$range[1], input$range[2], "Within35Days","Proportion of Payments Within 35 Days", "50-state Comparison of First Payments within 35 Days"),
-                    "higherAuthority" = getSMPlot(ucbrTimeliness,input$range[1], input$range[2], "Within75Days", "Proportion of Decisions Within 75 Days", "50-state Comparison of Second Level Appeal Decisions within 75 Days"))
+                    "monthlyUI" = getSMPlot(unemployed_df, input$range[1], input$range[2], "total_compensated_mov_avg", "Montly UI Payments","50-state Comparison of Total Monthly UI Payments", scale = 1/1000000, prefix = "", suffix = "M"),
+                    "overvPayments" = getSMPlot(unemployed_df, input$range[1], input$range[2], "outstanding_proportion", "Overpayment Balance/Annual UI Payments","50-state Comparison of Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually"),
+                    "fraudvNon" = getSMPlot(unemployed_df,input$range[1], input$range[2], "fraud_num_percent", "Fraud/Non-Fraud","50-state Comparison of Fraud vs Non-Fraud UI Overpayemnts"),
+                    "overvRecovery" = getSMPlot(unemployed_df,input$range[1], input$range[2], "outstanding", "Overpayment Balance","50-state Comparison of Outstanding UI Overpayment Balance"),
+                    "nonMonDen" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_rate_overall", "Non-Monetary Denial Rate","50-state Comparison of Denial Rates for Non-Monetary Reasons"),
+                    "nonMonSep" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_sep_percent", "Proportion of all Non-Monetary Determinations","50-state Comparison of Denials for Separation Reasons"),
+                    "nonMonSepRate" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_sep_rate", "Non-Monetary Separation Denial Rate","50-state Comparison of Denial Rate for Separation Reasons"),
+                    "nonMonNonSep" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_non_percent", "Proportion of all Non-Monetary Determinations","50-state Comparison of Denials for Non-Separation Reasons"),
+                    "nonMonNonSepRate" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_non_rate", "Non-Monetary Non-Separation Denial Rate","50-state Comparison of Denial Rate for Non-Separation Reasons"),
+                    "TOPS" = getSMPlot(unemployed_df,input$range[1], input$range[2], "federal_tax_recovery", "Fed Tax Intercept $","50-state Comparison of Fed Tax Intercepts (Quarterly)"),
+                    "recipRate" = getSMPlot(unemployed_df, input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rate"),
+                    "recipBreakdown" = getSMPlot(unemployed_df,input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rates"),
+                    "uirate" = getSMPlot(unemployed_df,input$range[1], input$range[2], "perc_unemployed", "Unemployment Rate","50-state Comparison of SA Unemployment Rates"),
+                    "lowerAuthority" = getSMPlot(unemployed_df,input$range[1], input$range[2], "Within45Days", "Proportion of Decisions Within 45 Days","50-state Comparison of First Level Appeal Decisions within 45 Days"),
+                    "firstPay" = getSMPlot(unemployed_df,input$range[1], input$range[2], "Within35Days","Proportion of Payments Within 35 Days", "50-state Comparison of First Payments within 35 Days"),
+                    "higherAuthority" = getSMPlot(unemployed_df,input$range[1], input$range[2], "Within75Days", "Proportion of Decisions Within 75 Days", "50-state Comparison of Second Level Appeal Decisions within 75 Days"))
     
     return(smPlot)
   })
