@@ -124,7 +124,7 @@ getOverpayments <- function() {
     pivot_longer(cols = -c(st, rptdate), names_to = "metric", values_to = "valueEUC08")
   
   # combine the data sets
-  ucOverPayments <- ucOverpaymentsRegular %>% 
+  ucOverpayments <- ucOverpaymentsRegular %>% 
     left_join(ucOverpaymentsEUC91, by = c("st", "rptdate", "metric")) %>% 
     left_join(ucOverpaymentsTEUC02, by = c("st", "rptdate", "metric")) %>% 
     left_join(ucOverpaymentsEUC08, by = c("st", "rptdate", "metric")) %>%
@@ -323,7 +323,7 @@ getRecipiency <- function (bls_unemployed)
   # compute US Averages and add them into the df
   usAvg <- ucRecipiency %>% 
     group_by(rptdate) %>% 
-    summarize(across(where(is.numeric), mean))
+    summarize(across(where(is.numeric), mean, na.rm = T))
   
   ucRecipiency <- ucRecipiency %>% 
     bind_rows(usAvg %>% mutate(st = "US")) %>%

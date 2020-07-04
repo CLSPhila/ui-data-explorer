@@ -695,7 +695,19 @@ server <- function(input, output) {
     return(uiMap)
   })
   
+  
+  # recipiency rate - US not working
+  # recip breakdown - should have multiple lines 
   # render the small multiple plot
+  # overpayment v recovery: scale to M of dollars
+  # first payments: faceting issue
+  # lower: faceting issues
+  # upper: faceting issues
+  # TOPS: scale to millions of dollars
+  # larger y label size
+  # separation denial rnate goes below 0 for a bunch; e.g. PA? MN
+  # non-sep denials goes below 0 for WA
+  # uirate - faceting
   output$smplot <- renderPlot({
     smPlot <- switch(input$viewData,
                     "monthlyUI" = getSMPlot(unemployed_df, input$range[1], input$range[2], "total_compensated_mov_avg", "Montly UI Payments","50-state Comparison of Total Monthly UI Payments", scale = 1/1000000, prefix = "", suffix = "M"),

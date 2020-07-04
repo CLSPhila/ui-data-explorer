@@ -118,9 +118,9 @@ getSMPlot <- function(df, startDate, endDate, measure, yLabel, plotTitle, ...)
                 select(-st), 
               aes(x = rptdate, y = value), color="tomato3", linetype="dashed") +
     theme_minimal() +
-    scale_y_continuous(breaks = scales::pretty_breaks(n = 3, min.n = 2), 
+    scale_y_continuous(breaks = scales::extended_breaks(n = 3), 
                        labels = label_number(...)) +
-    scale_x_date(breaks = scales::pretty_breaks(n = 4, min.n = 2)) +
+    scale_x_date(breaks = scales::pretty_breaks(n = 4, min.n = 3)) +
     theme(plot.title = element_text(face="bold", hjust=.5, size=20),
           legend.position="top",
           legend.title = element_blank(),
