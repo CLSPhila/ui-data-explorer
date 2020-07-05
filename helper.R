@@ -4,22 +4,24 @@
 library(rgdal)
 library(leaflet)
 library(ggplot2)
+library(gghighlight)
 library(lubridate)
+library(geojsonio)
 
-tmp <- tempdir()
-unzip("cb_2015_us_state_20m.zip", exdir = tmp)
-
-usa <- readOGR(dsn=tmp, layer="cb_2015_us_state_20m")
+# tmp <- tempdir()
+# unzip("cb_2015_us_state_20m.zip", exdir = tmp)
 # 
-# #add data to the usa dataframe
-# maxDate = max(ucRecipiency$rptdate)
-# # use a left join b/c there is no data for DC and PR in most cases
-# usa@data = usa@data %>%
-#   left_join(ucRecipiency[ucRecipiency$rptdate==maxDate,c("st","rptdate","recipiency_annual_total")], by=c("STUSPS"="st"))
-# 
-# # this creates the color mapping
-#pal <- colorBin("Reds", NULL, bins = 7)
-pal <- colorNumeric("Reds",NULL)
+# usa <- readOGR(dsn=tmp, layer="cb_2015_us_state_20m")
+# # 
+# # #add data to the usa dataframe
+# # maxDate = max(ucRecipiency$rptdate)
+# # # use a left join b/c there is no data for DC and PR in most cases
+# # usa@data = usa@data %>%
+# #   left_join(ucRecipiency[ucRecipiency$rptdate==maxDate,c("st","rptdate","recipiency_annual_total")], by=c("STUSPS"="st"))
+# # 
+# # # this creates the color mapping
+# #pal <- colorBin("Reds", NULL, bins = 7)
+# pal <- colorNumeric("Reds",NULL)
 
 
 # a df of the recessions; used for graphing
@@ -42,6 +44,15 @@ recession_df <- data.frame(start = as.Date(c("1969-12-01", "1973-11-01", "1980-0
 # maxNonSepDenials <- max(ucNonMonetary$denial_non_aa_percent,ucNonMonetary$denial_non_income_percent, ucNonMonetary$denial_non_refusework_percent, ucNonMonetary$denial_non_reporting_percent, ucNonMonetary$denial_non_referrals_percent, ucNonMonetary$denial_non_other_percent, na.rm=TRUE)
 # maxSepDenialRate <- max(ucNonMonetary$denial_sep_misconduct_rate, ucNonMonetary$denial_sep_vol_rate, ucNonMonetary$denial_sep_other_rate, na.rm=TRUE)
 # maxNonSepDenialRate <- max(ucNonMonetary$denial_non_aa_rate,ucNonMonetary$denial_non_income_rate, ucNonMonetary$denial_non_refusework_rate, ucNonMonetary$denial_non_reporting_rate, ucNonMonetary$denial_non_referrals_rate, ucNonMonetary$denial_non_other_rate, na.rm=TRUE)
+
+
+getChoroplethMap <- function(df, uiDate, dfColumn, stateText, reverseLevels) {
+  states <- geojsonio::geojson_read("json/us-states.geojson", what = "sp")
+  leaflet(states) %>%
+    setView(-96, 37.8, 4) %>%
+    addTiles() %>% 
+    addPolygons()
+}
 
 getUIMap <- function(usa,df,uiDate,dfColumn, stateText, reverseLevels) 
 {
@@ -98,8 +109,11 @@ reportTheme <- theme_minimal() +
 
 # a function to generate small multiple plots of 50-state data, compared against the US average for a given measure
 # measure - the measure to graph
-getSMPlot <- function(df, startDate, endDate, measure, yLabel, plotTitle, ...)
+getSMPlot <- function(df, startDate, endDate, measure, yLabel, plotTitle, free_y, ...)
 { 
+  
+  scales = "fixed"
+  if(free_y) scales = "free_y"
   
   # start by filtering the df to the right time period and to the right metric
   df <- df %>% 
@@ -112,21 +126,21 @@ getSMPlot <- function(df, startDate, endDate, measure, yLabel, plotTitle, ...)
     filter(!st %in% ("US")) %>% 
     ggplot(aes(x = rptdate, y = value)) +
     geom_line(size = 1.1, color = "gray29") +
-    facet_wrap(vars(st), ncol = 5, scales = "free_y") +
+    facet_wrap(vars(st), ncol = 5, scales = scales) +
     geom_line(data = df %>% 
                 filter(st == "US") %>% 
                 select(-st), 
               aes(x = rptdate, y = value), color="tomato3", linetype="dashed") +
     theme_minimal() +
-    scale_y_continuous(breaks = scales::extended_breaks(n = 3), 
-                       labels = label_number(...)) +
+    scale_y_continuous(breaks = scales::pretty_breaks(n = 3), 
+                       labels = label_comma(...)) +
     scale_x_date(breaks = scales::pretty_breaks(n = 4, min.n = 3)) +
     theme(plot.title = element_text(face="bold", hjust=.5, size=20),
           legend.position="top",
           legend.title = element_blank(),
-          axis.title = element_text(size=10, face="bold"),
-          axis.text = element_text(size=10),
-          strip.text.x = element_text(face="bold")
+          axis.title = element_text(size=15, face="bold"),
+          axis.text = element_text(size=12),
+          strip.text.x = element_text(size = 12, face="bold")
     ) +
     labs(x="Date", 
          y=yLabel, 
@@ -137,12 +151,22 @@ getSMPlot <- function(df, startDate, endDate, measure, yLabel, plotTitle, ...)
 
 # a function to generate a single state vs 50-state overview on one graphs
 # measure - the measure to graph
-get50StateComparisonPlot <- function(dfData, startDate, endDate, measure, highlightState, yLabel, plotTitle)
+get50StateComparisonPlot <- function(df, startDate, endDate, measure, highlightState, yLabel, plotTitle, ...)
 { 
-  plot <- ggplot(dfData[dfData$rptdate > as.Date(startDate) & dfData$rptdate < as.Date(endDate) & !(dfData$st %in% c("US","PR","VI","DC")), c("rptdate","st", measure)], aes_string(x="rptdate", y=measure, group="st")) +
-    geom_line(color="grey") +
-    geom_line(data=dfData[dfData$rptdate > as.Date(startDate) & dfData$rptdate < as.Date(endDate) & dfData$st==highlightState, c("rptdate", "st", measure)], color="tomato3", size=2) +
+  
+  df <- df %>% 
+    filter(rptdate > startDate, 
+           rptdate < endDate, 
+           metric == measure)
+  
+  plot <- df %>% 
+    ggplot(aes(x = rptdate, y = value, color = st)) +
+    geom_line(size = 2) +
+    gghighlight(st == highlightState,
+                unhighlighted_params = list(size = 1)) + 
     theme_minimal() +
+    scale_y_continuous(labels = label_comma(...)) +
+    #scale_x_date(breaks = scales::pretty_breaks) +
     theme(plot.title = element_text(face="bold", hjust=.5, size=20),
           legend.position="top",
           legend.title = element_blank(),

@@ -696,36 +696,29 @@ server <- function(input, output) {
   })
   
   
-  # recipiency rate - US not working
-  # recip breakdown - should have multiple lines 
-  # render the small multiple plot
-  # overpayment v recovery: scale to M of dollars
-  # first payments: faceting issue
-  # lower: faceting issues
-  # upper: faceting issues
-  # TOPS: scale to millions of dollars
-  # larger y label size
-  # separation denial rnate goes below 0 for a bunch; e.g. PA? MN
-  # non-sep denials goes below 0 for WA
-  # uirate - faceting
-  output$smplot <- renderPlot({
+  # recip breakdown - should have multiple lines? mgh
+  output$smplot <- renderPlot({ 
+    
+    # should the scales be the same for all facets or free?
+    free_y = !input$constant_y_axis
+    
     smPlot <- switch(input$viewData,
-                    "monthlyUI" = getSMPlot(unemployed_df, input$range[1], input$range[2], "total_compensated_mov_avg", "Montly UI Payments","50-state Comparison of Total Monthly UI Payments", scale = 1/1000000, prefix = "", suffix = "M"),
-                    "overvPayments" = getSMPlot(unemployed_df, input$range[1], input$range[2], "outstanding_proportion", "Overpayment Balance/Annual UI Payments","50-state Comparison of Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually"),
-                    "fraudvNon" = getSMPlot(unemployed_df,input$range[1], input$range[2], "fraud_num_percent", "Fraud/Non-Fraud","50-state Comparison of Fraud vs Non-Fraud UI Overpayemnts"),
-                    "overvRecovery" = getSMPlot(unemployed_df,input$range[1], input$range[2], "outstanding", "Overpayment Balance","50-state Comparison of Outstanding UI Overpayment Balance"),
-                    "nonMonDen" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_rate_overall", "Non-Monetary Denial Rate","50-state Comparison of Denial Rates for Non-Monetary Reasons"),
-                    "nonMonSep" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_sep_percent", "Proportion of all Non-Monetary Determinations","50-state Comparison of Denials for Separation Reasons"),
-                    "nonMonSepRate" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_sep_rate", "Non-Monetary Separation Denial Rate","50-state Comparison of Denial Rate for Separation Reasons"),
-                    "nonMonNonSep" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_non_percent", "Proportion of all Non-Monetary Determinations","50-state Comparison of Denials for Non-Separation Reasons"),
-                    "nonMonNonSepRate" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_non_rate", "Non-Monetary Non-Separation Denial Rate","50-state Comparison of Denial Rate for Non-Separation Reasons"),
-                    "TOPS" = getSMPlot(unemployed_df,input$range[1], input$range[2], "federal_tax_recovery", "Fed Tax Intercept $","50-state Comparison of Fed Tax Intercepts (Quarterly)"),
-                    "recipRate" = getSMPlot(unemployed_df, input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rate"),
-                    "recipBreakdown" = getSMPlot(unemployed_df,input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rates"),
-                    "uirate" = getSMPlot(unemployed_df,input$range[1], input$range[2], "perc_unemployed", "Unemployment Rate","50-state Comparison of SA Unemployment Rates"),
-                    "lowerAuthority" = getSMPlot(unemployed_df,input$range[1], input$range[2], "Within45Days", "Proportion of Decisions Within 45 Days","50-state Comparison of First Level Appeal Decisions within 45 Days"),
-                    "firstPay" = getSMPlot(unemployed_df,input$range[1], input$range[2], "Within35Days","Proportion of Payments Within 35 Days", "50-state Comparison of First Payments within 35 Days"),
-                    "higherAuthority" = getSMPlot(unemployed_df,input$range[1], input$range[2], "Within75Days", "Proportion of Decisions Within 75 Days", "50-state Comparison of Second Level Appeal Decisions within 75 Days"))
+                    "monthlyUI" = getSMPlot(unemployed_df, input$range[1], input$range[2], "total_compensated_mov_avg", "Montly UI Payments","50-state Comparison of Total Monthly UI Payments", free_y, scale = 1/1000000, prefix = "", suffix = "M"),
+                    "overvPayments" = getSMPlot(unemployed_df, input$range[1], input$range[2], "outstanding_proportion", "Overpayment Balance/Annual UI Payments","50-state Comparison of Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually", free_y),
+                    "fraudvNon" = getSMPlot(unemployed_df,input$range[1], input$range[2], "fraud_num_percent", "Fraud/Non-Fraud","50-state Comparison of Fraud vs Non-Fraud UI Overpayemnts", free_y),
+                    "overvRecovery" = getSMPlot(unemployed_df,input$range[1], input$range[2], "outstanding", "Overpayment Balance","50-state Comparison of Outstanding UI Overpayment Balance", free_y, scale = 1/1000000, prefix = "$", suffix = "M"),
+                    "nonMonDen" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_rate_overall", "Non-Monetary Denial Rate","50-state Comparison of Denial Rates for Non-Monetary Reasons", free_y),
+                    "nonMonSep" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_sep_percent", "Proportion of all Non-Monetary Determinations","50-state Comparison of Denials for Separation Reasons", free_y),
+                    "nonMonSepRate" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_sep_rate", "Non-Monetary Separation Denial Rate","50-state Comparison of Denial Rate for Separation Reasons", free_y),
+                    "nonMonNonSep" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_non_percent", "Proportion of all Non-Monetary Determinations","50-state Comparison of Denials for Non-Separation Reasons", free_y),
+                    "nonMonNonSepRate" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_non_rate", "Non-Monetary Non-Separation Denial Rate","50-state Comparison of Denial Rate for Non-Separation Reasons", free_y),
+                    "TOPS" = getSMPlot(unemployed_df,input$range[1], input$range[2], "federal_tax_recovery", "Fed Tax Intercept $","50-state Comparison of Fed Tax Intercepts (Quarterly)", free_y, scale = 1/1000000, prefix = "$", suffix = "M"),
+                    "recipRate" = getSMPlot(unemployed_df, input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rate", free_y),
+                    "recipBreakdown" = getSMPlot(unemployed_df,input$range[1], input$range[2], "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rates", free_y),
+                    "uirate" = getSMPlot(unemployed_df,input$range[1], input$range[2], "unemployment_rate_sa", "Unemployment Rate (Seasonally Adjusted)","50-state Comparison of SA Unemployment Rates", free_y),
+                    "lowerAuthority" = getSMPlot(unemployed_df,input$range[1], input$range[2], "lower_Within45Days", "Proportion of Decisions Within 45 Days","50-state Comparison of First Level Appeal Decisions within 45 Days", free_y),
+                    "firstPay" = getSMPlot(unemployed_df,input$range[1], input$range[2], "first_time_payment_Within35Days","Proportion of Payments Within 35 Days", "50-state Comparison of First Payments within 35 Days", free_y),
+                    "higherAuthority" = getSMPlot(unemployed_df,input$range[1], input$range[2], "higher_Within75Days", "Proportion of Decisions Within 75 Days", "50-state Comparison of Second Level Appeal Decisions within 75 Days", free_y))
     
     return(smPlot)
   })
@@ -733,22 +726,22 @@ server <- function(input, output) {
   # render the small multiple plot
   output$fiftyStatePlot <- renderPlot({
     fiftyStatePlot <- switch(input$viewData,
-                     "monthlyUI" = get50StateComparisonPlot(ucRecipiency,input$range[1], input$range[2], "total_compensated_mov_avg", input$state, "Montly UI Payments",paste(input$state, "vs. US: Total Monthly UI Payments")),
-                     "overvPayments" = get50StateComparisonPlot(ucOverpayments, input$range[1], input$range[2], "outstanding_proportion", input$state, "Overpayment Balance/Annual UI Payments",paste(input$state, "vs. US: Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually")),
-                     "fraudvNon" = get50StateComparisonPlot(ucOverpayments,input$range[1], input$range[2], "fraud_num_percent", input$state, "Fraud/Non-Fraud",paste(input$state, "vs. US: Fraud / Non-Fraud UI Overpayemnts")),
-                     "overvRecovery" = get50StateComparisonPlot(ucOverpayments,input$range[1], input$range[2], "outstanding", input$state, "Overpayment Balance",paste(input$state, "vs. US: Outstanding UI Overpayment Balance")),
-                     "nonMonDen" = get50StateComparisonPlot(ucNonMonetary,input$range[1], input$range[2], "denial_rate_overall", input$state, "Non-Monetary Denial Rate",paste(input$state, "vs. US: Denial Rates for Non-Monetary Reasons")),
-                     "nonMonSep" = get50StateComparisonPlot(ucNonMonetary,input$range[1], input$range[2], "denial_sep_percent", input$state, "Proportion of all Non-Monetary Determinations",paste(input$state, "vs. US: Denials for Separation Reasons")),
-                     "nonMonSepRate" = get50StateComparisonPlot(ucNonMonetary,input$range[1], input$range[2], "denial_sep_rate", input$state, "Non-Monetary Separation Denial Rate",paste(input$state, "vs. US: Denial Rate for Separation Reasons")),
-                     "nonMonNonSep" = get50StateComparisonPlot(ucNonMonetary,input$range[1], input$range[2], "denial_non_percent", input$state, "Proportion of all Non-Monetary Determinations",paste(input$state, "vs. US: Denials for Non-Separation Reasons")),
-                     "nonMonNonSepRate" = get50StateComparisonPlot(ucNonMonetary,input$range[1], input$range[2], "denial_non_rate", input$state, "Non-Monetary Non-Separation Denial Rate",paste(input$state, "vs. US: Denial Rate for Non-Separation Reasons")),
-                     "TOPS" = get50StateComparisonPlot(ucOverpayments,input$range[1], input$range[2], "federal_tax_recovery", input$state, "Fed Tax Intercept $",paste(input$state, "vs. US: Fed Tax Intercepts (Quarterly)")),
-                     "recipRate" = get50StateComparisonPlot(ucRecipiency, input$range[1], input$range[2], "recipiency_annual_total", input$state, "Recipiency Rate", paste(input$state, "vs. US: UI Recipiency Rate")),
-                     "recipBreakdown" = get50StateComparisonPlot(ucRecipiency,input$range[1], input$range[2], "recipiency_annual_total", input$state, "Recipiency Rate", paste(input$state, "vs. US: UI Recipiency Rates")),
-                     "uirate" = get50StateComparisonPlot(bls_unemployed_sa,input$range[1], input$range[2], "perc_unemployed", input$state, "Unemployment Rate",paste(input$state, "vs. US: Seasonally Adjusted Unemployment Rates")),
-                     "lowerAuthority" = get50StateComparisonPlot(refereeTimeliness,input$range[1], input$range[2], "Within45Days", input$state, "Proportion of Decisions Within 45 Days", paste(input$state, "vs. US: First Level Appeal Decisions within 45 Days")),
-                     "firstPay" = get50StateComparisonPlot(paymentTimeliness,input$range[1], input$range[2], "Within35Days", input$state, "Proportion of Payments Within 35 Days", paste(input$state, "vs. US: First Payments within 35 Days")),
-                     "higherAuthority" = get50StateComparisonPlot(ucbrTimeliness,input$range[1], input$range[2], "Within75Days", input$state, "Proportion of Decisions Within 75 Days", paste(input$state, "vs. US: Second Level Appeal Decisions within 75 Days")))
+                     "monthlyUI" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "total_compensated_mov_avg", input$state, "Montly UI Payments",paste(input$state, "vs. US: Total Monthly UI Payments"), scale = 1/1000000, prefix = "", suffix = "M"),
+                     "overvPayments" = get50StateComparisonPlot(unemployed_df, input$range[1], input$range[2], "outstanding_proportion", input$state, "Overpayment Balance/Annual UI Payments",paste(input$state, "vs. US: Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually")),
+                     "fraudvNon" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "fraud_num_percent", input$state, "Fraud/Non-Fraud",paste(input$state, "vs. US: Fraud / Non-Fraud UI Overpayemnts")),
+                     "overvRecovery" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "outstanding", input$state, "Overpayment Balance",paste(input$state, "vs. US: Outstanding UI Overpayment Balance"), scale = 1/1000000, prefix = "$", suffix = "M"),
+                     "nonMonDen" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "denial_rate_overall", input$state, "Non-Monetary Denial Rate",paste(input$state, "vs. US: Denial Rates for Non-Monetary Reasons")),
+                     "nonMonSep" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "denial_sep_percent", input$state, "Proportion of all Non-Monetary Determinations",paste(input$state, "vs. US: Denials for Separation Reasons")),
+                     "nonMonSepRate" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "denial_sep_rate", input$state, "Non-Monetary Separation Denial Rate",paste(input$state, "vs. US: Denial Rate for Separation Reasons")),
+                     "nonMonNonSep" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "denial_non_percent", input$state, "Proportion of all Non-Monetary Determinations",paste(input$state, "vs. US: Denials for Non-Separation Reasons")),
+                     "nonMonNonSepRate" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "denial_non_rate", input$state, "Non-Monetary Non-Separation Denial Rate",paste(input$state, "vs. US: Denial Rate for Non-Separation Reasons")),
+                     "TOPS" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "federal_tax_recovery", input$state, "Fed Tax Intercept $",paste(input$state, "vs. US: Fed Tax Intercepts (Quarterly)"), scale = 1/1000000, prefix = "$", suffix = "M"),
+                     "recipRate" = get50StateComparisonPlot(unemployed_df, input$range[1], input$range[2], "recipiency_annual_total", input$state, "Recipiency Rate", paste(input$state, "vs. US: UI Recipiency Rate")),
+                     "recipBreakdown" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "recipiency_annual_total", input$state, "Recipiency Rate", paste(input$state, "vs. US: UI Recipiency Rates")),
+                     "uirate" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "unemployment_rate_sa", input$state, "Unemployment Rate",paste(input$state, "vs. US: Seasonally Adjusted Unemployment Rates")),
+                     "lowerAuthority" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "lower_Within45Days", input$state, "Proportion of Decisions Within 45 Days", paste(input$state, "vs. US: First Level Appeal Decisions within 45 Days")),
+                     "firstPay" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "first_time_payment_Within35Days", input$state, "Proportion of Payments Within 35 Days", paste(input$state, "vs. US: First Payments within 35 Days")),
+                     "higherAuthority" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "higher_Within75Days", input$state, "Proportion of Decisions Within 75 Days", paste(input$state, "vs. US: Second Level Appeal Decisions within 75 Days")))
     return(fiftyStatePlot)
   })
 
