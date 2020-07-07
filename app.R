@@ -675,22 +675,22 @@ server <- function(input, output) {
   output$uimap <- renderLeaflet({
     
     uiMap <- switch(input$viewData,
-                    "monthlyUI" = getUIMap(usa,ucRecipiency,input$range[2],"total_compensated_mov_avg", paste("Total UI Payments disbursed in ", input$range[2]), FALSE),
-                    "overvPayments" = getUIMap(usa,ucOverpayments, input$range[2], "outstanding_proportion", paste("Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually in ", input$range[2]), FALSE),
-                    "fraudvNon" = getUIMap(usa,ucOverpayments,input$range[2],"fraud_num_percent", paste("Fraud vs Non-Fraud Overpayments in ",input$range[2]),FALSE),
-                    "overvRecovery" = getUIMap(usa,ucOverpayments,input$range[2],"outstanding", paste("Outstanding Overpayments Balance in ",input$range[2]),FALSE),
-                    "nonMonDen" = getUIMap(usa,ucNonMonetary,input$range[2],"denial_rate_overall", paste("Non-Monetary Denial Rate in ",input$range[2]),FALSE),
-                    "nonMonSep" = getUIMap(usa,ucNonMonetary,input$range[2],"denial_sep_percent", paste("Proportion of Non-Monetary Denials that are Separation Related in ",input$range[2]),FALSE),
-                    "nonMonSepRate" = getUIMap(usa,ucNonMonetary,input$range[2],"denial_sep_rate", paste("Non-Monetary Denial Rate in ",input$range[2]),FALSE),
-                    "nonMonNonSep" = getUIMap(usa,ucNonMonetary,input$range[2],"denial_non_percent", paste("Proportion of Non-Monetary Denials that are Non-Separation Related in ",input$range[2]),FALSE),
-                    "nonMonNonSepRate" = getUIMap(usa,ucNonMonetary,input$range[2],"denial_non_rate", paste("Non-Monetary Non-Separation Denial Rate in ",input$range[2]),FALSE),
-                    "TOPS" = getUIMap(usa,ucOverpayments,input$range[2],"federal_tax_recovery", paste("Federal Tax Intercepts in Quarter ending ",input$range[2]), FALSE),
-                    "recipRate" = getUIMap(usa,ucRecipiency,input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
-                    "recipBreakdown" = getUIMap(usa,ucRecipiency,input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
-                    "uirate" = getUIMap(usa,bls_unemployed_sa,input$range[2],"perc_unemployed", paste("Seasonally Adjusted Unemployed Rate in ",input$range[2]), FALSE),
-                    "lowerAuthority" = getUIMap(usa,refereeTimeliness,input$range[2],"Within45Days", paste("Proportion of First Level Appeal Decisions within 45 days, ",input$range[2]), TRUE),
-                    "firstPay" = getUIMap(usa,paymentTimeliness,input$range[2],"Within35Days", paste("Proportion of First Payments within 35 days, ",input$range[2]), TRUE),
-                    "higherAuthority" = getUIMap(usa,ucbrTimeliness,input$range[2],"Within75Days", paste("Prioportion of Second Level Appeal Decisions within 75 days, ",input$range[2]), TRUE))
+                    "monthlyUI" = getUIMap(unemployed_df, input$range[2],"total_compensated_mov_avg", paste("12-mo moving average of total UI Payments disbursed in ", input$range[2]), FALSE, suffix = "M", scale = 1/1000000, round_digits = 0),
+                    "overvPayments" = getUIMap(unemployed_df, input$range[2], "outstanding_proportion", paste("Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually in ", input$range[2]), FALSE),
+                    "fraudvNon" = getUIMap(unemployed_df, input$range[2],"fraud_num_percent", paste("Fraud vs Non-Fraud Overpayments in ",input$range[2]),FALSE),
+                    "overvRecovery" = getUIMap(unemployed_df, input$range[2],"outstanding", paste("Outstanding Overpayments Balance in ",input$range[2]), FALSE, scale = 1/1000000, prefix = "$", suffix = "M", round_digits = 0),
+                    "nonMonDen" = getUIMap(unemployed_df, input$range[2],"denial_rate_overall", paste("Non-Monetary Denial Rate in ",input$range[2]),FALSE),
+                    "nonMonSep" = getUIMap(unemployed_df, input$range[2],"denial_sep_percent", paste("Proportion of Non-Monetary Denials that are Separation Related in ",input$range[2]),FALSE),
+                    "nonMonSepRate" = getUIMap(unemployed_df, input$range[2],"denial_sep_rate", paste("Non-Monetary Denial Rate in ",input$range[2]),FALSE),
+                    "nonMonNonSep" = getUIMap(unemployed_df, input$range[2],"denial_non_percent", paste("Proportion of Non-Monetary Denials that are Non-Separation Related in ",input$range[2]),FALSE),
+                    "nonMonNonSepRate" = getUIMap(unemployed_df, input$range[2],"denial_non_rate", paste("Non-Monetary Non-Separation Denial Rate in ",input$range[2]),FALSE),
+                    "TOPS" = getUIMap(unemployed_df, input$range[2],"federal_tax_recovery", paste("Federal Tax Intercepts in Quarter ending ",input$range[2]), FALSE, scale = 1/1000000, prefix = "$", suffix = "M", round_digits = 0),
+                    "recipRate" = getUIMap(unemployed_df, input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
+                    "recipBreakdown" = getUIMap(unemployed_df, input$range[2],"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",input$range[2]), TRUE),
+                    "uirate" = getUIMap(unemployed_df, input$range[2],"unemployment_rate_sa", paste("Seasonally Adjusted Unemployed Rate in ",input$range[2]), FALSE),
+                    "lowerAuthority" = getUIMap(unemployed_df, input$range[2],"lower_Within45Days", paste("Proportion of First Level Appeal Decisions within 45 days, ",input$range[2]), TRUE),
+                    "firstPay" = getUIMap(unemployed_df, input$range[2],"first_time_payment_Within35Days", paste("Proportion of First Payments within 35 days, ",input$range[2]), TRUE),
+                    "higherAuthority" = getUIMap(unemployed_df, input$range[2],"higher_Within75Days", paste("Proportion of Second Level Appeal Decisions within 75 days, ",input$range[2]), TRUE))
       
     return(uiMap)
   })

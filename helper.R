@@ -1,29 +1,17 @@
 #' helper.R
 #' A series of functions to help with the UI data explorer shiny app
 
-library(rgdal)
+library(sf)
 library(leaflet)
 library(ggplot2)
 library(gghighlight)
 library(lubridate)
 library(geojsonio)
 
-# tmp <- tempdir()
-# unzip("cb_2015_us_state_20m.zip", exdir = tmp)
-# 
-# usa <- readOGR(dsn=tmp, layer="cb_2015_us_state_20m")
-# # 
-# # #add data to the usa dataframe
-# # maxDate = max(ucRecipiency$rptdate)
-# # # use a left join b/c there is no data for DC and PR in most cases
-# # usa@data = usa@data %>%
-# #   left_join(ucRecipiency[ucRecipiency$rptdate==maxDate,c("st","rptdate","recipiency_annual_total")], by=c("STUSPS"="st"))
-# # 
-# # # this creates the color mapping
-# #pal <- colorBin("Reds", NULL, bins = 7)
-# pal <- colorNumeric("Reds",NULL)
+tmp <- tempdir()
+unzip("cb_2015_us_state_20m.zip", exdir = tmp)
 
-
+usa <- sf::st_read(tmp) %>% sf::st_transform(crs = 4326)
 # a df of the recessions; used for graphing
 recession_df <- data.frame(start = as.Date(c("1969-12-01", "1973-11-01", "1980-01-01",  
                                      "1981-07-01", "1990-07-01", "2001-03-01", "2007-12-01", "2020-02-01")),
@@ -54,45 +42,55 @@ getChoroplethMap <- function(df, uiDate, dfColumn, stateText, reverseLevels) {
     addPolygons()
 }
 
-getUIMap <- function(usa,df,uiDate,dfColumn, stateText, reverseLevels) 
+getUIMap <- function(df, uiDate, metric_filter, stateText, reverseLevels, prefix = "", suffix = "", scale = 1, round_digits = 2) 
 {
-  # the dates that come in can be anywhere in the month b/c of the way the date slider works, so we have to 
-  # get the end of the month
-  uiDate <- ceiling_date(uiDate,"month") - days(1)
-  # this is b/c the stats are on different release cycles--some release earlier and later in the month, some release quarterly
-  # so this allows us to pick a date that doesn't exist, but fall back to something that does
-  if(!(uiDate %in% df$rptdate))
-    uiDate <- max(df$rptdate)
+  # first filter the DF to just the metric we need
+  df <- df %>% 
+    filter(metric == metric_filter)
   
-  df <- subset(df, rptdate==uiDate, select=c("st","rptdate",dfColumn))
+  #then try and figure out what month we are seaching for; the slider allows
+  # values throughout the month, but our reports must be based on the last
+  # day in the month
+  uiDate <- ceiling_date(uiDate,"month") - days(1)
+  
+  # if the uiDate isn't in our rptdate vector, find the next highest value that is
+  if(!(uiDate %in% df$rptdate)) {
+    dates <- unique(df$rptdate)
+    uiDate <- dates[which.min(abs(dates - uiDate))]
+  }
+
+  df <- df %>% 
+    filter(rptdate == uiDate,
+           metric == metric) %>% 
+           select(st, rptdate, value)
   
   # flop the measure col if reverse is true so that we can do the shading correctly when high is good
-  if (reverseLevels)
-    df$measureCol <- 1/df[[dfColumn]]
-  else
-    df$measureCol <- df[[dfColumn]]
+  if(reverseLevels) { df$measure = 1/df$value 
+  } else { df$measure = df$value }
+
   
-  # use a left join b/c there is no data for DC and PR in most cases
-  usa@data = usa@data %>%
-    left_join(df, by=c("STUSPS"="st"), copy=TRUE)
+  # join the shapefile and the state
+  map <- usa %>%
+    left_join(df, by=c("STUSPS"="st")) 
   
+  labels = paste0(stateText,"<br><strong>", map$NAME, "</strong>: ", prefix, round(map$value * scale, round_digits), suffix) %>% 
+    lapply(htmltools::HTML)
   
-  state_popup <- paste0(stateText,
-                        "<br><strong>", 
-                        usa$NAME, 
-                        "</strong>: ",
-                        usa[[dfColumn]])
+  # this creates the color mapping
+  pal <- colorBin("Reds", NULL, bins = 7)
+  pal <- colorNumeric("Reds",NULL)
   
+
   
   # print out the map.  The problem here is that the palettes are white->red as you go from bad->good, which
   # means that we often will want to resort everything 
-  uiMap <- leaflet(data = usa) %>%
+  uiMap <- leaflet(map) %>%
     addProviderTiles("CartoDB.Positron") %>%
-    addPolygons(fillColor = ~pal(measureCol), 
+    addPolygons(fillColor = ~pal(measure), 
                 fillOpacity = 0.8, 
                 color = "#BDBDC3", 
                 weight = 1, 
-                popup = state_popup) %>%
+                label = labels) %>%
     setView(lng = -93.85, lat = 37.45, zoom = 4)
   
   
