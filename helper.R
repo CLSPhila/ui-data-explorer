@@ -20,28 +20,7 @@ recession_df <- data.frame(start = as.Date(c("1969-12-01", "1973-11-01", "1980-0
   replace(is.na(.), today())
 
 
-# graphing.... get the max dollars; use for scale of the graph
-# maxOverpaymentDollars <- max(c(ucOverpayments$state_tax_recovery,ucOverpayments$federal_tax_recovery))
-# maxOutstandingOverpayment <- max(ucOverpayments$outstanding)
-# maxUIPayments <- max(ucRecipiency$total_compensated_mov_avg, na.rm=TRUE)
-# maxOutstandingProportion <- max(ucOverpayments$outstanding_proportion, na.rm = TRUE)
-# maxUnemployedRecipients <- max(ucRecipiency$total_week_mov_avg, ucRecipiency$unemployed_avg, na.rm = TRUE)
-# maxUnemploymentRate <- max(bls_unemployed_sa$perc_unemployed)
-# maxDenials <- max(ucNonMonetary$denial_rate_overall, na.rm = TRUE)
-# maxSepDenials <- max(ucNonMonetary$denial_sep_misconduct_percent, ucNonMonetary$denial_sep_vol_percent, ucNonMonetary$denial_sep_other_percent, na.rm = TRUE)
-# maxNonSepDenials <- max(ucNonMonetary$denial_non_aa_percent,ucNonMonetary$denial_non_income_percent, ucNonMonetary$denial_non_refusework_percent, ucNonMonetary$denial_non_reporting_percent, ucNonMonetary$denial_non_referrals_percent, ucNonMonetary$denial_non_other_percent, na.rm=TRUE)
-# maxSepDenialRate <- max(ucNonMonetary$denial_sep_misconduct_rate, ucNonMonetary$denial_sep_vol_rate, ucNonMonetary$denial_sep_other_rate, na.rm=TRUE)
-# maxNonSepDenialRate <- max(ucNonMonetary$denial_non_aa_rate,ucNonMonetary$denial_non_income_rate, ucNonMonetary$denial_non_refusework_rate, ucNonMonetary$denial_non_reporting_rate, ucNonMonetary$denial_non_referrals_rate, ucNonMonetary$denial_non_other_rate, na.rm=TRUE)
-
-
-getChoroplethMap <- function(df, uiDate, dfColumn, stateText, reverseLevels) {
-  states <- geojsonio::geojson_read("json/us-states.geojson", what = "sp")
-  leaflet(states) %>%
-    setView(-96, 37.8, 4) %>%
-    addTiles() %>% 
-    addPolygons()
-}
-
+# creates a choropleth map of ui data
 getUIMap <- function(df, uiDate, metric_filter, stateText, reverseLevels, prefix = "", suffix = "", scale = 1, round_digits = 2) 
 {
   # first filter the DF to just the metric we need
@@ -77,8 +56,8 @@ getUIMap <- function(df, uiDate, metric_filter, stateText, reverseLevels, prefix
     lapply(htmltools::HTML)
   
   # this creates the color mapping
-  pal <- colorBin("Reds", NULL, bins = 7)
-  pal <- colorNumeric("Reds",NULL)
+  #pal <- colorBin("Reds", NULL, bins = 7)
+  pal <- colorNumeric("Reds", domain = (map %>% filter(!is.infinite(measure)) %>% pull(measure)))
   
 
   
@@ -182,11 +161,12 @@ getRibbonPlot <- function(df, xlab = "Date", ylab, caption, title, ...) {
   df %>% 
     ggplot(aes(x = rptdate, y = value, ymin = 0, ymax = value, fill = metric)) +
     geom_rect(inherit.aes = FALSE, data=recession_df, aes(xmin=start, xmax=end, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
-    geom_ribbon(alpha=.9) +
-    geom_line() +
+    geom_col(alpha=.9, position = "stack", width = 31) +
+    geom_line(position = "stack") +
     #scale_color_discrete(guide = FALSE) +
     #scale_fill_discrete(...)
     scale_fill_brewer(palette="Set1", ...) +
+    #scale_color_brewer(palette="Set1", ...) +
     reportTheme +
     labs(x = xlab,
         y = ylab,

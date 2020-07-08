@@ -330,10 +330,11 @@ getRecipiency <- function (bls_unemployed)
     mutate(
       # get recipiency rates
       recipiency_annual_reg = round(reg_total_week_mov_avg / unemployed_avg,3),
-      recipiency_annual_total = round(total_week_mov_avg / unemployed_avg, 3)) %>% 
+      recipiency_annual_total = round(total_week_mov_avg / unemployed_avg, 3),
+      recipiency_annual_fed = recipiency_annual_total - recipiency_annual_reg) %>% 
     replace(is.na(.), 0) %>% 
     # select just the cols that we need
-    select(st,rptdate,total_week_mov_avg, unemployed_avg, recipiency_annual_reg, recipiency_annual_total, total_state_compensated_mov_avg,
+    select(st,rptdate,total_week_mov_avg, unemployed_avg, recipiency_annual_reg, recipiency_annual_fed, recipiency_annual_total, total_state_compensated_mov_avg,
            total_week_mov_avg, total_compensated, total_federal_compensated_mov_avg, total_state_compensated, total_federal_compensated,
            total_compensated_mov_avg)
 

@@ -140,17 +140,21 @@ server <- function(input, output) {
     if (input$viewData == "monthlyUI")
     {
       
-      metric_filter = c("total_compensated_mov_avg", "total_state_compensated_mov_avg")
+      metric_filter = c("total_federal_compensated_mov_avg", "total_state_compensated_mov_avg")
       df <- df %>% 
         filter(metric %in% metric_filter) %>% 
         mutate(metric = factor(metric, labels = metric_filter, ordered = TRUE))
       
+      
       uPlot <- getRibbonPlot(df, xlab = "Date", ylab = "Total Paid",
                       caption = "12-month moving average of UI paid per month in both regular and federal UI programs.\nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",  
                       title = glue::glue("{input$state} Monthly UI Payments from {format.Date(input$range[1], 'm-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
-                      breaks=c("total_state_compensated_mov_avg","total_compensated_mov_avg"),
+                      breaks=c("total_state_compensated_mov_avg","total_federal_compensated_mov_avg"),
                       labels=c("Regular Programs","Federal Programs")) +
         scale_y_continuous(labels = label_number(scale = 1/1000000, prefix = "$", suffix = "M"))
+      
+      # adjustment for finding the max height of the graph
+      metric_filter = c("total_compensated_mov_avg")
       
       
     }
@@ -243,15 +247,16 @@ server <- function(input, output) {
     ## mgh: I can't figure out how to reverse the orders of geoms here.  shit.
     else if (input$viewData == "recipRate")
     {
-      metric_filter = c("recipiency_annual_reg", "recipiency_annual_total")
+      metric_filter = c("recipiency_annual_fed", "recipiency_annual_reg")
       df <- df %>% 
         filter(metric %in% metric_filter) %>% 
         mutate(metric = factor(metric, labels = metric_filter, ordered = TRUE))
+      metric_filter = c("recipiency_annual_total")
       
       uPlot <- getRibbonPlot(df, xlab = "Date", ylab = "Recipiency Rate",
                              caption = "Recipiency rate calculated by dividing 12 month moving average of unemployment continuing claims divided by 12 month moving average of total unemployed.\nData not seasonally adjusted.  \nSource: Continuing claims can be found in ETA report 5159, found here: https://ows.doleta.gov/unemploy/DataDownloads.asp.\nUnemployed numbers courtesy the BLS: https://www.bls.gov/web/laus/ststdnsadata.txt.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",  
                              title = glue::glue("{input$state} Recipiency Rate from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
-                             breaks=c("recipiency_annual_reg","recipiency_annual_total"),
+                             breaks=c("recipiency_annual_reg","recipiency_annual_fed"),
                              labels=c("Regular Programs", "Federal Programs"))
        
       
@@ -396,7 +401,7 @@ server <- function(input, output) {
     {
       
       # this represents the highest y value of all of the states for this metric
-      ymax = max(df %>% 
+      ymax = max(unemployed_df %>% 
         filter(metric %in% metric_filter,
                rptdate > (input$range[1]-10),
                rptdate < (input$range[2]+10)) %>% 
