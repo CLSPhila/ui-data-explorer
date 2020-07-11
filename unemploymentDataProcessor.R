@@ -54,7 +54,7 @@ getOverpayments <- function() {
   ucOverpaymentsEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac227.csv") #227 report
   ucOverpaymentsTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at227.csv") #227 report
   ucOverpaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au227.csv") #227 report
-
+  
   # cols that we want to keep
   overpayment_cols <- c("st","rptdate","regular_fraud_num","federal_fraud_num","regular_fraud_dol","federal_fraud_dol","regular_nonfraud_num","federal_nonfraud_num","regular_nonfraud_dol","federal_nonfraud_dol","state_tax_recovery","federal_tax_recovery", "outstanding", "recovered")
   all_cols <- c("st","rptdate")
@@ -215,6 +215,81 @@ get_state_from_series_id <- function(series) {
 }
 
 
+# disaster unemployment assistance information
+get_dua_data <- function() {
+  downloadUCData("https://oui.doleta.gov/unemploy/csv/ar902.csv") %>% # DUA 2020 data 
+    rename(dua_initial_appeals_total = c4,
+           dua_initial_appeals_self = c57,
+           dua_eligible_total = c5,
+           dua_eligible_self = c17,
+           dua_first_payments = c6,
+           dua_weeks_claimed = c21,
+           dua_weeks_compensated = c22,
+           dua_amount_compensated = c23,
+           dua_weeks_denied_total = c35,
+           dua_appeals_filed_state_total = c58,
+           dua_appeals_filed_ra_total = c59,
+           dua_appeals_disposed_state_total = c33,
+           dua_appeals_disposed_ra_total = c34,
+           dua_appeals_successful_state_total = c60,
+           dua_appeals_successful_ra_total = c61,
+           dua_appeals_filed_state_self = c62,
+           dua_appeals_filed_ra_self = c63,
+           dua_appeals_disposed_state_self = c45,
+           dua_appeals_disposed_ra_self = c46,
+           dua_appeals_successful_state_self = c64,
+           dua_appeals_successful_ra_self = c65,
+           dua_overpayments_cases_total = c49,
+           dua_overpayment_weeks_total = c50,
+           dua_overpayment_amount_total = c51,
+           dua_overpayments_cases_self = c53,
+           dua_overpayment_weeks_self = c54,
+           dua_overpayment_amount_self = c55,
+    ) %>% 
+    select(-starts_with("c"))
+}
+
+
+# pandemic unemployment assistance information
+get_pua_data <- function() {
+  downloadUCData("https://oui.doleta.gov/unemploy/csv/ap902.csv") %>% # DUA 2020 data 
+    rename(pua_initial_applications_total = c1,
+           pua_initial_applications_self = c7,
+           pua_eligible_total = c2,
+           pua_eligible_self = c8,
+           pua_first_payments = c3,
+           pua_weeks_claimed = c4,
+           pua_weeks_compensated = c5,
+           pua_amount_compensated = c6,
+           pua_weeks_denied_total = c9,
+           pua_appeals_filed_state_total = c10,
+           pua_appeals_filed_ra_total = c11,
+           pua_appeals_disposed_state_total = c12,
+           pua_appeals_disposed_ra_total = c13,
+           pua_appeals_successful_state_total = c14,
+           pua_appeals_successful_ra_total = c15,
+           pua_appeals_filed_state_self = c16,
+           pua_appeals_filed_ra_self = c17,
+           pua_appeals_disposed_state_self = c18,
+           pua_appeals_disposed_ra_self = c19,
+           pua_appeals_successful_state_self = c20,
+           pua_appeals_successful_ra_self = c21,
+           pua_overpayments_cases_total = c22,
+           pua_overpayment_weeks_total = c23,
+           pua_overpayment_amount_total = c24,
+           pua_overpayments_cases_self = c26,
+           pua_overpayment_weeks_self = c27,
+           pua_overpayment_amount_self = c28,
+    ) %>% 
+    select(-starts_with("c"))
+}
+
+# I'm not yet clear on what to do with this information
+get_financial_transactions <- function() {
+  downloadUCData("https://oui.doleta.gov/unemploy/csv/ar2112.csv") %>%   # ar2112 data 
+    rename(puc_payments = c125) %>%  #,pua_payments = c128) pua_payments doesn't yet exist!
+    select(-starts_with("c"))
+}
 
 # combine bls unemployed info with general unemployment continuing claims numbers to get a recipiency rate
 # generally speaking, recipiency rate is total continued claims in an average week / total unemployed over that week
@@ -241,6 +316,8 @@ getRecipiency <- function (bls_unemployed)
   ucClaimsPaymentsEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac5159.csv") #5159 report
   ucClaimsPaymentsTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at5159.csv") #5159 report
   ucClaimsPaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au5159.csv") #5159 report
+  pua_claims <- get_pua_data() %>% 
+    select(st, rptdate, pua_weeks_claimed, pua_amount_compensated) #902p report
   
   # EUC data from the 80s isn't available on the DOL website, but DOL provided a copy of those claims
   ucClaimsPaymentsEUC80s <- read.csv("EUC-1982-1987-USDOLData.csv")
@@ -254,6 +331,7 @@ getRecipiency <- function (bls_unemployed)
   euc91_cols <- c("euc91_state_intrastate", "euc91_state_liable", "euc91_ucfe_instrastate", "euc91_ufce_liable", "euc91_ucx_intrastate", "euc91_ucx_liable", "euc91_state_compensated", "euc91_ucfe_ucx_compensated")
   euc08_cols <- c("euc08_state_intrastate", "euc08_state_liable", "euc08_ucfe_instrastate", "euc08_ufce_liable", "euc08_ucx_intrastate", "euc08_ucx_liable", "euc08_state_compensated", "euc08_ucfe_ucx_compensated")
   teuc_cols <-  c("teuc02_state_intrastate", "teuc02_state_liable", "teuc02_ucfe_instrastate", "teuc02_ufce_liable", "teuc02_ucx_intrastate", "teuc02_ucx_liable", "teuc02_state_compensated")
+  
   
   ucClaimsPaymentsRegular <- ucClaimsPaymentsRegular %>% 
     rename_at(vars(c("c21", "c24", "c27", "c30", "c33", "c36", "c45","c48")), ~ reg_cols)
@@ -273,7 +351,8 @@ getRecipiency <- function (bls_unemployed)
     left_join(ucClaimsPaymentsEUC91 %>% select(all_of(c(all_cols, euc91_cols))), by = all_cols) %>% 
     left_join(ucClaimsPaymentsTEUC02 %>% select(all_of(c(all_cols, teuc_cols))), by = all_cols) %>% 
     left_join(ucClaimsPaymentsEUC08 %>% select(all_of(c(all_cols, euc08_cols))), by = all_cols) %>% 
-    left_join(ucClaimsPaymentsEUC80s %>% select(one_of(c(all_cols, "euc80s"))), by = all_cols) %>% 
+    left_join(ucClaimsPaymentsEUC80s %>% select(one_of(c(all_cols, "euc80s"))), by = all_cols) %>%
+    left_join(pua_claims, by = all_cols) %>% 
     replace(is.na(.), 0)
     
   
@@ -284,7 +363,7 @@ getRecipiency <- function (bls_unemployed)
              ext_ucx_liable + euc91_state_intrastate + euc91_state_liable + euc91_ucfe_instrastate + euc91_ufce_liable + 
              euc91_ucx_intrastate + euc91_ucx_liable + euc08_state_intrastate + euc08_state_liable + euc08_ucfe_instrastate + 
              euc08_ufce_liable + euc08_ucx_intrastate + euc08_ucx_liable + teuc02_state_intrastate + teuc02_state_liable + 
-             teuc02_ucfe_instrastate + teuc02_ufce_liable + teuc02_ucx_intrastate + teuc02_ucx_liable + euc80s,
+             teuc02_ucfe_instrastate + teuc02_ufce_liable + teuc02_ucx_intrastate + teuc02_ucx_liable + euc80s + pua_weeks_claimed,
            total = reg_total + fed_total, 
            reg_total_week = reg_total / (as.numeric(days_in_month(rptdate)) / 7),
            fed_total_week = fed_total / (as.numeric(days_in_month(rptdate)) / 7),
@@ -292,7 +371,7 @@ getRecipiency <- function (bls_unemployed)
            
            # this is a measure of the total money paid out per month in all of the various programs.  Note that we are missing EUC80s....
            total_compensated = state_compensated + ucfe_ucx_compensated + euc91_state_compensated + euc91_ucfe_ucx_compensated + 
-             teuc02_state_compensated + euc08_state_compensated + euc08_ucfe_ucx_compensated + ext_state_compensated + ext_ucfe_ucx_compensated,
+             teuc02_state_compensated + euc08_state_compensated + euc08_ucfe_ucx_compensated + ext_state_compensated + ext_ucfe_ucx_compensated + pua_amount_compensated,
            total_state_compensated = state_compensated + ucfe_ucx_compensated,
            total_federal_compensated = total_compensated - total_state_compensated
     ) %>% 
@@ -350,6 +429,8 @@ getNonMonetaryDeterminations <- function()
   ucNonMonetaryEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac207.csv") #207 report
   ucNonMonetaryTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at207.csv") #207 report
   ucNonMonetaryEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au207.csv") #207 report
+  pua_claims <- get_pua_data() %>% 
+    select(st, rptdate, starts_with("pua_appeals"))
   
   # name the columns that we care about for later code readability
   # EUC08 and TEUC appear to have the same structure as extended benefits, not euc91
@@ -378,6 +459,7 @@ getNonMonetaryDeterminations <- function()
     left_join(ucNonMonetaryEUC91 %>% select(all_of(c(all_cols,euc91_cols))), by = all_cols) %>% 
     left_join(ucNonMonetaryTEUC02 %>% select(all_of(c(all_cols,teuc_cols))), by = all_cols) %>% 
     left_join(ucNonMonetaryEUC08 %>% select(all_of(c(all_cols,euc08_cols))), by = all_cols) %>% 
+    left_join(pua_claims, by = all_cols) %>% 
     replace(is.na(.), 0)
   
   # do some math to get some interesting information for graphing purposes
@@ -390,7 +472,7 @@ getNonMonetaryDeterminations <- function()
       determ_total = state_total_determ + ufce_total_determ + ucx_total_determ + ext_state_total_determ + 
         ext_ufce_total_determ + ext_ucx_total_determ + euc08_state_total_determ + euc08_ufce_total_determ + 
         euc08_ucx_total_determ + teuc_state_total_determ + teuc_ucx_total_determ + teuc_ufce_total_determ + 
-        euc91_state_total_determ + euc91_ufce_total_determ + euc91_ucx_total_determ,
+        euc91_state_total_determ + euc91_ufce_total_determ + euc91_ucx_total_determ + pua_appeals_disposed_state_total + pua_appeals_disposed_ra_total,
       determ_sep_vol = state_determ_sep_vol + ufce_determ_sep_vol + ext_state_determ_sep_vol + 
         euc08_state_determ_sep_vol + euc91_state_determ_sep_vol + teuc_state_determ_sep_vol,
       determ_sep_misconduct = state_determ_sep_misconduct + ufce_determ_sep_misconduct + 
@@ -411,7 +493,8 @@ getNonMonetaryDeterminations <- function()
       denial_sep_total = state_denial_sep_total + ufce_denial_sep_total + ext_state_denial_sep_total + 
         euc08_state_denial_sep_total + euc91_state_denial_sep_total + teuc_state_denial_sep_total,
       denial_non_total = state_denial_non_total + ext_state_denial_non_total + euc08_state_denial_non_total + 
-        euc91_state_denial_non_total + teuc_state_denial_non_total,
+        euc91_state_denial_non_total + teuc_state_denial_non_total + 
+        (pua_appeals_disposed_state_total + pua_appeals_disposed_ra_total - pua_appeals_successful_state_total - pua_appeals_successful_ra_total), # in theory this is the pua denials
       denial_total = denial_sep_total + denial_non_total,
       denial_sep_misconduct = state_denial_sep_misconduct + ufce_denial_sep_misconduct + 
         ext_state_denial_sep_misconduct + euc08_state_denial_sep_misconduct + 
@@ -429,9 +512,11 @@ getNonMonetaryDeterminations <- function()
       denial_non_reporting = state_denial_non_reporting + euc91_state_denial_non_reporting,
       denial_non_referrals = state_denial_non_referrals,
       denial_non_other = state_denial_non_other + ext_state_denial_non_other + euc08_state_denial_non_other + 
-        euc91_state_denial_non_other + teuc_state_denial_non_other,
+        euc91_state_denial_non_other + teuc_state_denial_non_other + 
+        (pua_appeals_disposed_state_total + pua_appeals_disposed_ra_total - pua_appeals_successful_state_total - pua_appeals_successful_ra_total), # in theory this is the pua denials,
       
       # now calculate our actual statistics that we care about
+      # mgh: I don't feel like PUA is properly captured; it is in the determinations total and denials_non and in non-other, but is that right?
       denial_rate_overall = round(denial_total / determ_total, 3),
       denial_sep_percent = round(denial_sep_total / determ_total,3),
       denial_sep_rate = round(denial_sep_total / (determ_sep_misconduct + determ_sep_vol + 
