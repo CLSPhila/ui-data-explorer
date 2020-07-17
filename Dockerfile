@@ -7,4 +7,6 @@ COPY unemploymentDataProcessor.R /Rscripts/
 # /data should be a volume mount, where the dataprocessor will write.
 RUN mkdir /data
 
-CMD ["RScript","/Rscripts/unemploymentDataProcessor.R"]
+RUN install2.r RCurl zoo
+RUN install2.r fredr
+CMD ["Rscript","/Rscripts/unemploymentDataProcessor.R"]
