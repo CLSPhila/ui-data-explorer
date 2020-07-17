@@ -699,7 +699,7 @@ unemployment_df <-
   # there are a few repeat metrics that get thrown in there by accident; get rid of them:
   distinct()
 
-arrow::write_feather(unemployment_df, "~/unemployment_data.feather")
+arrow::write_feather(unemployment_df, "/data/unemployment_data.feather")
 
 
 

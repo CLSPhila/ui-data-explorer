@@ -1,0 +1,13 @@
+version: "3.8"
+services:
+    datadownload:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: natev/uidataprocessor:latest
+        volumes:
+            - type: bind
+              source: ./data
+              target: /data
+volumes:
+    data:
