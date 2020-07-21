@@ -11,5 +11,7 @@ services:
               target: /data
         environment:
             DATA_DIR: /data
+            FRED_KEY: ${FRED_KEY}
+            PROJECT_ROOT: /Rscripts
 volumes:
     data:

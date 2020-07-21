@@ -8,6 +8,8 @@ library(lubridate)
 library(tidyverse)
 library(zoo)
 library(fredr)
+message("Libraries loaded.")
+message(Sys.getenv("FRED_KEY"))
 fredr_set_key(Sys.getenv("FRED_KEY"))
 
 #library(data.table)
@@ -158,7 +160,7 @@ getOverpayments <- function() {
 # can be used in a map function to get all 50 states; will sleep if sleep is set to true
 # to avoid api limitations
 get_fred_series_with_state_id <- function(series, metric_name, sleep = FALSE, start_date = as.Date("1976-01-01")) {
-  
+  message(paste("Getting FRED series:",series,metric_name))
   # get the data from fredr; use a try catch b/c some series don't exist and we 
   # need to catch those and move on
   df <- tryCatch({
@@ -225,7 +227,9 @@ get_state_from_series_id <- function(series) {
 getRecipiency <- function (bls_unemployed)
 {
   
-  
+  message("Getting recipency")
+  message("columns of bls_unemployed:")
+  message(names(bls_unemployed))
   # take the bls unemployment data and just extract the data that we need, which includes getting a 
   # 12 month moving averages of the unemployed number
   bls_unemployed <- bls_unemployed %>% filter(endsWith(metric, "nsa")) %>% 
@@ -243,7 +247,7 @@ getRecipiency <- function (bls_unemployed)
   ucClaimsPaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au5159.csv") #5159 report
   
   # EUC data from the 80s isn't available on the DOL website, but DOL provided a copy of those claims
-  ucClaimsPaymentsEUC80s <- read.csv("EUC-1982-1987-USDOLData.csv")
+  ucClaimsPaymentsEUC80s <- read.csv(paste0(Sys.getenv("PROJECT_ROOT"), "/EUC-1982-1987-USDOLData.csv"))
   ucClaimsPaymentsEUC80s <- ucClaimsPaymentsEUC80s %>% 
     mutate(rptdate =  as.Date(rptdate))
   
@@ -481,7 +485,7 @@ getNonMonetaryDeterminations <- function()
 }
 
 getUCFirstTimePaymentLapse <- function() {
-  
+  message("Collecting UC FirstTimePayment Lapse data.")
   # download the data
   ucFirstTimePaymentLapse <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9050.csv") # 9050 report
 
@@ -657,18 +661,23 @@ bls_unemployed <- bind_rows(
 ucFirstTimePaymentLapse <- getUCFirstTimePaymentLapse()
 
 # get all of the appeals information
+message("collecting UC Beniftis appeals data.")
 ucBenefitAppealsRegular <- getUCBenefitAppeals("https://oui.doleta.gov/unemploy/csv/ar5130.csv") 
 ucBenefitAppealsExtended <- getUCBenefitAppeals("https://oui.doleta.gov/unemploy/csv/ae5130.csv") 
 ucBenefitAppealsEUC91x94 <- getUCBenefitAppeals("https://oui.doleta.gov/unemploy/csv/ac5130.csv") 
 ucBenefitAppealsEUC02x04 <- getUCBenefitAppeals("https://oui.doleta.gov/unemploy/csv/at5130.csv") 
 ucBenefitAppealsEUC08x13 <- getUCBenefitAppeals("https://oui.doleta.gov/unemploy/csv/au5130.csv") 
 
+message("collecting UC Appeals Time Lapses")
 ucAppealsTimeLapseLower <- getUCAppealsTimeLapseLower(ucBenefitAppealsRegular)
 ucAppealsTimeLapseHigher <- getucAppealsTimeLapseHigher()
 
 
-# get UC recipiency and overpayments
+# get UC recipiency and overpayments\
+message("Collecting UC Recipiency")
 ucRecipiency <- getRecipiency(bls_unemployed)
+
+message("Collecting UC Overpayments")
 ucOverpayments <- getOverpayments()
 
 # add in the uc payments by month into the ucOverpayments data to get overpayments as a percent of annual costs
