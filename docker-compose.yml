@@ -1,0 +1,17 @@
+version: "3.8"
+services:
+    datadownload:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: natev/uidataprocessor:latest
+        volumes:
+            - type: bind
+              source: ./data
+              target: /data
+        environment:
+            DATA_DIR: /data
+            FRED_KEY: ${FRED_KEY}
+            PROJECT_ROOT: /Rscripts
+volumes:
+    data:
