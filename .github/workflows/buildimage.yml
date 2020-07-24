@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build docker image to download unemployment data.
-        run: docker build . --tag ui-data-downloader:latest
+        run: docker build . --tag $IMAGE_NAME
       - name: Log into registry
         run: |
           # github automatically creates the GITHUB_TOKEN token. 
