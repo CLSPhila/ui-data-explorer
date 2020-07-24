@@ -247,7 +247,7 @@ getRecipiency <- function (bls_unemployed)
   ucClaimsPaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au5159.csv") #5159 report
   
   # EUC data from the 80s isn't available on the DOL website, but DOL provided a copy of those claims
-  ucClaimsPaymentsEUC80s <- read.csv(paste0(Sys.getenv("PROJECT_ROOT"), "/EUC-1982-1987-USDOLData.csv"))
+  ucClaimsPaymentsEUC80s <- read.csv(paste0(Sys.getenv("DATA_DIR"), "/EUC-1982-1987-USDOLData.csv"))
   ucClaimsPaymentsEUC80s <- ucClaimsPaymentsEUC80s %>% 
     mutate(rptdate =  as.Date(rptdate))
   
