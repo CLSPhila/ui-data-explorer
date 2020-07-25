@@ -58,10 +58,12 @@ getOverpayments <- function() {
   ucOverpaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au227.csv") #227 report
   
   # cols that we want to keep
-  overpayment_cols <- c("st","rptdate","regular_fraud_num","federal_fraud_num","regular_fraud_dol","federal_fraud_dol","regular_nonfraud_num","federal_nonfraud_num","regular_nonfraud_dol","federal_nonfraud_dol","state_tax_recovery","federal_tax_recovery", "outstanding", "recovered")
+  overpayment_cols <- c("st", "rptdate", "regular_fraud_num", "federal_fraud_num", "regular_fraud_dol", "federal_fraud_dol", "regular_nonfraud_num", 
+                        "federal_nonfraud_num","regular_nonfraud_dol","federal_nonfraud_dol","state_tax_recovery", "state_tax_recovery_fed_programs", 
+                        "federal_tax_recovery", "federal_tax_recovery_fed_programs", "outstanding", "recovered", "outstanding_fed_programs", "recovered_fed_programs")
   all_cols <- c("st","rptdate")
-  detection_cols <- c("federal_fraud_num","federal_fraud_dol","federal_nonfraud_num","federal_nonfraud_dol", "outstanding", "recovered")
-  recovery_cols <- c("state_tax_recovery","federal_tax_recovery")
+  detection_cols <- c("federal_fraud_num", "federal_fraud_dol", "federal_nonfraud_num", "federal_nonfraud_dol", "outstanding_fed_programs", "recovered_fed_programs")
+  recovery_cols <- c("state_tax_recovery_fed_programs","federal_tax_recovery_fed_programs")
   
   
   # just pull out the columns that we care about
@@ -75,10 +77,14 @@ getOverpayments <- function() {
       federal_nonfraud_num = c250,
       regular_nonfraud_dol = c29 + c30,
       federal_nonfraud_dol = c251,
-      state_tax_recovery = c210 + c211 + c212 + c213 + c284 + c285,
-      federal_tax_recovery = c286 + c287 + c289 + c290+ c288 + c291,
-      outstanding = c35 + c36 + c276 + c37 + c38 + c277,
-      recovered = c206 + c207 + c278 + c208 + c209 + c279
+      state_tax_recovery = c210 + c211 + c212 + c213,
+      state_tax_recovery_fed_programs = c284 + c285,
+      federal_tax_recovery = c286 + c287 + c289 + c290,
+      federal_tax_recovery_fed_programs = c288 + c291,
+      outstanding = c71 + c72 + c73 + c74,
+      outstanding_fed_programs = c276 + c277,
+      recovered = c206 + c207 + c208 + c209,
+      recovered_fed_programs = c278 + c279
     ) %>% 
     select(one_of(overpayment_cols)) %>%
     pivot_longer(cols = -c(st, rptdate), names_to = "metric", values_to = "value")
@@ -89,8 +95,8 @@ getOverpayments <- function() {
       federal_fraud_dol = c3 + c4,
       federal_nonfraud_num = c5 + c6,
       federal_nonfraud_dol = c7 + c8,
-      outstanding = c9 + c10 + c11 + c12,
-      recovered = c13 + c14 + c15 + c16
+      outstanding_fed_programs = c9 + c10 + c11 + c12,
+      recovered_fed_programs = c13 + c14 + c15 + c16
     ) %>% 
     select(one_of(all_cols, detection_cols)) %>% 
     pivot_longer(cols = -c(st, rptdate), names_to = "metric", values_to = "valueEUC91")
@@ -102,10 +108,10 @@ getOverpayments <- function() {
       federal_fraud_dol = c3 + c4,
       federal_nonfraud_num = c27 + c28,
       federal_nonfraud_dol = c29 + c30,
-      state_tax_recovery = c210 + c211 + c212 + c213,
-      federal_tax_recovery = c214 + c215 + c216 + c217,
-      outstanding = c35 + c36 + c37 + c38,
-      recovered = c206 + c207 + c208 + c209,
+      state_tax_recovery_fed_programs = c210 + c211 + c212 + c213,
+      federal_tax_recovery_fed_programs = c214 + c215 + c216 + c217,
+      outstanding_fed_programs = c35 + c36 + c37 + c38,
+      recovered_fed_programs = c206 + c207 + c208 + c209,
     ) %>% 
     select(one_of(all_cols, detection_cols, recovery_cols)) %>% 
     pivot_longer(cols = -c(st, rptdate), names_to = "metric", values_to = "valueTEUC02")
@@ -117,10 +123,10 @@ getOverpayments <- function() {
       federal_fraud_dol = c3 + c4,
       federal_nonfraud_num = c27 + c28,
       federal_nonfraud_dol = c29 + c30,
-      state_tax_recovery = c210 + c211 + c212 + c213,
-      federal_tax_recovery = c214 + c215 + c216 + c217,
-      outstanding = c35 + c36 + c37 + c38,
-      recovered = c206 + c207 + c208 + c209,
+      state_tax_recovery_fed_programs = c210 + c211 + c212 + c213,
+      federal_tax_recovery_fed_programs = c214 + c215 + c216 + c217,
+      outstanding_fed_programs = c35 + c36 + c37 + c38,
+      recovered_fed_programs = c206 + c207 + c208 + c209,
     ) %>% 
     select(one_of(all_cols, detection_cols, recovery_cols)) %>% 
     pivot_longer(cols = -c(st, rptdate), names_to = "metric", values_to = "valueEUC08")
@@ -148,10 +154,10 @@ getOverpayments <- function() {
     bind_rows(usAvg %>% mutate(st = "US")) %>%
     mutate(
       # then calculate the fraud percent
-      fraud_num_percent = round((regular_fraud_num + federal_fraud_num) / 
-                                  (regular_fraud_num + federal_fraud_num + 
-                                     regular_nonfraud_num + federal_nonfraud_num), 
-                                3))
+      fraud_num_percent = round((regular_fraud_num) / (regular_fraud_num + regular_nonfraud_num ), 
+                                3),
+      fraud_num_percent_fed_programs = round((federal_fraud_num) / (federal_fraud_num + federal_nonfraud_num), 3),
+      fraud_num_percent_fed_programs = if_else(is.nan(fraud_num_percent_fed_programs), 0, fraud_num_percent_fed_programs))
   
   return(ucOverpayments)
 }

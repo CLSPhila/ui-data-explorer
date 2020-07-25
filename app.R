@@ -270,7 +270,7 @@ server <- function(input, output) {
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
-                            title = glue::glue("{input$state} Outstanding Overpayments vs $ Recovered from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                            title = glue::glue("{input$state} Outstanding State Overpayments vs State $ Recovered from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
                             breaks=c("outstanding", "recovered"),
                             labels=c("Outstanding Overpayments", "Overpayments Recovered")) + 
         scale_y_continuous(labels = label_number(scale = 1/1000000, prefix = "$", suffix = "M"))
@@ -468,10 +468,10 @@ server <- function(input, output) {
     
     else if (input$viewData == "overvRecovery")
     {
-      col_list <- c("outstanding", "recovered")
-      names_list <- c("State","Report Date", "Outstanding Owed", "Recovered")
+      col_list <- c("outstanding", "recovered", "outstanding_fed_programs", "recovered_fed_programs")
+      names_list <- c("State","Report Date", "Outstanding Owed", "Recovered", "Outstanding Owed (Fed Programs)", "Recovered (Fed Programs)")
       uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
-        formatCurrency(3:4, '$')
+        formatCurrency(3:6, '$')
       
     }
 
@@ -609,7 +609,7 @@ server <- function(input, output) {
                        "overvPayments" = c("outstanding_proportion", "outstanding", "total_paid_annual_mov_avg"),
                        "fraudvNon" = c("fraud_num_percent", "regular_fraud_num", "federal_fraud_num","regular_nonfraud_num","federal_nonfraud_num"),
                        "TOPS" = c("state_tax_recovery", "federal_tax_recovery"),
-                       "overvRecovery" = c("outstanding", "recovered"),
+                       "overvRecovery" = c("outstanding", "recovered", "outstanding_fed_programs", "recovered_fed_programs"),
                        "nonMonDen" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
                        "nonMonSep" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
                        "nonMonSepRate" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
@@ -630,7 +630,7 @@ server <- function(input, output) {
                          "overvPayments" = c("Outstanding balance / Annual UI Payments", "Outstanding Overpayment Balance", "Annual UI Payments"),
                          "fraudvNon" = c("Fraud as % of Total Overpayments", "Regular UI Fraud", "Federal UI Fraud", "Regular UI Non-Fraud", "Federal UI Non-Fraud"),
                          "TOPS" = c("State Tax Recovery", "Federal Tax Recovery"),
-                         "overvRecovery" = c("Outstanding Owed", "Recovered"),
+                         "overvRecovery" = c("Outstanding Owed", "Recovered", "Outstanding Owed (Fed Programs)", "Recovered (Fed Programs)"),
                          "nonMonDen" = c("Total Determinations", "Separation-Voluntary Quit Determinations", "Separation-Misconduct Determinations", "Separation-Other Determinations", 
                                          "Non-monetary Able & Available Determations", "Non-monetary Disqualifying Income Determations", "Non-monetary Refusal of Suitable Work Determations", "Non-monetary Reporting/Call-ins/Etc Determations", "Non-monetary Refusal of Referral Determations", "Non-monetary Other Determations", 
                                          "Total Separation Denials", "Total Non-Separation Denials", "Separation-Misconduct Denials", "Separation-Voluntaray Quit Denials", "Separation-Other Denials", 
@@ -711,7 +711,7 @@ server <- function(input, output) {
                     "monthlyUI" = getSMPlot(unemployed_df, input$range[1], input$range[2], "total_compensated_mov_avg", "Montly UI Payments","50-state Comparison of Total Monthly UI Payments", free_y, scale = 1/1000000, prefix = "", suffix = "M"),
                     "overvPayments" = getSMPlot(unemployed_df, input$range[1], input$range[2], "outstanding_proportion", "Overpayment Balance/Annual UI Payments","50-state Comparison of Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually", free_y),
                     "fraudvNon" = getSMPlot(unemployed_df,input$range[1], input$range[2], "fraud_num_percent", "Fraud/Non-Fraud","50-state Comparison of Fraud vs Non-Fraud UI Overpayemnts", free_y),
-                    "overvRecovery" = getSMPlot(unemployed_df,input$range[1], input$range[2], "outstanding", "Overpayment Balance","50-state Comparison of Outstanding UI Overpayment Balance", free_y, scale = 1/1000000, prefix = "$", suffix = "M"),
+                    "overvRecovery" = getSMPlot(unemployed_df,input$range[1], input$range[2], "outstanding", "Overpayment Balance","50-state Comparison of Outstanding State UI Overpayment Balance", free_y, scale = 1/1000000, prefix = "$", suffix = "M"),
                     "nonMonDen" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_rate_overall", "Non-Monetary Denial Rate","50-state Comparison of Denial Rates for Non-Monetary Reasons", free_y),
                     "nonMonSep" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_sep_percent", "Proportion of all Non-Monetary Determinations","50-state Comparison of Denials for Separation Reasons", free_y),
                     "nonMonSepRate" = getSMPlot(unemployed_df,input$range[1], input$range[2], "denial_sep_rate", "Non-Monetary Separation Denial Rate","50-state Comparison of Denial Rate for Separation Reasons", free_y),
