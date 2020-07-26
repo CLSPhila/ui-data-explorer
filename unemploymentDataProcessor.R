@@ -657,7 +657,7 @@ getUCAppealsTimeLapseLower <- function(ucBenefitAppealsRegular) {
   usAvg <- ucAppealsTimeLapseLower %>% 
     group_by(rptdate) %>% 
     summarize(across(where(is.numeric), function(x) round(mean(x), 3))) %>% 
-    mutate(lower_total = NA) # this is ported from earlier code; I'm not sure why I did this back then
+    mutate(total_lower_appeals = NA) # this is ported from earlier code; I'm not sure why I did this back then
   
   ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
     bind_rows(usAvg %>% mutate(st = "US")) %>% 
@@ -703,7 +703,7 @@ getucAppealsTimeLapseHigher <- function() {
   usAvg <- ucAppealsTimeLapseHigher %>% 
     group_by(rptdate) %>% 
     summarize(across(where(is.numeric), function(x) round(mean(x), 3))) %>% 
-    mutate(higher_total = NA) # this is ported from earlier code; I'm not sure why I did this back then
+    mutate(total_higher_appeals = NA) # this is ported from earlier code; I'm not sure why I did this back then
   
   ucAppealsTimeLapseHigher <- ucAppealsTimeLapseHigher %>% 
     bind_rows(usAvg %>% mutate(st = "US")) %>% 
@@ -809,8 +809,50 @@ unemployment_df <-
   # there are a few repeat metrics that get thrown in there by accident; get rid of them:
   distinct()
 
+message("Writing Parquet File")
 arrow::write_parquet(unemployment_df, file.path(Sys.getenv("DATA_DIR"), "unemployment_data.parquet"))
 
+# Writing All Files to CSV
+write_csv_files(unemployment_df, file.path(Sys.getenv("DATA_DIR")))
 
+# write a series of CSV files based on the data that we have.
+# each CSV should be on a specific data issue, for all states since 1970
+write_csv_files <- function(df, save_dir) {
 
+  message("Writing Determinations and Denials CSV")
+  df %>% 
+    write_data_as_csv("determinations_and_denials.csv", "^denial|^determ")
 
+  message("Writing Overpayment Information CSV")  
+  df %>% 
+    write_data_as_csv("overpayments_and_fraud.csv", "^outstanding|fraud_|_tax_|recover")
+
+  message("Writing PUA Data CSV")  
+  df %>% 
+    write_data_as_csv("pua_data.csv", "^pua")
+
+  message("Writing Appeals Information CSV")  
+  df %>% 
+    write_data_as_csv("lower_and_higher_appeals.csv", "higher_|lower_")
+  
+  message("Writing First Time Payment CSV")
+  df %>% 
+    write_data_as_csv("first_time_payments.csv", "^first_time")
+  
+  message("Writing Labor Force CSV")
+  df %>% 
+    write_data_as_csv("labor_force_data.csv", "_sa$|_nsa$")
+  
+  message("Writing Recipiency CSV")
+  df %>% 
+    write_data_as_csv("recipiency_data.csv", "recipiency_|total_week_mov|unemployed_avg|_mov_avg$|compensated$")
+}
+
+# writes to a csv file named filename all columns in the DF prefixed by prefix
+write_data_as_csv <- function(df, filename, metric_filter) {
+  df %>% 
+    filter(grepl(metric_filter, metric)) %>% 
+    pivot_wider(names_from = metric, values_from = value) %>% 
+    write_csv(filename)
+
+}
