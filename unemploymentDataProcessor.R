@@ -289,6 +289,10 @@ get_pua_data <- function() {
            pua_overpayment_weeks_self = c27,
            pua_overpayment_amount_self = c28,
     ) %>% 
+    mutate(pua_percent_eligible =  pua_eligible_total / pua_initial_applications_total,
+           pua_percent_applicants_self_employed = pua_initial_applications_self / pua_initial_applications_total,
+           pua_percent_eligible_self_employed = pua_eligible_self / pua_initial_applications_self
+    ) %>% 
     select(-starts_with("c"))
 }
 
@@ -305,7 +309,7 @@ get_financial_transactions <- function() {
 # it also calculates state, fed, and total recipiency rates separately so that you can see how much of the recipiency
 # rate is from federal programs like EB and EUC.
 # accepts as a parameter bls_unemployment data
-getRecipiency <- function (bls_unemployed)
+getRecipiency <- function (bls_unemployed, pua_claims)
 {
   
   message("Getting recipency")
@@ -326,11 +330,11 @@ getRecipiency <- function (bls_unemployed)
   ucClaimsPaymentsEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac5159.csv") #5159 report
   ucClaimsPaymentsTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at5159.csv") #5159 report
   ucClaimsPaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au5159.csv") #5159 report
-  pua_claims <- get_pua_data() %>% 
+  pua_claims <- pua_claims %>% 
     select(st, rptdate, pua_weeks_claimed, pua_amount_compensated) #902p report
   
   # EUC data from the 80s isn't available on the DOL website, but DOL provided a copy of those claims
-  ucClaimsPaymentsEUC80s <- read.csv(paste0(Sys.getenv("PROJECT_ROOT"), "/EUC-1982-1987-USDOLData.csv"))
+  ucClaimsPaymentsEUC80s <- read.csv(file.path(Sys.getenv("PROJECT_ROOT"), "EUC-1982-1987-USDOLData.csv"))
   ucClaimsPaymentsEUC80s <- ucClaimsPaymentsEUC80s %>% 
     mutate(rptdate =  as.Date(rptdate))
   
@@ -432,14 +436,14 @@ getRecipiency <- function (bls_unemployed)
 
 
 # sort through the non monetary determinations to get information about separation and non-separation issues
-getNonMonetaryDeterminations <- function()
+getNonMonetaryDeterminations <- function(pua_claims)
 {
   ucNonMonetaryRegular <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar207.csv") #207 report
   ucNonMonetaryExtended <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ae207.csv") #207 report
   ucNonMonetaryEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac207.csv") #207 report
   ucNonMonetaryTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at207.csv") #207 report
   ucNonMonetaryEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au207.csv") #207 report
-  pua_claims <- get_pua_data() %>% 
+  pua_claims <- pua_claims %>% 
     select(st, rptdate, starts_with("pua_appeals"))
   
   # name the columns that we care about for later code readability
@@ -748,7 +752,8 @@ bls_unemployed <- bind_rows(
   map_dfr(c("LNU03000000", paste0("LAUST", str_pad(1:56,width = 2, side = "left", pad = "0"), "0000000000004")), get_fred_series_with_state_id, "total_unemployed_nsa", sleep = TRUE),
   labor_force_info)
 
-
+# first time payment
+message("Collecting First Time Payment Lapse data.")
 ucFirstTimePaymentLapse <- getUCFirstTimePaymentLapse()
 
 # get all of the appeals information
@@ -763,10 +768,13 @@ message("collecting UC Appeals Time Lapses")
 ucAppealsTimeLapseLower <- getUCAppealsTimeLapseLower(ucBenefitAppealsRegular)
 ucAppealsTimeLapseHigher <- getucAppealsTimeLapseHigher()
 
+# PUA data (pandemic unemployment 2020)
+message("collecting PUA data")
+pua_claims <- get_pua_data()
 
 # get UC recipiency and overpayments\
 message("Collecting UC Recipiency")
-ucRecipiency <- getRecipiency(bls_unemployed)
+ucRecipiency <- getRecipiency(bls_unemployed, pua_claims)
 
 message("Collecting UC Overpayments")
 ucOverpayments <- getOverpayments()
@@ -785,13 +793,14 @@ ucRecipiency$total_paid_annual_mov_avg <- ucRecipiency$total_compensated_mov_avg
 ucOverpayments$outstanding_proportion <- round(ucOverpayments$outstanding / ucOverpayments$total_paid_annual_mov_avg,4)
 
 # get determination data
-ucNonMonetary <- getNonMonetaryDeterminations()
+ucNonMonetary <- getNonMonetaryDeterminations(pua_claims)
+
 
 
 # make long-uberdf
 unemployment_df <- 
   map_dfr(list(ucNonMonetary, ucOverpayments, ucRecipiency, ucFirstTimePaymentLapse, 
-             ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher), 
+             ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher, pua_claims), 
         function(x) { 
           x %>% 
             pivot_longer(cols = !one_of(c("rptdate", "st")), names_to = "metric", values_to = "value")}) %>% 
@@ -799,7 +808,7 @@ unemployment_df <-
   # there are a few repeat metrics that get thrown in there by accident; get rid of them:
   distinct()
 
-arrow::write_feather(unemployment_df, paste0(Sys.getenv("DATA_DIR"),"/unemployment_data.feather"))
+arrow::write_parquet(unemployment_df, file.path(Sys.getenv("DATA_DIR"), "unemployment_data.parquet"))
 
 
 

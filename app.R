@@ -21,8 +21,8 @@ source("helper.R")
 # input <- list(range = as.Date(c("2008-01-01", "2020-05-30")), state = "PA")
 
 # read in the df of data that we need
-stored_data_location <- "~/unemployment_data.feather"
-unemployed_df <- arrow::read_feather(stored_data_location)
+stored_data_location <- file.path(Sys.getenv("DATA_DIR"), "unemployment_data.parquet")
+unemployed_df <- arrow::read_parquet(stored_data_location)
 
 maxDate <- max(unemployed_df$rptdate)
 minDate <- min(unemployed_df$rptdate)
@@ -54,22 +54,24 @@ ui <- fluidPage(
       selectInput("viewData",
                   label = 'Select Data to View',
                   size=17, selectize=FALSE,
-                  choices = c("Recipiency Rate"="recipRate",
-                              "--Recipiency Rate Breakdown"="recipBreakdown",
-                              "Monthly UI Payments"="monthlyUI", 
-                              "Timeliness of First Payments"="firstPay", 
-                              "Timeliness of Lower Authority Decisions"="lowerAuthority", 
-                              "Timeliness of Higher Authority Decisions"="higherAuthority", 
-                              "Overpayment vs Recovery"="overvRecovery",
-                              "--Overpayment Balance/Annual UI Payments"="overvPayments",
-                              "--Fraud vs Non Fraud Overpayents"="fraudvNon", 
-                              "--Tax Program Overpayment Recoveries"="TOPS",
-                              "Non-Monetary Denials"="nonMonDen",
-                              "--Separation Denial Breakdown"="nonMonSep",
-                              "--Separation Denial Rates"="nonMonSepRate",
-                              "--Non-Separation Denial Breakdown"="nonMonNonSep",
-                              "--Non-Separation Denial Rates"="nonMonNonSepRate",
-                              "Unemployment Rate (SA)"="uirate"),
+                  choices = c("Recipiency Rate" = "recipRate",
+                              "--Recipiency Rate Breakdown" = "recipBreakdown",
+                              "Monthly UI Payments" = "monthlyUI", 
+                              "Pandemic Unemployment Assistance" = "puaData",
+                              "--PUA Basic Claims Data" = "puaClaims", 
+                              "Timeliness of First Payments" = "firstPay", 
+                              "Timeliness of Lower Authority Decisions" = "lowerAuthority", 
+                              "Timeliness of Higher Authority Decisions" = "higherAuthority", 
+                              "Overpayment vs Recovery" = "overvRecovery",
+                              "--Overpayment Balance/Annual UI Payments" = "overvPayments",
+                              "--Fraud vs Non Fraud Overpayents" = "fraudvNon", 
+                              "--Tax Program Overpayment Recoveries" = "TOPS",
+                              "Non-Monetary Denials" = "nonMonDen",
+                              "--Separation Denial Breakdown" = "nonMonSep",
+                              "--Separation Denial Rates" = "nonMonSepRate",
+                              "--Non-Separation Denial Breakdown" = "nonMonNonSep",
+                              "--Non-Separation Denial Rates" = "nonMonNonSepRate",
+                              "Unemployment Rate (SA)" = "uirate"),
                   # the default selected is the recipiency Rate, but this coudl be anythign
                   selected = "recipRate"),
       
@@ -156,6 +158,44 @@ server <- function(input, output) {
       # adjustment for finding the max height of the graph
       metric_filter = c("total_compensated_mov_avg")
       
+      
+    }
+    
+    else if (input$viewData == "puaData")
+    {
+      
+      metric_filter = c("pua_percent_eligible", "pua_percent_eligible_self_employed", "pua_percent_applicants_self_employed" )
+      df <- df %>% 
+        filter(metric %in% metric_filter) %>% 
+        mutate(metric = factor(metric, labels = metric_filter, ordered = TRUE))
+      
+      
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 902p, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} PUA Eligibility: General and Self Employed from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                            breaks= metric_filter,
+                            labels=c("Overall Eligibility Rate", "Self-Employed Eligibility Rate", "% Self-Employed Applicants")) + 
+        scale_y_continuous(labels = scales::percent)
+      
+      # adjustment for finding the max height of the graph
+      metric_filter = c("pua_percent_eligible")
+    }
+
+    else if (input$viewData == "puaClaims")
+    {
+      
+      metric_filter = c("pua_initial_applications_total", "pua_eligible_total", "pua_first_payments", "pua_weeks_compensated")
+      df <- df %>% 
+        filter(metric %in% metric_filter) %>% 
+        mutate(metric = factor(metric, labels = metric_filter, ordered = TRUE))
+      
+      
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 902p, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} PUA Claims and Payments from {format.Date(input$range[1], '%m-%Y')} to {format.Date(input$range[2], '%m-%Y')}"),
+                            breaks= metric_filter,
+                            labels=c("Initial Applications", "Total Eligible", "First Payments", "Weeks Compensated")) +
+        scale_y_continuous(labels = comma)
       
     }
     
@@ -437,6 +477,24 @@ server <- function(input, output) {
       
     }
     
+    
+    if (input$viewData == "puaData")
+    {
+      
+      col_list = c("pua_initial_applications_total", "pua_initial_applications_self", "pua_eligible_total",  "pua_eligible_self" , "pua_percent_eligible", "pua_percent_eligible_self_employed", "pua_percent_applicants_self_employed")
+      names_list <- c("State","Report Date", "PUA Initial Applications", "PUA Initial Applications (Self-Employed)", "PUA Eligible", "PUA Eligible (Self-Employed)", "PUA Eligibility Rate (Overall)", "PUA Eligibility Rate (Self-Employed)", "PUA Percent Self-Employed Applicants")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list) %>% 
+        formatRound(columns=c(7:9), digits=2)
+    }
+
+    if (input$viewData == "puaClaims")
+    {
+      
+      col_list = c("pua_initial_applications_total", "pua_eligible_total", "pua_first_payments", "pua_weeks_compensated")
+      names_list <- c("State","Report Date", "PUA Initial Applications", "PUA Eligible", "PUA First Payments", "PUA Weeks Compensated")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list)
+    }
+    
     else if (input$viewData == "overvPayments")
     {
       
@@ -580,6 +638,8 @@ server <- function(input, output) {
       # get an appropriate filename
       filename <- switch(input$viewData,
                          "monthlyUI" = "Monthly_UI_Payments",
+                         "puaData" = "PUA_Data",
+                         "puaClaims" = "PUA_Claims",
                          "overvPayments" = "Monthly_UI_Overpayments_v_UI_Payments",
                          "fraudvNon" = "Monthly_UI_Fraud_and_Non_Fraud_Overpayments",
                          "TOPS" = "UI_Tax_Offset_Program_Data",
@@ -602,10 +662,11 @@ server <- function(input, output) {
     },
     
     content = function(file) { 
-    
     # set vars to use for the datatable and download
     col_list <- switch(input$viewData,
                        "monthlyUI" = c("total_state_compensated_mov_avg", "total_federal_compensated_mov_avg", "total_state_compensated", "total_federal_compensated", "total_paid_annual_mov_avg"),
+                       "puaData" = c("pua_initial_applications_total", "pua_initial_applications_self", "pua_eligible_total",  "pua_eligible_self" , "pua_percent_eligible", "pua_percent_eligible_self_employed", "pua_percent_applicants_self_employed"),
+                       "puaClaims" = c("pua_initial_applications_total", "pua_eligible_total", "pua_first_payments", "pua_weeks_compensated"),
                        "overvPayments" = c("outstanding_proportion", "outstanding", "total_paid_annual_mov_avg"),
                        "fraudvNon" = c("fraud_num_percent", "regular_fraud_num", "federal_fraud_num","regular_nonfraud_num","federal_nonfraud_num"),
                        "TOPS" = c("state_tax_recovery", "federal_tax_recovery"),
@@ -627,6 +688,8 @@ server <- function(input, output) {
     
     names_list <- switch(input$viewData,
                          "monthlyUI" = c("State UI Payments (Monthly, mov avg)", "Federal UI Payments (Monthly, mov avg)", "State UI Payments (Monthly)", "Federal UI Payments (Monthly)", "Annual UI Payments (mov avg)"),
+                         "puaData" = c("PUA Initial Applications", "PUA Initial Applications (Self-Employed)", "PUA Eligible", "PUA Eligible (Self-Employed)", "PUA % Eligible (Overall)", "PUA % Eligible (Self-Employed)", "PUA Percent Self-Employed Applicants"),
+                         "puaClaims" = c("State","Report Date", "PUA Initial Applications", "PUA Eligible", "PUA First Payments", "PUA Weeks Compensated"),
                          "overvPayments" = c("Outstanding balance / Annual UI Payments", "Outstanding Overpayment Balance", "Annual UI Payments"),
                          "fraudvNon" = c("Fraud as % of Total Overpayments", "Regular UI Fraud", "Federal UI Fraud", "Regular UI Non-Fraud", "Federal UI Non-Fraud"),
                          "TOPS" = c("State Tax Recovery", "Federal Tax Recovery"),
@@ -681,6 +744,8 @@ server <- function(input, output) {
     
     uiMap <- switch(input$viewData,
                     "monthlyUI" = getUIMap(unemployed_df, input$range[2],"total_compensated_mov_avg", paste("12-mo moving average of total UI Payments disbursed in ", input$range[2]), FALSE, suffix = "M", scale = 1/1000000, round_digits = 0),
+                    "puaData" = getUIMap(unemployed_df, input$range[2],"pua_percent_eligible", paste("Pecent of Eligible PUA Applicants in ", input$range[2]), FALSE),
+                    "puaClaims" = getUIMap(unemployed_df, input$range[2],"pua_weeks_compensated", paste("PUA Total Weeks Compensated in ", input$range[2]), FALSE),
                     "overvPayments" = getUIMap(unemployed_df, input$range[2], "outstanding_proportion", paste("Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually in ", input$range[2]), FALSE),
                     "fraudvNon" = getUIMap(unemployed_df, input$range[2],"fraud_num_percent", paste("Fraud vs Non-Fraud Overpayments in ",input$range[2]),FALSE),
                     "overvRecovery" = getUIMap(unemployed_df, input$range[2],"outstanding", paste("Outstanding Overpayments Balance in ",input$range[2]), FALSE, scale = 1/1000000, prefix = "$", suffix = "M", round_digits = 0),
@@ -709,6 +774,8 @@ server <- function(input, output) {
     
     smPlot <- switch(input$viewData,
                     "monthlyUI" = getSMPlot(unemployed_df, input$range[1], input$range[2], "total_compensated_mov_avg", "Montly UI Payments","50-state Comparison of Total Monthly UI Payments", free_y, scale = 1/1000000, prefix = "", suffix = "M"),
+                    "puaData" = getSMPlot(unemployed_df, input$range[1], input$range[2], "pua_percent_eligible", "PUA Eligibility Rate","50-state Comparison of PUA Eligibility Rate", free_y),
+                    "puaClaims" = getSMPlot(unemployed_df, input$range[1], input$range[2], "pua_weeks_compensated", "Weeks Compesnated","50-state Comparison of Weeks of PUA Compensated", free_y),
                     "overvPayments" = getSMPlot(unemployed_df, input$range[1], input$range[2], "outstanding_proportion", "Overpayment Balance/Annual UI Payments","50-state Comparison of Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually", free_y),
                     "fraudvNon" = getSMPlot(unemployed_df,input$range[1], input$range[2], "fraud_num_percent", "Fraud/Non-Fraud","50-state Comparison of Fraud vs Non-Fraud UI Overpayemnts", free_y),
                     "overvRecovery" = getSMPlot(unemployed_df,input$range[1], input$range[2], "outstanding", "Overpayment Balance","50-state Comparison of Outstanding State UI Overpayment Balance", free_y, scale = 1/1000000, prefix = "$", suffix = "M"),
@@ -732,6 +799,8 @@ server <- function(input, output) {
   output$fiftyStatePlot <- renderPlot({
     fiftyStatePlot <- switch(input$viewData,
                      "monthlyUI" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "total_compensated_mov_avg", input$state, "Montly UI Payments",paste(input$state, "vs. US: Total Monthly UI Payments"), scale = 1/1000000, prefix = "", suffix = "M"),
+                     "puaData" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "pua_percent_eligible", input$state, "PUA Eligibility Rate",paste(input$state, "vs. US: PUA Eligibility Rate")),
+                     "puaClaims" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "pua_weeks_compensated", input$state, "Weeks Compensated",paste(input$state, "vs. US: Weeks of PUA Compensated")),
                      "overvPayments" = get50StateComparisonPlot(unemployed_df, input$range[1], input$range[2], "outstanding_proportion", input$state, "Overpayment Balance/Annual UI Payments",paste(input$state, "vs. US: Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually")),
                      "fraudvNon" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "fraud_num_percent", input$state, "Fraud/Non-Fraud",paste(input$state, "vs. US: Fraud / Non-Fraud UI Overpayemnts")),
                      "overvRecovery" = get50StateComparisonPlot(unemployed_df,input$range[1], input$range[2], "outstanding", input$state, "Overpayment Balance",paste(input$state, "vs. US: Outstanding UI Overpayment Balance"), scale = 1/1000000, prefix = "$", suffix = "M"),

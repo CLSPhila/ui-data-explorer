@@ -199,7 +199,9 @@ getPointPlot <- function(df, xlab = "Date", ylab, caption, title, ...) {
     labs(x=xlab, y = ylab,
          caption = caption,
          title= title) + 
-    scale_fill_brewer(palette="Set1", ...)
+    scale_fill_brewer(palette="Set1", ...) + 
+    scale_color_brewer(palette="Set1", ...)
+  
 }
 
 
