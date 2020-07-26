@@ -34,7 +34,7 @@ downloadUCData <- function (URL) {
 # sets the names of specific columns in the 5130 dataset
 setBenefitAppealNames <- function(df) {
   df %>% 
-    rename(`lower_filed` = c9, `lower_disposed` = c13, `higher_filed` = c10, `higher_disposed` = c14)
+    rename(`lower_filed` = c9, `lower_appeals_total_disposed` = c13, `higher_filed` = c10, `higher_appeals_total_disposed` = c14)
 }
 
 
@@ -377,7 +377,7 @@ getRecipiency <- function (bls_unemployed, pua_claims)
              ext_ucx_liable + euc91_state_intrastate + euc91_state_liable + euc91_ucfe_instrastate + euc91_ufce_liable + 
              euc91_ucx_intrastate + euc91_ucx_liable + euc08_state_intrastate + euc08_state_liable + euc08_ucfe_instrastate + 
              euc08_ufce_liable + euc08_ucx_intrastate + euc08_ucx_liable + teuc02_state_intrastate + teuc02_state_liable + 
-             teuc02_ucfe_instrastate + teuc02_ufce_liable + teuc02_ucx_intrastate + teuc02_ucx_liable + euc80s + pua_weeks_claimed,
+             teuc02_ucfe_instrastate + teuc02_ufce_liable + teuc02_ucx_intrastate + teuc02_ucx_liable + euc80s, #+ pua_weeks_claimed,
            total = reg_total + fed_total, 
            reg_total_week = reg_total / (as.numeric(days_in_month(rptdate)) / 7),
            fed_total_week = fed_total / (as.numeric(days_in_month(rptdate)) / 7),
@@ -385,7 +385,7 @@ getRecipiency <- function (bls_unemployed, pua_claims)
            
            # this is a measure of the total money paid out per month in all of the various programs.  Note that we are missing EUC80s....
            total_compensated = state_compensated + ucfe_ucx_compensated + euc91_state_compensated + euc91_ucfe_ucx_compensated + 
-             teuc02_state_compensated + euc08_state_compensated + euc08_ucfe_ucx_compensated + ext_state_compensated + ext_ucfe_ucx_compensated + pua_amount_compensated,
+             teuc02_state_compensated + euc08_state_compensated + euc08_ucfe_ucx_compensated + ext_state_compensated + ext_ucfe_ucx_compensated, #+ pua_amount_compensated,
            total_state_compensated = state_compensated + ucfe_ucx_compensated,
            total_federal_compensated = total_compensated - total_state_compensated
     ) %>% 
@@ -600,8 +600,9 @@ getUCFirstTimePaymentLapse <- function() {
       first_time_payment_Over70Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42 + x43x49 + x50x56 + 
                             x57x63 + x64x70 + xOver70) / first_time_payment_total, 3)) %>% 
   
-    # we only need to choose certain columns, so this isn't strictly necessary, but is a convenience
-    select(all_of(c("st","rptdate","first_time_payment_Within15Days","first_time_payment_Within35Days", "first_time_payment_Within49Days", "first_time_payment_Within70Days", "first_time_payment_total"))) 
+    # we only need to choose certai n columns, so this isn't strictly necessary, but is a convenience
+    select(st, rptdate, first_time_payment_total, first_time_payment_Within15Days, first_time_payment_Within35Days, first_time_payment_Within49Days, 
+           first_time_payment_Within70Days) 
   
   #compute US Averages
   # compute US Averages and add them into the df
@@ -635,22 +636,22 @@ getUCAppealsTimeLapseLower <- function(ucBenefitAppealsRegular) {
   # set some names
   ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
     rename_at(vars(c("c1", "c4", "c7")), 
-           ~ c("Total", "x0x30", "x31x45"))
-  ucAppealsCaseAgingLower <- ucAppealsCaseAgingLower %>% rename(lower_total = c1)
+           ~ c("total_lower_appeals", "x0x30", "x31x45"))
+  ucAppealsCaseAgingLower <- ucAppealsCaseAgingLower %>% rename(lower_appeals_total_outstanding = c1)
   
   # calculate some values
   ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
     mutate(
-      lower_Within30Days = round(x0x30 / Total, 3),
-      lower_Within45Days = round((x0x30 + x31x45) / Total, 3)) %>% 
-    select(all_of(c("st","rptdate","lower_Within30Days","lower_Within45Days")))
+      lower_Within30Days = round(x0x30 / total_lower_appeals, 3),
+      lower_Within45Days = round((x0x30 + x31x45) / total_lower_appeals, 3)) %>% 
+    select(st, rptdate, total_lower_appeals, lower_Within30Days, lower_Within45Days)
   
   # need to add EUC and EB into this, but not now
   ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
     full_join(ucAppealsCaseAgingLower %>% 
-                select(all_of(c("st","rptdate","lower_total"))), by=c("st", "rptdate")) %>% 
+                select(st, rptdate, lower_appeals_total_outstanding), by=c("st", "rptdate")) %>% 
     full_join(ucBenefitAppealsRegular %>% 
-                select(all_of(c("st", "rptdate", "lower_filed","lower_disposed"))), by=c("st", "rptdate"))
+                select(st, rptdate, lower_filed, lower_appeals_total_disposed), by=c("st", "rptdate"))
 
   # compute US Averages  
   usAvg <- ucAppealsTimeLapseLower %>% 
@@ -679,23 +680,23 @@ getucAppealsTimeLapseHigher <- function() {
   
   # set some names
   ucAppealsTimeLapseHigher <- ucAppealsTimeLapseHigher %>% 
-    rename_at(vars(c("c1", "c4", "c7", "c10")), ~c("Total", "x0x45", "x46x60", "x61x75"))
+    rename_at(vars(c("c1", "c4", "c7", "c10")), ~c("total_higher_appeals", "x0x45", "x46x60", "x61x75"))
   ucAppealsCaseAgingHigher <- ucAppealsCaseAgingHigher %>% 
-    rename(higher_total = c1)
+    rename(higher_appeals_total_outstanding = c1)
   
   #calculate soome values
   ucAppealsTimeLapseHigher <- ucAppealsTimeLapseHigher %>% 
     mutate(
-      higher_Within45Days = round(x0x45 / Total,3),
-      higher_Within75Days = round((x0x45 + x46x60 + x61x75) / Total,3)) %>% 
-    select(one_of(c("st","rptdate","higher_Within45Days","higher_Within75Days"))) %>% 
+      higher_Within45Days = round(x0x45 / total_higher_appeals,3),
+      higher_Within75Days = round((x0x45 + x46x60 + x61x75) / total_higher_appeals,3)) %>% 
+    select(st, rptdate, total_higher_appeals, higher_Within45Days, higher_Within75Days) %>% 
     # merge with UCCaseAging Data
     full_join(ucAppealsCaseAgingHigher %>% 
-                select(all_of(c("st","rptdate","higher_total"))), 
+                select(all_of(c("st","rptdate","higher_appeals_total_outstanding"))), 
               by=c("st", "rptdate")) %>% 
     # merge with ucbenefitappeal data, but not EUC stuff yet
     full_join(ucBenefitAppealsRegular %>% 
-                select(all_of(c("st", "rptdate", "higher_filed","higher_disposed"))),
+                select(all_of(c("st", "rptdate", "higher_filed","higher_appeals_total_disposed"))),
               by=c("st", "rptdate"))
   
   #compute US Averages

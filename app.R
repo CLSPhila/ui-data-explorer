@@ -606,24 +606,24 @@ server <- function(input, output) {
     else if (input$viewData == "lowerAuthority") {
       
       # mgh: is lower total correct?  and also us averages
-      col_list <- c("lower_Within30Days", "lower_Within45Days", "lower_filed", "lower_disposed", "lower_total")
-      names_list <- c("State", "Date", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending")#, "US 30 Day Avg" ,"US 45 Day Avg")
+      col_list <- c("total_lower_appeals", "lower_Within30Days", "lower_Within45Days", "lower_filed", "lower_appeals_total_disposed", "lower_appeals_total_outstanding")
+      names_list <- c("State", "Date", "Total Lower Authority Appeals", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending")#, "US 30 Day Avg" ,"US 45 Day Avg")
       uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .6, lim_b = .8) %>% 
         formatRound(columns = c(5:7), digits = 0)
       
       
     } else if (input$viewData == "firstPay") {
       # mgh: need to think about how to add in US averages
-      col_list <- c("first_time_payment_Within15Days", "first_time_payment_Within35Days", "first_time_payment_total")
-      names_list <- c("State", "Date", "Within 15 Days", "Within 35 Days", "Total Paid") #, "US 15 Day Avg", "US 35 Day Avg")
+      col_list <- c("first_time_payment_total", "first_time_payment_Within15Days", "first_time_payment_Within35Days")
+      names_list <- c("State", "Date", "First Time Payments", "Within 15 Days", "Within 35 Days") #, "US 15 Day Avg", "US 35 Day Avg")
       uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .87, lim_b = .93) %>% 
         formatRound(columns = c(5), digits = 0)
       
       
     } else if (input$viewData == "higherAuthority") {
       # mgh: same: us averages and is higher_total correct?
-      col_list <- c("higher_Within45Days", "higher_Within75Days", "higher_filed", "higher_disposed", "higher_total")
-      names_list <- c("State", "Date", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending") #, "US 45 Day Avg", "US 75 Day Avg")
+      col_list <- c("total_higher_appeals", "higher_Within45Days", "higher_Within75Days", "higher_filed", "higher_appeals_total_disposed", "higher_appeals_total_outstanding")
+      names_list <- c("State", "Date", "Total Higher Authority Appeals", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending") #, "US 45 Day Avg", "US 75 Day Avg")
       uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .4, lim_b = .8) %>% 
         formatRound(columns = c(5:7), digits = 0)
       
@@ -679,9 +679,9 @@ server <- function(input, output) {
                        "uirate" = c("civilian_non_insitutionalized_population_sa", "labor_force_sa", "total_unemployed_sa", "unemployment_rate_sa"),
                        "recipRate" = c("recipiency_annual_reg","recipiency_annual_total"),
                        "recipBreakdown" = c("total_week_mov_avg","unemployed_avg","recipiency_annual_total"),
-                       "lowerAuthority" = c("lower_Within30Days", "lower_Within45Days", "lower_filed", "lower_disposed", "lower_total"),
-                       "firstPay" = c("first_time_payment_Within15Days", "first_time_payment_Within35Days", "first_time_payment_total"),
-                       "higherAuthority" = c("higher_Within45Days", "higher_Within75Days", "higher_filed", "higher_disposed", "higher_total"), 
+                       "lowerAuthority" = c("total_lower_appeals", "lower_Within30Days", "lower_Within45Days", "lower_filed", "lower_appeals_total_disposed", "lower_appeals_total_outstanding"),
+                       "firstPay" = c("first_time_payment_total", "first_time_payment_Within15Days", "first_time_payment_Within35Days", "first_time_payment_total"),
+                       "higherAuthority" = c("total_higher_appeals", "higher_Within45Days", "higher_Within75Days", "higher_filed", "higher_appeals_total_disposed", "higher_appeals_total_outstanding"), 
     )
     col_list <- c("st", "rptdate", col_list)
     
@@ -717,9 +717,9 @@ server <- function(input, output) {
                          "uirate" = c("Civilian Non-Institutionalized Population", "Labor Force", "Unemployed", "Unemployment Rate"),
                          "recipRate" = c("Annual Recipiency Rate (Regular UI)","Annual Recipiency Rate (Regular + Federal)"),
                          "recipBreakdown" = c("Weekly Continuing Claims (12-mo moving avg)", "Total Unemployed (12-mo moving avg)", "Recipiency Rate (state + federal programs)"),
-                         "lowerAuthority" = c("Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending"),
-                         "firstPay" = c("Within 15 Days", "Within 35 Days", "Total Paid"),
-                         "higherAuthority" = c("Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending"))
+                         "lowerAuthority" = c("Total Lower Authority Appeals", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending"),
+                         "firstPay" = c("Total First Time Payments", "Within 15 Days", "Within 35 Days", "Total Paid"),
+                         "higherAuthority" = c("Total Higher Authority Appeals", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending"))
     names_list <- c("State", "Report Date", names_list)
     
     df <- unemployed_df %>% 
