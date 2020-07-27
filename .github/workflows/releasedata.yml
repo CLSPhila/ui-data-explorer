@@ -1,0 +1,36 @@
+# Workflow to pull the datadownload docker image, run it, and store the created data.
+name: Process unemployment data and publish
+on: [push]
+env:
+  IMAGE_ID: clsphila/ui-data-explorer/uidatadownloader:dockerize-update-2020
+  FRED_KEY: ${{secrets.FRED_KEY}}
+jobs:
+  build:
+    name: Download Data
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Download and process data
+        run: |
+          docker-compose run --rm datadownload
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        with:
+          tag_name: "v0"
+          release_name: "processedData"
+          draft: false
+          prerelease: false
+      - name: Upload release asset
+        id: upload_release_asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./data/unemployment_data.feather
+          asset_name: unemployent_data.feather
+          asset_content_type: application/octet-stream
