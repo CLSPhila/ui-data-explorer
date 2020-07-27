@@ -303,13 +303,123 @@ get_financial_transactions <- function() {
     select(-starts_with("c"))
 }
 
+
+# get and massage basic ui data like claims, payments, exhaustions, etc...
+get_basic_ui_information <- function() {
+  # download 5159 reports
+  ucClaimsPaymentsRegular <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar5159.csv") #5159 report
+  ucClaimsPaymentsExtended <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ae5159.csv") #5159 report
+  ucClaimsPaymentsEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac5159.csv") #5159 report
+  ucClaimsPaymentsTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at5159.csv") #5159 report
+  ucClaimsPaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au5159.csv") #5159 report
+
+  # EUC data from the 80s isn't available on the DOL website, but DOL provided a copy of those claims
+  ucClaimsPaymentsEUC80s <- read.csv(file.path(Sys.getenv("PROJECT_ROOT"), "EUC-1982-1987-USDOLData.csv"))
+  ucClaimsPaymentsEUC80s <- ucClaimsPaymentsEUC80s %>% 
+    mutate(rptdate =  as.Date(rptdate))
+  
+  # name the columns that we care about for later code readability
+  ucClaimsPaymentsRegular <- ucClaimsPaymentsRegular %>% 
+    rename(monthly_initial_claims = c1,
+           monthly_first_payments = c51,
+           monthly_weeks_compensated = c38,
+           monthly_exhaustion = c56,
+           state_intrastate = c21, 
+           state_liable = c24, 
+           ucfe_instrastate = c27, 
+           ufce_liable = c30, 
+           ucx_intrastate = c33, 
+           ucx_liable = c36, 
+           state_compensated = c45,
+           ucfe_ucx_compensated = c48) %>% 
+    mutate(monthly_weeks_claimed = c22 + state_intrastate,
+           monthly_partial_weeks_compensated = c39 - monthly_weeks_compensated,
+           monthly_first_payments_as_prop_claims = monthly_first_payments / monthly_initial_claims) %>% 
+    select(-starts_with("c"))
+  
+  ucClaimsPaymentsExtended <- ucClaimsPaymentsExtended %>% 
+    rename(ext_monthly_initial_claims = c1,
+           ext_monthly_first_payments = c40,
+           ext_monthly_weeks_compensated = c29,
+           ext_month_exhuastion = c43,
+           ext_state_intrastate = c12, 
+           ext_state_liable = c15, 
+           ext_ucfe_instrastate = c18, 
+           ext_ufce_liable = c21, 
+           ext_ucx_intrastate = c24, 
+           ext_ucx_liable = c27,
+           ext_state_compensated = c35, 
+           ext_ucfe_ucx_compensated = c37) %>% 
+    select(-starts_with("c"))
+  
+  ucClaimsPaymentsEUC91 <- ucClaimsPaymentsEUC91 %>% 
+    rename(euc91_monthly_initial_claims = c1,
+           euc91_monthly_first_payments = c45,
+           euc91_monthly_weeks_compensated = c32,
+           euc91_month_exhuastion = c50,
+           euc91_state_intrastate = c19, 
+           euc91_state_liable = c22, 
+           euc91_ucfe_instrastate = c23, 
+           euc91_ufce_liable = c26, 
+           euc91_ucx_intrastate = c27, 
+           euc91_ucx_liable = c30, 
+           euc91_state_compensated = c38,
+           euc91_ucfe_ucx_compensated = c42) %>% 
+    select(-starts_with("c"))
+  
+  ucClaimsPaymentsTEUC02 <- ucClaimsPaymentsTEUC02 %>% 
+    rename(teuc02_monthly_initial_claims = c1,
+           teuc02_monthly_first_payments = c40,
+           teuc02_monthly_weeks_compensated = c29,
+           teuc02_month_exhuastion = c43,
+           teuc02_state_intrastate = c12, 
+           teuc02_state_liable = c15, 
+           teuc02_ucfe_instrastate = c18, 
+           teuc02_ufce_liable = c21, 
+           teuc02_ucx_intrastate = c24, 
+           teuc02_ucx_liable = c27,
+           teuc02_state_compensated = c35) %>% 
+    select(-starts_with("c"))
+  
+
+  ucClaimsPaymentsEUC08 <- ucClaimsPaymentsEUC08 %>% 
+    rename(euc08_monthly_initial_claims = c1,
+           euc08_monthly_first_payments = c40,
+           euc08_monthly_weeks_compensated = c29,
+           euc08_month_exhuastion = c43,
+           euc08_state_intrastate = c12, 
+           euc08_state_liable = c15, 
+           euc08_ucfe_instrastate = c18, 
+           euc08_ufce_liable = c21, 
+           euc08_ucx_intrastate = c24, 
+           euc08_ucx_liable = c27,
+           euc08_state_compensated = c35, 
+           euc08_ucfe_ucx_compensated = c37) %>% 
+    select(-starts_with("c"))
+  
+  
+  # merge the different datasets together and backfill with 0 if there is no data for a month
+  all_cols <- c("st","rptdate")
+  ucClaimsPayments <- ucClaimsPaymentsRegular %>% 
+    left_join(ucClaimsPaymentsExtended, by = all_cols) %>% 
+    left_join(ucClaimsPaymentsEUC91, by = all_cols) %>% 
+    left_join(ucClaimsPaymentsTEUC02, by = all_cols) %>% 
+    left_join(ucClaimsPaymentsEUC08, by = all_cols) %>% 
+    left_join(ucClaimsPaymentsEUC80s, by = all_cols) %>%
+    #left_join(pua_claims, by = all_cols) %>% 
+    replace(is.na(.), 0)
+  
+  return(ucClaimsPayments)
+  
+}
+
 # combine bls unemployed info with general unemployment continuing claims numbers to get a recipiency rate
 # generally speaking, recipiency rate is total continued claims in an average week / total unemployed over that week
 # the function below returns a df with a recipiency rate that is smoothed with 12 month moving averages.
 # it also calculates state, fed, and total recipiency rates separately so that you can see how much of the recipiency
 # rate is from federal programs like EB and EUC.
 # accepts as a parameter bls_unemployment data
-getRecipiency <- function (bls_unemployed, pua_claims)
+getRecipiency <- function (bls_unemployed, ucClaimsPaymentsMonthly, pua_claims)
 {
   
   message("Getting recipency")
@@ -325,53 +435,8 @@ getRecipiency <- function (bls_unemployed, pua_claims)
     ungroup()
   
   
-  ucClaimsPaymentsRegular <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar5159.csv") #5159 report
-  ucClaimsPaymentsExtended <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ae5159.csv") #5159 report
-  ucClaimsPaymentsEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac5159.csv") #5159 report
-  ucClaimsPaymentsTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at5159.csv") #5159 report
-  ucClaimsPaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au5159.csv") #5159 report
-  pua_claims <- pua_claims %>% 
-    select(st, rptdate, pua_weeks_claimed, pua_amount_compensated) #902p report
-  
-  # EUC data from the 80s isn't available on the DOL website, but DOL provided a copy of those claims
-  ucClaimsPaymentsEUC80s <- read.csv(file.path(Sys.getenv("PROJECT_ROOT"), "EUC-1982-1987-USDOLData.csv"))
-  ucClaimsPaymentsEUC80s <- ucClaimsPaymentsEUC80s %>% 
-    mutate(rptdate =  as.Date(rptdate))
-  
-  # name the columns that we care about for later code readability
-  all_cols <- c("st","rptdate")
-  reg_cols <- c("state_intrastate", "state_liable", "ucfe_instrastate", "ufce_liable", "ucx_intrastate", "ucx_liable", "state_compensated", "ucfe_ucx_compensated")
-  ext_cols <- c("ext_state_intrastate", "ext_state_liable", "ext_ucfe_instrastate", "ext_ufce_liable", "ext_ucx_intrastate", "ext_ucx_liable", "ext_state_compensated", "ext_ucfe_ucx_compensated")
-  euc91_cols <- c("euc91_state_intrastate", "euc91_state_liable", "euc91_ucfe_instrastate", "euc91_ufce_liable", "euc91_ucx_intrastate", "euc91_ucx_liable", "euc91_state_compensated", "euc91_ucfe_ucx_compensated")
-  euc08_cols <- c("euc08_state_intrastate", "euc08_state_liable", "euc08_ucfe_instrastate", "euc08_ufce_liable", "euc08_ucx_intrastate", "euc08_ucx_liable", "euc08_state_compensated", "euc08_ucfe_ucx_compensated")
-  teuc_cols <-  c("teuc02_state_intrastate", "teuc02_state_liable", "teuc02_ucfe_instrastate", "teuc02_ufce_liable", "teuc02_ucx_intrastate", "teuc02_ucx_liable", "teuc02_state_compensated")
-  
-  
-  ucClaimsPaymentsRegular <- ucClaimsPaymentsRegular %>% 
-    rename_at(vars(c("c21", "c24", "c27", "c30", "c33", "c36", "c45","c48")), ~ reg_cols)
-  ucClaimsPaymentsExtended <- ucClaimsPaymentsExtended %>% 
-    rename_at(vars(c("c12", "c15", "c18", "c21", "c24", "c27","c35", "c37")), ~ext_cols)
-  
-  ucClaimsPaymentsEUC91 <- ucClaimsPaymentsEUC91 %>% 
-    rename_at(vars(c("c19", "c22", "c23", "c26", "c27", "c30", "c38","c42")), ~euc91_cols)
-  ucClaimsPaymentsTEUC02 <- ucClaimsPaymentsTEUC02 %>% 
-    rename_at(vars(c("c12", "c15", "c18", "c21", "c24", "c27","c35")),~teuc_cols)
-  ucClaimsPaymentsEUC08 <- ucClaimsPaymentsEUC08 %>% 
-    rename_at(vars(c("c12", "c15", "c18", "c21", "c24", "c27","c35", "c37")), ~euc08_cols)
-  
-  # merge the different datasets together and backfill with 0 if there is no data for a month
-  ucRecipiency <- ucClaimsPaymentsRegular %>% select(all_of(c(all_cols, reg_cols))) %>% 
-    left_join(ucClaimsPaymentsExtended %>% select(all_of(c(all_cols, ext_cols))), by = all_cols) %>% 
-    left_join(ucClaimsPaymentsEUC91 %>% select(all_of(c(all_cols, euc91_cols))), by = all_cols) %>% 
-    left_join(ucClaimsPaymentsTEUC02 %>% select(all_of(c(all_cols, teuc_cols))), by = all_cols) %>% 
-    left_join(ucClaimsPaymentsEUC08 %>% select(all_of(c(all_cols, euc08_cols))), by = all_cols) %>% 
-    left_join(ucClaimsPaymentsEUC80s %>% select(one_of(c(all_cols, "euc80s"))), by = all_cols) %>%
-    left_join(pua_claims, by = all_cols) %>% 
-    replace(is.na(.), 0)
-    
-  
   # sum the various numbers that we care about and then divide by the number of weeks in the month to get a weekly number rather than a monthly number
-  ucRecipiency <- ucRecipiency %>% 
+  ucRecipiency <- ucClaimsPaymentsMonthly %>% 
     mutate(reg_total = state_intrastate + state_liable + ucfe_instrastate + ufce_liable + ucx_intrastate + ucx_liable,
            fed_total = ext_state_intrastate + ext_state_liable + ext_ucfe_instrastate + ext_ufce_liable + ext_ucx_intrastate + 
              ext_ucx_liable + euc91_state_intrastate + euc91_state_liable + euc91_ucfe_instrastate + euc91_ufce_liable + 
@@ -753,6 +818,10 @@ bls_unemployed <- bind_rows(
   map_dfr(c("LNU03000000", paste0("LAUST", str_pad(1:56,width = 2, side = "left", pad = "0"), "0000000000004")), get_fred_series_with_state_id, "total_unemployed_nsa", sleep = TRUE),
   labor_force_info)
 
+# basic claims and payment information
+message("Collecting Basic Claims and Payment data.")
+ucClaimsPaymentsMonthly <- get_basic_ui_information()
+
 # first time payment
 message("Collecting First Time Payment Lapse data.")
 ucFirstTimePaymentLapse <- getUCFirstTimePaymentLapse()
@@ -775,7 +844,7 @@ pua_claims <- get_pua_data()
 
 # get UC recipiency and overpayments\
 message("Collecting UC Recipiency")
-ucRecipiency <- getRecipiency(bls_unemployed, pua_claims)
+ucRecipiency <- getRecipiency(bls_unemployed, ucClaimsPaymentsMonthly, pua_claims)
 
 message("Collecting UC Overpayments")
 ucOverpayments <- getOverpayments()
@@ -800,7 +869,7 @@ ucNonMonetary <- getNonMonetaryDeterminations(pua_claims)
 
 # make long-uberdf
 unemployment_df <- 
-  map_dfr(list(ucNonMonetary, ucOverpayments, ucRecipiency, ucFirstTimePaymentLapse, 
+  map_dfr(list(ucClaimsPaymentsMonthly, ucNonMonetary, ucOverpayments, ucRecipiency, ucFirstTimePaymentLapse, 
              ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher, pua_claims), 
         function(x) { 
           x %>% 
@@ -846,6 +915,10 @@ write_csv_files <- function(df, save_dir) {
   message("Writing Recipiency CSV")
   df %>% 
     write_data_as_csv("recipiency_data.csv", "recipiency_|total_week_mov|unemployed_avg|_mov_avg$|compensated$")
+  
+  message("Writing Basic UI Data")
+  df %>% 
+    write_data_as_csv("monthly_claims_and_payments.csv", "^monthly_|^ucx_|^ext_|^euc91|^teuc02_|^euc08_")
 }
 
 # writes to a csv file named filename all columns in the DF prefixed by prefix
