@@ -22,3 +22,17 @@ Run it with:
 # Setting up workflows
 
 We use github actions/workflows/jobs (there are a lot of different terms!) to download the data.
+
+# Deploying
+
+## Shinyapps.io
+
+We can host the app on shinyapps.io. To do this make sure the app runs locally for you (this means all the data must be local). Then deploy with
+
+```
+rsconnect::setAccountInfo(name='...',token='...',secret='...')
+rsconnect::deployApp(".",appFileManifest='./filemanifest.txt')
+```
+
+Get the SetAccountInfo information from your shinyapps.io account. 
+
