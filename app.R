@@ -53,24 +53,19 @@ ui <- fluidPage(
         #grid       = TRUE,
         width      = "100%"
       ),
-      
-      # the slider that allows for a date range
-      # sliderInput("range", 
-      #             label = "Years to View:",
-      #             # the default range is 10 years prior to the most recent date
-      #             min = minDate, max = maxDate, value = c(maxDate - (10 * 365), maxDate), timeFormat="%m/%Y"),
-      
+    
       # the list of data to view; shoudl rethink how to easily define new data sets rather than
       # having to handcode each dataset here and in 10 other places
       selectInput("viewData",
                   label = 'Select Data to View',
-                  size=17, selectize=FALSE,
+                  size=22, selectize=FALSE,
                   choices = c("Basic UI Data" = "basicUI_claims",
                               "--Weeks Claims/Compensated" = "basicUI_compensated",
+                              "--Monthly UI Payments" = "monthlyUI", 
                               "--Init. Payments / Claims" = "basicUI_payment_rate",
+                              "--Unemployment Rate (SA)" = "uirate",
                               "Recipiency Rate" = "recipRate",
                               "--Recipiency Rate Breakdown" = "recipBreakdown",
-                              "Monthly UI Payments" = "monthlyUI", 
                               "Pandemic Unemployment Assistance" = "puaData",
                               "--PUA Basic Claims Data" = "puaClaims", 
                               "Timeliness of First Payments" = "firstPay", 
@@ -84,8 +79,7 @@ ui <- fluidPage(
                               "--Separation Denial Breakdown" = "nonMonSep",
                               "--Separation Denial Rates" = "nonMonSepRate",
                               "--Non-Separation Denial Breakdown" = "nonMonNonSep",
-                              "--Non-Separation Denial Rates" = "nonMonNonSepRate",
-                              "Unemployment Rate (SA)" = "uirate"),
+                              "--Non-Separation Denial Rates" = "nonMonNonSepRate"),
                   # the default selected is the recipiency Rate, but this coudl be anythign
                   selected = "basicUI_claims"),
       
@@ -93,7 +87,7 @@ ui <- fluidPage(
       # comparisons to be made.  
       checkboxInput("constant_y_axis", 
                     label="Constant y axis? (makes comparisons easier)",
-                    value=TRUE),
+                    value=FALSE),
       
       tags$img(src="https://clsphila.org/wp-content/uploads/2019/02/CLS-Logo_120.png")
       
@@ -188,17 +182,18 @@ server <- function(input, output) {
     else if (input$viewData == "basicUI_claims")
     {
       
-      metric_filter = c("monthly_initial_claims", "monthly_weeks_claimed", "monthly_first_payments", "monthly_exhaustion" )
+      metric_filter = c("monthly_initial_claims", "monthly_first_payments", "monthly_exhaustion" )
       df <- df %>% 
-        filter(metric %in% metric_filter) %>% 
-        mutate(metric = factor(metric, labels = metric_filter, ordered = TRUE))
+        filter(metric %in% metric_filter)
       
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 5129, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Monthly State Claims, Payments and Exhaustion Eligibility from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
-                            breaks= metric_filter,
-                            labels=c("Initial Claims", "Weeks Claimed","First Payments", "Exhaustion"))
+                            breaks=  c("monthly_initial_claims", "monthly_first_payments", "monthly_exhaustion" ),
+                            labels=c("Initial Claims", "First Payments", "Exhaustion")) + 
+        scale_y_continuous(labels = comma)
+      
       
       # adjustment for finding the max height of the graph
       metric_filter = c("monthly_initial_claims")
@@ -209,9 +204,7 @@ server <- function(input, output) {
       
       metric_filter = c("monthly_weeks_compensated", "monthly_partial_weeks_compensated")
       df <- df %>% 
-        filter(metric %in% metric_filter) %>% 
-        mutate(metric = factor(metric, labels = metric_filter, ordered = TRUE))
-      
+        filter(metric %in% metric_filter)  
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 5129, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
@@ -230,20 +223,18 @@ server <- function(input, output) {
       
       metric_filter = c("monthly_first_payments_as_prop_claims")
       df <- df %>% 
-        filter(metric %in% metric_filter) %>% 
-        mutate(metric = factor(metric, labels = metric_filter, ordered = TRUE))
-      
+        filter(metric %in% metric_filter)  
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 5129, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} First Payments as a Proportion of Initial Claims from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks= metric_filter,
-                            labels=c("")) + 
+                            labels=c("Monthly Payments as a Proportion of Initial Claims")) + 
         scale_y_continuous(labels = scales::percent)
       
       
       # adjustment for finding the max height of the graph
-      metric_filter = c("monthly_weeks_compensated")
+      metric_filter = c("monthly_first_payments_as_prop_claims")
     }
     
     else if (input$viewData == "puaData")

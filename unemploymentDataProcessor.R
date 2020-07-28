@@ -333,7 +333,7 @@ get_basic_ui_information <- function() {
            state_compensated = c45,
            ucfe_ucx_compensated = c48) %>% 
     mutate(monthly_weeks_claimed = c22 + state_intrastate,
-           monthly_partial_weeks_compensated = c39 - monthly_weeks_compensated,
+           monthly_partial_weeks_compensated = monthly_weeks_compensated - c39,
            monthly_first_payments_as_prop_claims = monthly_first_payments / monthly_initial_claims) %>% 
     select(-starts_with("c"))
   
