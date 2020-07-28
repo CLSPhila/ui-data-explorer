@@ -409,6 +409,14 @@ get_basic_ui_information <- function() {
     #left_join(pua_claims, by = all_cols) %>% 
     replace(is.na(.), 0)
   
+  # compute US Averages and add them into the df
+  usAvg <- ucClaimsPayments %>% 
+    group_by(rptdate) %>% 
+    summarize(across(where(is.numeric), mean, na.rm = T))
+  
+  ucClaimsPayments <- ucClaimsPayments %>% 
+    bind_rows(usAvg %>% mutate(st = "US"))
+    
   return(ucClaimsPayments)
   
 }
