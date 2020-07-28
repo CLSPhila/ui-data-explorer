@@ -9,7 +9,7 @@ library(lubridate)
 library(geojsonio)
 
 tmp <- tempdir()
-unzip("cb_2015_us_state_20m.zip", exdir = tmp)
+unzip(file.path(Sys.getenv("DATA_DIR"), "cb_2015_us_state_20m.zip"), exdir = tmp)
 
 usa <- sf::st_read(tmp) %>% sf::st_transform(crs = 4326)
 # a df of the recessions; used for graphing

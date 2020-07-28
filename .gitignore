@@ -1,4 +1,5 @@
 .Rproj.user
+rsconnect/
 .env
 .Rhistory
 .RData
