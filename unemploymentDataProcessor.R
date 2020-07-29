@@ -222,6 +222,21 @@ get_state_from_series_id <- function(series) {
   
 }
 
+# get 539 information
+get_weekly_claims_data <- function() {
+  df <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar539.csv") %>% 
+    select(st, rptdate, weekly_initial_claims = c3, weekly_continued_claims = c8)
+  # weekly claims data 
+    
+  
+  # compute US Averages and add them into the df
+  usAvg <- df %>% 
+    group_by(rptdate) %>% 
+    summarize(across(where(is.numeric), mean, na.rm = T))
+  
+  df <- df %>% 
+    bind_rows(usAvg %>% mutate(st = "US"))
+}
 
 # disaster unemployment assistance information
 get_dua_data <- function() {
@@ -445,6 +460,7 @@ getRecipiency <- function (bls_unemployed, ucClaimsPaymentsMonthly, pua_claims)
   
   # sum the various numbers that we care about and then divide by the number of weeks in the month to get a weekly number rather than a monthly number
   ucRecipiency <- ucClaimsPaymentsMonthly %>% 
+    filter(st != "US") %>% 
     mutate(reg_total = state_intrastate + state_liable + ucfe_instrastate + ufce_liable + ucx_intrastate + ucx_liable,
            fed_total = ext_state_intrastate + ext_state_liable + ext_ucfe_instrastate + ext_ufce_liable + ext_ucx_intrastate + 
              ext_ucx_liable + euc91_state_intrastate + euc91_state_liable + euc91_ucfe_instrastate + euc91_ufce_liable + 
@@ -808,6 +824,58 @@ getUCBenefitAppeals <- function(url) {
 }
 
 
+# writes to a csv file named filename all columns in the DF prefixed by prefix
+write_data_as_csv <- function(df, filename, metric_filter) {
+  df %>% 
+    filter(grepl(metric_filter, metric)) %>% 
+    pivot_wider(names_from = metric, values_from = value) %>% 
+    write_csv(filename)
+  
+}
+
+# write a series of CSV files based on the data that we have.
+# each CSV should be on a specific data issue, for all states since 1970
+write_csv_files <- function(df, save_dir) {
+  
+  message("Writing Determinations and Denials CSV")
+  df %>% 
+    write_data_as_csv("determinations_and_denials.csv", "^denial|^determ")
+  
+  message("Writing Overpayment Information CSV")  
+  df %>% 
+    write_data_as_csv("overpayments_and_fraud.csv", "^outstanding|fraud_|_tax_|recover")
+  
+  message("Writing PUA Data CSV")  
+  df %>% 
+    write_data_as_csv("pua_data.csv", "^pua")
+  
+  message("Writing Appeals Information CSV")  
+  df %>% 
+    write_data_as_csv("lower_and_higher_appeals.csv", "higher_|lower_")
+  
+  message("Writing First Time Payment CSV")
+  df %>% 
+    write_data_as_csv("first_time_payments.csv", "^first_time")
+  
+  message("Writing Labor Force CSV")
+  df %>% 
+    write_data_as_csv("labor_force_data.csv", "_sa$|_nsa$")
+  
+  message("Writing Recipiency CSV")
+  df %>% 
+    write_data_as_csv("recipiency_data.csv", "recipiency_|total_week_mov|unemployed_avg|_mov_avg$|compensated$")
+  
+  message("Writing Basic Monthly UI Data")
+  df %>% 
+    write_data_as_csv("monthly_claims_and_payments.csv", "^monthly_|^ucx_|^ext_|^euc91|^teuc02_|^euc08_")
+
+  message("Writing Basic Weekly UI Data")
+  df %>% 
+    write_data_as_csv("weekly_claims.csv", "^weekly_")
+  
+}
+
+
 # gets the unemployment rate and total unemployed for all 50 states + DC + the US;
 # uses a sleep within each request (1sec) so it takes on the order of 5 minutes to retrieve all of the data that we want
 # without hitting a rate limit
@@ -829,6 +897,7 @@ bls_unemployed <- bind_rows(
 # basic claims and payment information
 message("Collecting Basic Claims and Payment data.")
 ucClaimsPaymentsMonthly <- get_basic_ui_information()
+ucClaimsWeekly <- get_weekly_claims_data()
 
 # first time payment
 message("Collecting First Time Payment Lapse data.")
@@ -866,9 +935,11 @@ ucOverpayments <- ucOverpayments %>%
                   "total_federal_compensated", "total_federal_compensated_mov_avg", 
                   "total_state_compensated_mov_avg", "total_compensated_mov_avg"))), 
             by=c("st", "rptdate"))
+
 ucOverpayments$total_paid_annual_mov_avg <- ucOverpayments$total_compensated_mov_avg*12
 ucRecipiency$total_paid_annual_mov_avg <- ucRecipiency$total_compensated_mov_avg*12
-ucOverpayments$outstanding_proportion <- round(ucOverpayments$outstanding / ucOverpayments$total_paid_annual_mov_avg,4)
+# the distinct gets rid of a single repeated entry
+ucOverpayments$outstanding_proportion <- round(ucOverpayments$outstanding / ucOverpayments$total_paid_annual_mov_avg,4) 
 
 # get determination data
 ucNonMonetary <- getNonMonetaryDeterminations(pua_claims)
@@ -877,7 +948,7 @@ ucNonMonetary <- getNonMonetaryDeterminations(pua_claims)
 
 # make long-uberdf
 unemployment_df <- 
-  map_dfr(list(ucClaimsPaymentsMonthly, ucNonMonetary, ucOverpayments, ucRecipiency, ucFirstTimePaymentLapse, 
+  map_dfr(list(ucClaimsPaymentsMonthly, ucClaimsWeekly, ucNonMonetary, ucOverpayments, ucRecipiency, ucFirstTimePaymentLapse, 
              ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher, pua_claims), 
         function(x) { 
           x %>% 
@@ -892,48 +963,3 @@ arrow::write_parquet(unemployment_df, file.path(Sys.getenv("DATA_DIR"), "unemplo
 # Writing All Files to CSV
 write_csv_files(unemployment_df, file.path(Sys.getenv("DATA_DIR")))
 
-# write a series of CSV files based on the data that we have.
-# each CSV should be on a specific data issue, for all states since 1970
-write_csv_files <- function(df, save_dir) {
-
-  message("Writing Determinations and Denials CSV")
-  df %>% 
-    write_data_as_csv("determinations_and_denials.csv", "^denial|^determ")
-
-  message("Writing Overpayment Information CSV")  
-  df %>% 
-    write_data_as_csv("overpayments_and_fraud.csv", "^outstanding|fraud_|_tax_|recover")
-
-  message("Writing PUA Data CSV")  
-  df %>% 
-    write_data_as_csv("pua_data.csv", "^pua")
-
-  message("Writing Appeals Information CSV")  
-  df %>% 
-    write_data_as_csv("lower_and_higher_appeals.csv", "higher_|lower_")
-  
-  message("Writing First Time Payment CSV")
-  df %>% 
-    write_data_as_csv("first_time_payments.csv", "^first_time")
-  
-  message("Writing Labor Force CSV")
-  df %>% 
-    write_data_as_csv("labor_force_data.csv", "_sa$|_nsa$")
-  
-  message("Writing Recipiency CSV")
-  df %>% 
-    write_data_as_csv("recipiency_data.csv", "recipiency_|total_week_mov|unemployed_avg|_mov_avg$|compensated$")
-  
-  message("Writing Basic UI Data")
-  df %>% 
-    write_data_as_csv("monthly_claims_and_payments.csv", "^monthly_|^ucx_|^ext_|^euc91|^teuc02_|^euc08_")
-}
-
-# writes to a csv file named filename all columns in the DF prefixed by prefix
-write_data_as_csv <- function(df, filename, metric_filter) {
-  df %>% 
-    filter(grepl(metric_filter, metric)) %>% 
-    pivot_wider(names_from = metric, values_from = value) %>% 
-    write_csv(filename)
-
-}

@@ -61,6 +61,7 @@ ui <- fluidPage(
                   size=22, selectize=FALSE,
                   choices = c("Basic UI Data" = "basicUI_claims",
                               "--Weeks Claims/Compensated" = "basicUI_compensated",
+                              "--Weekly Initial and Continued Claims" = "basicWeeklyClaims",
                               "--Monthly UI Payments" = "monthlyUI", 
                               "--Init. Payments / Claims" = "basicUI_payment_rate",
                               "--Unemployment Rate (SA)" = "uirate",
@@ -177,6 +178,26 @@ server <- function(input, output) {
       metric_filter = c("total_compensated_mov_avg")
       
       
+    }
+
+    else if (input$viewData == "basicWeeklyClaims")
+    {
+      
+      metric_filter = c("weekly_initial_claims", "weekly_continued_claims")
+      df <- df %>% 
+        filter(metric %in% metric_filter)
+      
+      
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 539, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Weekly Initial and Continued Claims Claims from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks=  metric_filter,
+                            labels=c("Initial Claims", "Continued Claims")) + 
+        scale_y_continuous(labels = comma)
+      
+      
+      # adjustment for finding the max height of the graph
+      metric_filter = c("weekly_continued_claims")
     }
     
     else if (input$viewData == "basicUI_claims")
@@ -565,6 +586,13 @@ server <- function(input, output) {
         formatRound(columns=c(9), digits=2)
     }
     
+    if (input$viewData == "basicWeeklyClaims")
+    {
+      col_list = c("weekly_initial_claims", "weekly_continued_claims") 
+      names_list <- c("State","Report Date", "Initial Claims (Weekly)", "Continued Claims (Weekly)")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list) %>% 
+        formatRound(columns = c(3:4), digits = 0)
+    }
     
     if (input$viewData == "puaData")
     {
@@ -726,6 +754,7 @@ server <- function(input, output) {
       filename <- switch(input$viewData,
                          "monthlyUI" = "Monthly_UI_Payments",
                          "basicUI_claims" = "Basic_UI_Payments_Claims",
+                         "basicWeeklyClaims" = "Weekly_UI_Claims",
                          "basicUI_compensated" = "Basic_UI_Payments_Claims",
                          "basicUI_payment_rate" = "Basic_UI_Payments_Claims",
                          "puaData" = "PUA_Data",
@@ -757,6 +786,7 @@ server <- function(input, output) {
                        "monthlyUI" = c("total_state_compensated_mov_avg", "total_federal_compensated_mov_avg", "total_state_compensated", "total_federal_compensated", "total_paid_annual_mov_avg"),
                        "basicUI_claims" = c("monthly_initial_claims", "monthly_first_payments", "monthly_weeks_compensated", "monthly_partial_weeks_compensated", "monthly_weeks_claimed", 
                                             "monthly_exhaustion", "monthly_first_payments_as_prop_claims"),
+                       "basicUI_claims" = c("weekly_initial_claims", "weekly_continued_claims"),
                        "basicUI_compensated" = c("monthly_initial_claims", "monthly_first_payments", "monthly_weeks_compensated", "monthly_partial_weeks_compensated", "monthly_weeks_claimed", 
                                             "monthly_exhaustion", "monthly_first_payments_as_prop_claims"),
                        "basicUI_payment_rate" = c("monthly_initial_claims", "monthly_first_payments", "monthly_weeks_compensated", "monthly_partial_weeks_compensated", "monthly_weeks_claimed", 
@@ -785,6 +815,7 @@ server <- function(input, output) {
                          "monthlyUI" = c("State UI Payments (Monthly, mov avg)", "Federal UI Payments (Monthly, mov avg)", "State UI Payments (Monthly)", "Federal UI Payments (Monthly)", "Annual UI Payments (mov avg)"),
                          "basicUI_Claims" = c("Initial Claims", "First Payments", "Weeks Compensated", "Partial Weeks Compensated", "Weeks Claimed",
                                               "Number Exhausted", "Initial Payments / Initial Claims"),
+                         "basicWeeklyClaims" = c("Initial Claims", "Continued Claims"),
                          "basicUI_compensated" = c("Initial Claims", "First Payments", "Weeks Compensated", "Partial Weeks Compensated", "Weeks Claimed",
                                               "Number Exhausted", "Initial Payments / Initial Claims"),
                          "basicUI_payment_rate" = c("Initial Claims", "First Payments", "Weeks Compensated", "Partial Weeks Compensated", "Weeks Claimed",
@@ -845,6 +876,7 @@ server <- function(input, output) {
     uiMap <- switch(input$viewData,
                     "monthlyUI" = getUIMap(unemployed_df, date_filter_end,"total_compensated_mov_avg", paste("12-mo moving average of total UI Payments disbursed in ", date_filter_end), FALSE, suffix = "M", scale = 1/1000000, round_digits = 0),
                     "basicUI_claims" = getUIMap(unemployed_df, date_filter_end,"monthly_initial_claims", paste("Initial UI Claims in ", date_filter_end), FALSE),
+                    "basicWeeklyClaims" = getUIMap(unemployed_df, date_filter_end,"weekly_initial_claims", paste("Weekly Initial UI Claims in ", date_filter_end), FALSE),
                     "basicUI_compensated" = getUIMap(unemployed_df, date_filter_end,"monthly_weeks_compensated", paste("Weeks Compensated in ", date_filter_end), FALSE),
                     "basicUI_payment_rate" = getUIMap(unemployed_df, date_filter_end,"monthly_first_payments_as_prop_claims", paste("First Payments as a Proportion of Initial Claims in ", date_filter_end), FALSE),
                     "puaData" = getUIMap(unemployed_df, date_filter_end,"pua_percent_eligible", paste("Pecent of Eligible PUA Applicants in ", date_filter_end), FALSE),
@@ -878,6 +910,7 @@ server <- function(input, output) {
     smPlot <- switch(input$viewData,
                     "monthlyUI" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "total_compensated_mov_avg", "Montly UI Payments","50-state Comparison of Total Monthly UI Payments", free_y, scale = 1/1000000, prefix = "", suffix = "M"),
                     "basicUI_claims" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "monthly_initial_claims", "Initial Claims","50-state Comparison of Initial UI Claims", free_y),
+                    "basicWeeklyClaims" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "weekly_initial_claims", "Initial Claims","50-state Comparison of Weekly Initial UI Claims", free_y),
                     "basicUI_compensated" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "monthly_weeks_compensated", "Weeks Compensated","50-state Comparison of Weeks of UI Compensated", free_y),
                     "basicUI_payment_rate" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "monthly_first_payments_as_prop_claims", "Proportion","50-state Comparison of Initial Payments / Initial Claims", free_y),
                     "puaData" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "pua_percent_eligible", "PUA Eligibility Rate","50-state Comparison of PUA Eligibility Rate", free_y),
@@ -906,6 +939,7 @@ server <- function(input, output) {
     fiftyStatePlot <- switch(input$viewData,
                      "monthlyUI" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "total_compensated_mov_avg", input$state, "Monthly UI Payments",paste(input$state, "vs. US: Total Monthly UI Payments"), scale = 1/1000000, prefix = "", suffix = "M"),
                      "basicUI_claims" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "monthly_initial_claims", input$state, "Initial Claims",paste(input$state, "vs. US: Monthly Initial Claims")),
+                     "basicWeeklyClaims" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "weekly_initial_claims", input$state, "Initial Claims",paste(input$state, "vs. US: Weekly Initial Claims")),
                      "basicUI_compensated" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "monthly_weeks_compensated", input$state, "Weeks Compensated",paste(input$state, "vs. US: Monthly Weeks Compensated")),
                      "basicUI_payment_rate" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "monthly_first_payments_as_prop_claims", input$state, "Proportion",paste(input$state, "vs. US: First Payments / Initial Claims")),
                      "puaData" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "pua_percent_eligible", input$state, "PUA Eligibility Rate",paste(input$state, "vs. US: PUA Eligibility Rate")),
