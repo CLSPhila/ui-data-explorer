@@ -311,11 +311,21 @@ get_pua_data <- function() {
     select(-starts_with("c"))
 }
 
-# I'm not yet clear on what to do with this information
-get_financial_transactions <- function() {
-  downloadUCData("https://oui.doleta.gov/unemploy/csv/ar2112.csv") %>%   # ar2112 data 
-    rename(puc_payments = c125) %>%  #,pua_payments = c128) pua_payments doesn't yet exist!
-    select(-starts_with("c"))
+# puc $600 payments
+get_puc_600_data <- function() {
+  df <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar2112.csv") %>%   # ar2112 data 
+    rename(puc_payments = c125, puc_payments_total = c124) %>%  #,pua_payments = c128) pua_payments doesn't yet exist!
+    select(-starts_with("c")) %>% 
+    mutate(puc_weeks = puc_payments_total / 600)
+  
+  # compute US Averages and add them into the df
+  usAvg <- df %>% 
+    group_by(rptdate) %>% 
+    summarize(across(where(is.numeric), mean, na.rm = T))
+  
+  df <- df %>% 
+    bind_rows(usAvg %>% mutate(st = "US"))
+  
 }
 
 
@@ -848,6 +858,10 @@ write_csv_files <- function(df, save_dir) {
   message("Writing PUA Data CSV")  
   df %>% 
     write_data_as_csv("pua_data.csv", "^pua")
+
+  message("Writing PUC Data CSV")  
+  df %>% 
+    write_data_as_csv("puc_data.csv", "^puc")
   
   message("Writing Appeals Information CSV")  
   df %>% 
@@ -918,6 +932,7 @@ ucAppealsTimeLapseHigher <- getucAppealsTimeLapseHigher()
 # PUA data (pandemic unemployment 2020)
 message("collecting PUA data")
 pua_claims <- get_pua_data()
+puc_payments <- get_puc_600_data()
 
 # get UC recipiency and overpayments\
 message("Collecting UC Recipiency")
@@ -949,7 +964,7 @@ ucNonMonetary <- getNonMonetaryDeterminations(pua_claims)
 # make long-uberdf
 unemployment_df <- 
   map_dfr(list(ucClaimsPaymentsMonthly, ucClaimsWeekly, ucNonMonetary, ucOverpayments, ucRecipiency, ucFirstTimePaymentLapse, 
-             ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher, pua_claims), 
+             ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher, pua_claims, puc_payments), 
         function(x) { 
           x %>% 
             pivot_longer(cols = !one_of(c("rptdate", "st")), names_to = "metric", values_to = "value")}) %>% 
