@@ -3,7 +3,7 @@
 # Do this by running the ui-explorer container with a CMD that calls the r script that deploys the app. (and overrides the default r script that
 #   processes the data. )
 name: Deploy ui-explorer to shinyapps.io
-on: [push] # when complete, run this when the 'release data' workflow completes,  https://docs.github.com/en/actions/reference/events-that-trigger-workflows#release
+on: [workflow_dispatch] # when complete, run this when the 'release data' workflow completes,  https://docs.github.com/en/actions/reference/events-that-trigger-workflows#release
 env:
   IMAGE_NAME: uidatadownloader
 jobs:
