@@ -23,4 +23,4 @@ jobs:
           SHINYAPPS_SECRET: ${{secrets.SHINYAPPS_SECRET}}
           SHINYAPPS_TOKEN: ${{secrets.SHINYAPPS_TOKEN}}
           SHINYAPPS_ACCOUNT: ${{secrets.SHINYAPPS_ACCOUNT}}
-        run: docker-compose run --rm shinyappdeploy
+        run: docker-compose run --rm shinyappsdeploy
