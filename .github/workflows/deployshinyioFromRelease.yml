@@ -4,6 +4,8 @@
 #   processes the data. )
 name: Deploy ui-explorer to shinyapps.io using the Released verion of the feather data.
 on: [push] # when complete, run this when the 'release data' workflow completes,  https://docs.github.com/en/actions/reference/events-that-trigger-workflows#release
+env:
+  IMAGE_NAME: uidatadownloader
 jobs:
   build:
     runs-on: ubuntu-latest
