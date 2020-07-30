@@ -6,6 +6,7 @@ name: Deploy ui-explorer to shinyapps.io
 on: [workflow_dispatch] # when complete, run this when the 'release data' workflow completes,  https://docs.github.com/en/actions/reference/events-that-trigger-workflows#release
 jobs:
   build:
+    runs-on: ubuntu-latest
     name: Deploy ui-explorer to shinyapps.io
     steps:
       - name: Setup repository
