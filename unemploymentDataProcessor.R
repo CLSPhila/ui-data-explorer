@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 # Helper app to download and process data from the DOL website
 # THe downloads can be found here: http://oui.doleta.gov/unemploy/DataDownloads.asp
 # For each download below, there is a data definition pdf that explains what each field is that is being sought
@@ -339,7 +341,7 @@ get_basic_ui_information <- function() {
   ucClaimsPaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au5159.csv") #5159 report
 
   # EUC data from the 80s isn't available on the DOL website, but DOL provided a copy of those claims
-  ucClaimsPaymentsEUC80s <- read.csv(file.path(Sys.getenv("PROJECT_ROOT"), "EUC-1982-1987-USDOLData.csv"))
+  ucClaimsPaymentsEUC80s <- read.csv(file.path(Sys.getenv("DATA_DIR"), "EUC-1982-1987-USDOLData.csv"))
   ucClaimsPaymentsEUC80s <- ucClaimsPaymentsEUC80s %>% 
     mutate(rptdate =  as.Date(rptdate))
   
@@ -971,6 +973,7 @@ unemployment_df <-
   bind_rows(bls_unemployed) %>% 
   # there are a few repeat metrics that get thrown in there by accident; get rid of them:
   distinct()
+
 
 message("Writing Parquet File")
 arrow::write_parquet(unemployment_df, file.path(Sys.getenv("DATA_DIR"), "unemployment_data.parquet"))

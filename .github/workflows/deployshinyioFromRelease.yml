@@ -1,0 +1,30 @@
+# Workflow to deploy the app to shinyapps.io using the Release of UC data, processed by another action.
+
+# Do this by running the ui-explorer container with a CMD that calls the r script that deploys the app. (and overrides the default r script that
+#   processes the data. )
+name: Deploy ui-explorer to shinyapps.io using the Released verion of the feather data.
+on: [workflow_dispatch] # when complete, run this when the 'release data' workflow completes,  https://docs.github.com/en/actions/reference/events-that-trigger-workflows#release
+env:
+  IMAGE_NAME: uidatadownloader
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Deploy ui-explorer to shinyapps.io using Released version of data.
+    steps:
+      - name: Setup repository
+        uses: actions/checkout@v2
+      - name: Download release of feather data
+        run: |
+          curl -L https://github.com/CLSPhila/ui-data-explorer/releases/download/v0/unemployent_data.feather --output data/unemployment_data.feather
+      - name: Build docker image
+        run: docker build . --tag $IMAGE_NAME
+      - name: Run docker with CMD set to run the script that deploys the app.
+        env:
+          DATA_DIR: /data
+          PROJECT_ROOT: /Rscripts
+          FRED_KEY: ${{secrets.FRED_KEY}}
+          SHINYAPPS_SECRET: ${{secrets.SHINYAPPS_SECRET}}
+          SHINYAPPS_TOKEN: ${{secrets.SHINYAPPS_TOKEN}}
+          SHINYAPPS_ACCOUNT: ${{secrets.SHINYAPPS_ACCOUNT}}
+        run: |
+          docker-compose run --rm shinyappsdeploywithrelease
