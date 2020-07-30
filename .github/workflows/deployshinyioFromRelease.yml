@@ -6,7 +6,7 @@ name: Deploy ui-explorer to shinyapps.io, using the Released verion of the feath
 on: [workflow_dispatch] # when complete, run this when the 'release data' workflow completes,  https://docs.github.com/en/actions/reference/events-that-trigger-workflows#release
 jobs:
   build:
-    name: Deploy ui-explorer to shinyapps.io
+    name: Deploy ui-explorer to shinyapps.io using Released version of data.
     steps:
       - name: Setup repository
         uses: actions/checkout:v2

@@ -8,8 +8,9 @@ jobs:
   build:
     name: Deploy ui-explorer to shinyapps.io
     steps:
-      - name: Build docker image
+      - name: Setup repository
         uses: actions/checkout:v2
+      - name: Build docker image
         run: docker build . --tag $IMAGE_NAME
       - name: Run docker with CMD set to run the script that deploys the app.
         env:
