@@ -31,6 +31,6 @@ jobs:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./data/unemployment_data.feather
-          asset_name: unemployent_data.feather
+          asset_path: ./data/unemployment_data.parquet
+          asset_name: unemployent_data.parquet
           asset_content_type: application/octet-stream

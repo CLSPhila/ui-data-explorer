@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Download release of feather data
         run: |
-          curl -L https://github.com/CLSPhila/ui-data-explorer/releases/download/v0/unemployent_data.feather --output data/unemployment_data.feather
+          curl -L https://github.com/CLSPhila/ui-data-explorer/releases/download/v0/unemployent_data.parquet --output data/unemployment_data.parquet
       - name: Build docker image
         run: docker build . --tag $IMAGE_NAME
       - name: Run docker with CMD set to run the script that deploys the app.
