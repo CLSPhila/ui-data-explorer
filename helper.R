@@ -30,7 +30,7 @@ getUIMap <- function(df, uiDate, metric_filter, stateText, reverseLevels, prefix
   #then try and figure out what month we are seaching for; the slider allows
   # values throughout the month, but our reports must be based on the last
   # day in the month
-  uiDate <- ceiling_date(uiDate,"month") - days(1)
+  #uiDate <- ceiling_date(uiDate,"month") - days(1)
   
   # if the uiDate isn't in our rptdate vector, find the next highest value that is
   if(!(uiDate %in% df$rptdate)) {
@@ -94,8 +94,8 @@ getSMPlot <- function(df, startDate, endDate, measure, yLabel, plotTitle, free_y
   
   # start by filtering the df to the right time period and to the right metric
   df <- df %>% 
-    filter(rptdate > startDate, 
-           rptdate < endDate, 
+    filter(rptdate >= startDate, 
+           rptdate <= endDate, 
            metric == measure)
   
   # small multiple plot
@@ -132,8 +132,8 @@ get50StateComparisonPlot <- function(df, startDate, endDate, measure, highlightS
 { 
   
   df <- df %>% 
-    filter(rptdate > startDate, 
-           rptdate < endDate, 
+    filter(rptdate >= startDate, 
+           rptdate <= endDate, 
            metric == measure)
   
   plot <- df %>% 
@@ -199,9 +199,10 @@ getPointPlot <- function(df, xlab = "Date", ylab, caption, title, ...) {
     labs(x=xlab, y = ylab,
          caption = caption,
          title= title) + 
-    scale_fill_brewer(palette="Set1", ...)
+    #scale_fill_brewer(palette="Set1", ...) + 
+    scale_color_brewer(palette="Set1", ...)
+  
 }
-
 
 add_line_with_label <- function(plot, x, y, label) {
   plot + 
@@ -246,4 +247,10 @@ get_UI_DT_datable <- function(df, col_list, names_list, class = "stripe", lim_a 
                 colnames= names_list,
                 class = class,
                 rownames = FALSE)
+}
+
+
+# gets the last day of the month from an object that looks like "May 2019"
+get_last_day_of_month_from_range <- function(range_date) {
+  ceiling_date(as.Date(paste('01', range_date), format = '%d %b %Y'), "month") - 1
 }
