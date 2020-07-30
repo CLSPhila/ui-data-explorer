@@ -16,9 +16,9 @@ jobs:
       #     docker-compose run --rm datadownload
       - name: Delete this release
         run: |
-          curl --request DELETE 
-             --url https://api.github.com/repos/clsphila/ui-data-explorer/releases
-             --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}'
+          curl --request DELETE \
+             --url https://api.github.com/repos/clsphila/ui-data-explorer/releases/28994809 \
+             --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
              --header 'content-type: application/json'
       # - name: Create release
       #   id: create_release
