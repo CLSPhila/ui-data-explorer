@@ -222,6 +222,54 @@ get_state_from_series_id <- function(series) {
   
 }
 
+# ETA 203 information - characteristics of the unemployed
+get_demographic_data <- function() {
+  
+  df <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar203.csv") %>% 
+    rename(demographic_sex_men = c2,
+           demographic_sex_women = c3,
+           demographic_eth_latinx = c40,
+           demographic_race_black = c45,
+           demographic_race_white = c47,
+           demographic_race_native_american_alaskan = c43,
+           demographic_race_unk = c48,
+           demographic_age_25_34 = c14,
+           demographic_age_35_44 = c15,
+           demographic_age_45_54 = c16,
+           demographic_age_unk = c20) %>% 
+    mutate(demographic_all_insured = demographic_sex_men + demographic_sex_women + c4,
+           demographic_eth_non_latinx = c41 + c42,
+           demographic_race_asian_pacific_islander = c44 + c46,
+           demographic_age_55_and_older = c17+c18+c19,
+           demographic_age_under25 = c12+c13,
+           demographic_sex_prop_men = demographic_sex_men / demographic_all_insured,
+           demographic_sex_prop_women = demographic_sex_women / demographic_all_insured,
+           demographic_eth_prop_latinx = demographic_eth_latinx / demographic_all_insured,
+           demographic_eth_prop_non_latinx = demographic_eth_non_latinx / demographic_all_insured,
+           demographic_race_prop_black = demographic_race_black / demographic_all_insured,
+           demographic_race_prop_white = demographic_race_white / demographic_all_insured,
+           demographic_race_prop_asian_pacific_islander = demographic_race_asian_pacific_islander / demographic_all_insured,
+           demographic_race_prop_native_american_alaskan = demographic_race_native_american_alaskan / demographic_all_insured,
+           demographic_race_prop_unk = demographic_race_unk / demographic_all_insured,
+           demographic_age_prop_under25 = demographic_age_under25 / demographic_all_insured,
+           demographic_age_prop_25_34 = demographic_age_25_34 / demographic_all_insured,
+           demographic_age_prop_35_44 = demographic_age_35_44 / demographic_all_insured,
+           demographic_age_prop_45_54 = demographic_age_45_54 / demographic_all_insured,
+           demographic_age_prop_55_and_older = demographic_age_55_and_older / demographic_all_insured,
+           demographic_age_prop_unk = demographic_age_unk / demographic_all_insured) %>% 
+    select(-starts_with("c"))
+           
+
+  # compute US Averages and add them into the df
+  usAvg <- df %>% 
+    group_by(rptdate) %>% 
+    summarize(across(where(is.numeric), mean, na.rm = T))
+
+  df <- df %>% 
+    bind_rows(usAvg %>% mutate(st = "US"))
+}
+
+# weekly claims data 
 # get 539 information
 get_weekly_claims_data <- function() {
   df <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar539.csv") %>% 
@@ -912,6 +960,7 @@ bls_unemployed <- bind_rows(
 message("Collecting Basic Claims and Payment data.")
 ucClaimsPaymentsMonthly <- get_basic_ui_information()
 ucClaimsWeekly <- get_weekly_claims_data()
+ucDemographicData <- get_demographic_data()
 
 # first time payment
 message("Collecting First Time Payment Lapse data.")
