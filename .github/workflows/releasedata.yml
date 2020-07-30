@@ -16,7 +16,10 @@ jobs:
       #     docker-compose run --rm datadownload
       - name: Delete this release
         run: |
-          curl -u $GITHUB_ACTOR:${{secrets.GITHUB_TOKEN}}  -X DELETE -H "Accept: application/vnd.github.v3+json"   https://api.github.com/repos/clsphila/ui-data-explorer/releases
+          curl --request DELETE \
+             --url https://api.github.com/repos/clsphila/ui-data-explorer/releases \
+             --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+             --header 'content-type: application/json'
       # - name: Create release
       #   id: create_release
       #   uses: actions/create-release@v1
