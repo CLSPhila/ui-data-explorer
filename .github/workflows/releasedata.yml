@@ -14,23 +14,26 @@ jobs:
       - name: Download and process data
         run: |
           docker-compose run --rm datadownload
-      - name: Create release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-        with:
-          tag_name: "v0"
-          release_name: "processedData"
-          draft: false
-          prerelease: false
-      - name: Upload release asset
-        id: upload_release_asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./data/unemployment_data.parquet
-          asset_name: unemployent_data.parquet
-          asset_content_type: application/octet-stream
+      - steps: Delete this release
+        run: |
+          curl -u ${{GITHUB_ACTOR}}:${{secrets.GITHUB_TOKEN}}  -H "Accept: application/vnd.github.v3+json"   https://api.github.com/repos/clsphila/ui-data-explorer/releases
+      # - name: Create release
+      #   id: create_release
+      #   uses: actions/create-release@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      #   with:
+      #     tag_name: "v0"
+      #     release_name: "processedData"
+      #     draft: false
+      #     prerelease: false
+      # - name: Upload release asset
+      #   id: upload_release_asset
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      #   with:
+      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
+      #     asset_path: ./data/unemployment_data.parquet
+      #     asset_name: unemployent_data.parquet
+      #     asset_content_type: application/octet-stream
