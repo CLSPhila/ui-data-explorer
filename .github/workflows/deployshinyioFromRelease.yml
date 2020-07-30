@@ -3,7 +3,7 @@
 # Do this by running the ui-explorer container with a CMD that calls the r script that deploys the app. (and overrides the default r script that
 #   processes the data. )
 name: Deploy ui-explorer to shinyapps.io using the Released verion of the feather data.
-on: [workflow_dispatch] # when complete, run this when the 'release data' workflow completes,  https://docs.github.com/en/actions/reference/events-that-trigger-workflows#release
+on: [push] # when complete, run this when the 'release data' workflow completes,  https://docs.github.com/en/actions/reference/events-that-trigger-workflows#release
 jobs:
   build:
     name: Deploy ui-explorer to shinyapps.io using Released version of data.
