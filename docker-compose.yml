@@ -11,7 +11,45 @@ services:
         target: /data
     environment:
       DATA_DIR: /data
-      FRED_KEY: ${FRED_KEY}
       PROJECT_ROOT: /Rscripts
+      FRED_KEY: ${FRED_KEY}
+  shinyappsdeploy:
+    # deploy the app to shinyapps and download and process the data.
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: $IMAGE_ID
+    environment:
+      DATA_DIR: /data
+      PROJECT_ROOT: /Rscripts
+      FRED_KEY: ${FRED_KEY}
+      SHINYAPPS_SECRET: ${SHINYAPPS_SECRET}
+      SHINYAPPS_TOKEN: ${SHINYAPPS_TOKEN}
+      SHINYAPPS_ACCOUNT: ${SHINYAPPS_ACCOUNT}
+    command: >
+      bash -c "/Rscripts/unemploymentDataProcessor.R && /Rscripts/deployShinyApps.R"
+    volumes:
+      - type: bind
+        source: ./data
+        target: /data
+  shinyappsdeploywithrelease:
+    # deploy the app to shinyapps using the github-released version of the data.
+    # (this does not download the release - it assumes the release is present)
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: $IMAGE_ID
+    environment:
+      DATA_DIR: /data
+      PROJECT_ROOT: /Rscripts
+      FRED_KEY: ${FRED_KEY}
+      SHINYAPPS_SECRET: ${SHINYAPPS_SECRET}
+      SHINYAPPS_TOKEN: ${SHINYAPPS_TOKEN}
+      SHINYAPPS_ACCOUNT: ${SHINYAPPS_ACCOUNT}
+    command: /Rscripts/deployShinyApps.R
+    volumes:
+      - type: bind
+        source: ./data
+        target: /data
 volumes:
   data:

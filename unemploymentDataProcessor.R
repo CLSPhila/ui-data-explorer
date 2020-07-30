@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 # Helper app to download and process data from the DOL website
 # THe downloads can be found here: http://oui.doleta.gov/unemploy/DataDownloads.asp
 # For each download below, there is a data definition pdf that explains what each field is that is being sought

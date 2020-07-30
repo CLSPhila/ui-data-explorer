@@ -19,6 +19,10 @@ The Image downloads the data to a directory, `/data` in the running container. T
 Run it with:
 `docker-compose run --rm datadownload`
 
+# Running locally
+
+There are a number of environment variables you need to set up. See `.env.example`.
+
 # Setting up workflows
 
 We use github actions/workflows/jobs (there are a lot of different terms!) to download the data.
@@ -34,5 +38,4 @@ rsconnect::setAccountInfo(name='...',token='...',secret='...')
 rsconnect::deployApp(".",appFileManifest='./filemanifest.txt')
 ```
 
-Get the SetAccountInfo information from your shinyapps.io account. 
-
+Get the SetAccountInfo information from your shinyapps.io account.
