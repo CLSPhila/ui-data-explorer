@@ -26,8 +26,6 @@ library(ggrepel)
 library(geojsonio)
 library(leaflet)
 library(arrow)
-library(dotenv)
-dotenv::load_dot_env()
 source("helper.R")
 
 # for testing
