@@ -7,7 +7,7 @@ COPY data /data/
 
 # /data should be a volume mount, where the dataprocessor will write.
 
-RUN install2.r RCurl zoo rsconnect && \
+RUN install2.r RCurl zoo rsconnect V8 && \
     installGithub.r https://github.com/sboysel/fredr.git 
 RUN chmod u+x /Rscripts/unemploymentDataProcessor.R && \
     chmod u+x /Rscripts/deployShinyApps.R
