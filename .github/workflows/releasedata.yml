@@ -11,10 +11,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Download and process data
-        run: |
-          docker-compose run --rm datadownload
-      - steps: Delete this release
+      # - name: Download and process data
+      #   run: |
+      #     docker-compose run --rm datadownload
+      - name: Delete this release
         run: |
           curl -u ${{GITHUB_ACTOR}}:${{secrets.GITHUB_TOKEN}}  -H "Accept: application/vnd.github.v3+json"   https://api.github.com/repos/clsphila/ui-data-explorer/releases
       # - name: Create release
