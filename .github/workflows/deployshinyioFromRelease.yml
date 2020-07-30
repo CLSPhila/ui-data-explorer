@@ -10,7 +10,7 @@ jobs:
     name: Deploy ui-explorer to shinyapps.io using Released version of data.
     steps:
       - name: Setup repository
-        uses: actions/checkout:v2
+        uses: actions/checkout@v2
       - name: Download release of feather data
         run: |
           curl -L https://github.com/CLSPhila/ui-data-explorer/releases/download/v0/unemployent_data.feather --output data/unemployment_data.feather
