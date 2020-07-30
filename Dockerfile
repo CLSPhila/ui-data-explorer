@@ -2,13 +2,11 @@
 FROM rocker/tidyverse
 RUN mkdir /data
 
-COPY unemploymentDataProcessor.R app.R filemanifest.txt helper.R deployShinyApps.R /Rscripts/
-COPY data /data/
+COPY unemploymentDataProcessor.R /Rscripts/
 
 # /data should be a volume mount, where the dataprocessor will write.
 
-RUN install2.r RCurl zoo rsconnect V8 && \
+RUN install2.r RCurl zoo &&\
     installGithub.r https://github.com/sboysel/fredr.git 
-RUN chmod u+x /Rscripts/unemploymentDataProcessor.R && \
-    chmod u+x /Rscripts/deployShinyApps.R
+RUN chmod u+x /Rscripts/unemploymentDataProcessor.R
 CMD ["Rscript","/Rscripts/unemploymentDataProcessor.R"]
