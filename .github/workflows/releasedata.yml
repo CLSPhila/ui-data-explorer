@@ -1,9 +1,10 @@
 # Workflow to pull the datadownload docker image, run it, and store the created data.
 name: Process unemployment data and publish
-on: [workflow_dispatch]
+on: [push]
 env:
   IMAGE_ID: clsphila/ui-data-explorer/uidatadownloader:dockerize-update-2020
   FRED_KEY: ${{secrets.FRED_KEY}}
+  GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 jobs:
   build:
     name: Download Data
@@ -14,23 +15,5 @@ jobs:
       - name: Download and process data
         run: |
           docker-compose run --rm datadownload
-      - name: Create release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-        with:
-          tag_name: "v0"
-          release_name: "processedData"
-          draft: false
-          prerelease: false
-      - name: Upload release asset
-        id: upload_release_asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./data/unemployment_data.parquet
-          asset_name: unemployent_data.parquet
-          asset_content_type: application/octet-stream
+      - name: Create release, or update if necessary.
+        run: . ./updateRelease.sh
