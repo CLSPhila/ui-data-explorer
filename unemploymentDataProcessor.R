@@ -935,6 +935,10 @@ write_csv_files <- function(df, save_dir) {
   df %>% 
     write_data_as_csv("weekly_claims.csv", "^weekly_")
   
+  message("Writing Demographic Data")
+  df %>% 
+    write_data_as_csv("ui_demographics.csv", "^demographic_")
+  
 }
 
 
@@ -1013,7 +1017,7 @@ ucNonMonetary <- getNonMonetaryDeterminations(pua_claims)
 # make long-uberdf
 unemployment_df <- 
   map_dfr(list(ucClaimsPaymentsMonthly, ucClaimsWeekly, ucNonMonetary, ucOverpayments, ucRecipiency, ucFirstTimePaymentLapse, 
-             ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher, pua_claims, puc_payments), 
+             ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher, pua_claims, puc_payments, ucDemographicData), 
         function(x) { 
           x %>% 
             pivot_longer(cols = !one_of(c("rptdate", "st")), names_to = "metric", values_to = "value")}) %>% 

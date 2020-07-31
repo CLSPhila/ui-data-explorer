@@ -204,6 +204,20 @@ getPointPlot <- function(df, xlab = "Date", ylab, caption, title, ...) {
   
 }
 
+
+# point plot with smoothing
+get_area_chart <- function(df, xlab = "Date", ylab, caption, title, ...) {
+  df %>% 
+    ggplot(aes(x = rptdate, y = value, fill = metric)) +
+    geom_rect(inherit.aes = FALSE, data=recession_df, aes(xmin=start, xmax=end, ymin=-Inf, ymax=+Inf), fill='pink', alpha=0.3) +
+    geom_area(alpha = .75) +
+    reportTheme + 
+    labs(x=xlab, y = ylab,
+         caption = caption,
+         title= title) + 
+    scale_fill_brewer(palette="Set1", ...)
+}
+
 add_line_with_label <- function(plot, x, y, label) {
   plot + 
     geom_hline(yintercept = y, linetype = "dashed") +

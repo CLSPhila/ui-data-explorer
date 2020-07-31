@@ -65,6 +65,10 @@ ui <- fluidPage(
                               "--Monthly UI Payments" = "monthlyUI", 
                               "--Init. Payments / Claims" = "basicUI_payment_rate",
                               "--Unemployment Rate (SA)" = "uirate",
+                              "Demographics: Race" = "demographics_race",
+                              "--Demographics: Ethnicity" = "demographics_ethnicity",
+                              "--Demographics: Sex" = "demographics_sex",
+                              "--Demographics: Age" = "demographics_age",
                               "Recipiency Rate" = "recipRate",
                               "--Recipiency Rate Breakdown" = "recipBreakdown",
                               "Pandemic Unemployment Assistance" = "puaData",
@@ -257,6 +261,83 @@ server <- function(input, output) {
       
       # adjustment for finding the max height of the graph
       metric_filter = c("monthly_first_payments_as_prop_claims")
+    }
+    
+    else if (input$viewData == "demographics_race")
+    {
+      
+      metric_filter = c("demographic_race_prop_native_american_alaskan", "demographic_race_prop_asian_pacific_islander", "demographic_race_prop_unk", 
+                        "demographic_race_prop_black", "demographic_race_prop_white")
+      df <- df %>% 
+        filter(metric %in% metric_filter) %>% 
+        mutate(metric = factor(metric, levels = metric_filter))
+      
+      
+      uPlot <- get_area_chart(df, xlab = "Date", ylab = "",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 203, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Racial Composition of UI Recipients from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks= metric_filter,
+                            labels=c("% Native American/Native Alaskan", "% Asian/Pacific Islander", "% Unknown", "% Black", "% White")) + 
+        scale_y_continuous(labels = scales::percent,limits = c(NA, 1))
+      
+    }
+
+    else if (input$viewData == "demographics_sex")
+    {
+      
+      metric_filter = c("demographic_sex_prop_men", "demographic_sex_prop_women")
+      df <- df %>% 
+        filter(metric %in% metric_filter) %>% 
+        mutate(metric = factor(metric, levels = metric_filter))
+      
+      
+      uPlot <- get_area_chart(df, xlab = "Date", ylab = "",
+                              caption = "Data courtesy of the USDOL.  Report used is ETA 203, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                              title = glue::glue("{input$state} Sex Composition of UI Recipients from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                              breaks= metric_filter,
+                              labels=c("% Women", "% Men")) + 
+        scale_y_continuous(labels = scales::percent,limits = c(NA, 1))
+      
+      
+  
+    }
+    
+    else if (input$viewData == "demographics_ethnicity")
+    {
+      
+      metric_filter = c("demographic_eth_prop_latinx", "demographic_eth_prop_non_latinx")
+      df <- df %>% 
+        filter(metric %in% metric_filter) %>% 
+        mutate(metric = factor(metric, levels = metric_filter))
+      
+      
+      uPlot <- get_area_chart(df, xlab = "Date", ylab = "",
+                              caption = "Data courtesy of the USDOL.  Report used is ETA 203, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                              title = glue::glue("{input$state} Latinx Composition of UI Recipients from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                              breaks= metric_filter,
+                              labels=c("% Latinx", "% Non-Latinx")) + 
+        scale_y_continuous(labels = scales::percent,limits = c(NA, 1))
+      
+      
+    }
+    
+    else if (input$viewData == "demographics_age")
+    {
+      
+      metric_filter = c("demographic_age_prop_unk", "demographic_age_prop_55_and_older", "demographic_age_prop_45_54", "demographic_age_prop_35_44", 
+                        "demographic_age_prop_25_34", "demographic_age_prop_under25")
+      df <- df %>% 
+        filter(metric %in% metric_filter) %>% 
+        mutate(metric = factor(metric, levels = metric_filter))
+      
+      
+      uPlot <- get_area_chart(df, xlab = "Date", ylab = "",
+                              caption = "Data courtesy of the USDOL.  Report used is ETA 203, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                              title = glue::glue("{input$state} Age Composition of UI Recipients from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                              breaks= metric_filter,
+                              labels=c("% Unknown", "% 55+", "% 45-54", "% 35-44", "% 25-34", "% Under 25")) + 
+        scale_y_continuous(labels = scales::percent,limits = c(NA, 1))
+      
     }
     
     else if (input$viewData == "puaData")
@@ -613,6 +694,52 @@ server <- function(input, output) {
       uiDT <- get_UI_DT_datable(df, col_list, names_list) %>% 
         formatRound(columns = c(3:4), digits = 0)
     }
+
+    if (input$viewData == "demographics_race")
+    {
+      
+      col_list = c("demographic_race_black", "demographic_race_white", "demographic_race_asian_pacific_islander", "demographic_race_native_american_alaskan", "demographic_race_unk",
+                   "demographic_race_prop_black", "demographic_race_prop_white", "demographic_race_prop_asian_pacific_islander", "demographic_race_prop_native_american_alaskan", "demographic_race_prop_unk") 
+      names_list <- c("State","Report Date", "Black", "White", "Asian/Pacific Islander", "Native American / Native Alaskan", "Unknown", 
+                      "% Black", "% White", "% Asian/Pacific Islander", "%Native American / Native Alaskan", "% Unknown")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list) %>% 
+        formatRound(columns = c(3:7), digits = 0) %>% 
+        formatPercentage(columns = c(8:12))
+    }
+    
+    
+    if (input$viewData == "demographics_ethnicity")
+    {
+      
+      col_list = c("demographic_eth_latinx", "demographic_eth_non_latinx", "demographic_eth_prop_latinx", "demographic_eth_prop_non_latinx") 
+      names_list <- c("State","Report Date", "Latinx", "Non Latinx", "% Latinx", "% Non-Latinx")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list) %>% 
+        formatRound(columns = c(3:4), digits = 0) %>% 
+        formatPercentage(columns = c(5:6))
+    }
+    
+    
+    if (input$viewData == "demographics_sex")
+    {
+      
+      col_list = c("demographic_sex_men", "demographic_sex_women", "demographic_sex_prop_men", "demographic_sex_prop_women") 
+      names_list <- c("State","Report Date", "Men", "Women", "% Men", "% Women")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list) %>% 
+        formatRound(columns = c(3:4), digits = 0) %>% 
+        formatPercentage(columns = c(5:6))
+    }
+    
+    
+    if (input$viewData == "demographics_age")
+    {
+      
+      col_list = c("demographic_age_under25", "demographic_age_25_34", "demographic_age_35_44", "demographic_age_45_54", "demographic_age_55_and_older", "demographic_age_unk",
+                   "demographic_age_prop_under25", "demographic_age_prop_25_34", "demographic_age_prop_35_44", "demographic_age_prop_45_54", "demographic_age_prop_55_and_older", "demographic_age_prop_unk") 
+      names_list <- c("State","Report Date", "Under 25", "25-34", "35-44", "45-54", "55+", "Unknown", "% Under 25", "% 25-34", "% 35-44", "% 45-54", "% 55+", "% Unknown")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list) %>% 
+        formatRound(columns = c(3:8), digits = 0) %>% 
+        formatPercentage(columns = c(9:14))
+    }
     
     if (input$viewData == "puaData")
     {
@@ -788,6 +915,10 @@ server <- function(input, output) {
                          "basicWeeklyClaims" = "Weekly_UI_Claims",
                          "basicUI_compensated" = "Basic_UI_Payments_Claims",
                          "basicUI_payment_rate" = "Basic_UI_Payments_Claims",
+                         "demographics_race" = "UI_Demographics",
+                         "demographics_ethnicity" = "UI_Demographics",
+                         "demographics_sex" = "UI_Demographics",
+                         "demographics_age" = "UI_Demographics",
                          "puaData" = "PUA_Data",
                          "puaClaims" = "PUA_Claims",
                          "pucClaims" = "PUC_Claims",
@@ -813,16 +944,33 @@ server <- function(input, output) {
     },
 
     content = function(file) { 
+      
     # set vars to use for the datatable and download
-    col_list <- switch(input$viewData,
+      
+      demographics_list = c("demographic_sex_men", "demographic_sex_women", 
+                            "demographic_eth_latinx", "demographic_eth_non_latinx",
+                            "demographic_race_black", "demographic_race_white",
+                            "demographic_race_native_american_alaskan",  "demographic_race_asian_pacific_islander", "demographic_race_unk",
+                            "demographic_age_under25", "demographic_age_25_34", "demographic_age_35_44","demographic_age_45_54", "demographic_age_55_and_older", "demographic_age_unk", 
+                            "demographic_all_insured",
+                            "demographic_sex_prop_men", "demographic_sex_prop_women", 
+                            "demographic_eth_prop_latinx", "demographic_eth_prop_non_latinx", 
+                            "demographic_race_prop_black", "demographic_race_prop_white", "demographic_race_prop_native_american_alaskan", "demographic_race_prop_asian_pacific_islander","demographic_race_prop_unk", 
+                            "demographic_age_prop_under25", "demographic_age_prop_25_34", "demographic_age_prop_35_44", "demographic_age_prop_45_54", "demographic_age_prop_55_and_older", "demographic_age_prop_unk")
+
+      col_list <- switch(input$viewData,
                        "monthlyUI" = c("total_state_compensated_mov_avg", "total_federal_compensated_mov_avg", "total_state_compensated", "total_federal_compensated", "total_paid_annual_mov_avg"),
                        "basicUI_claims" = c("monthly_initial_claims", "monthly_first_payments", "monthly_weeks_compensated", "monthly_partial_weeks_compensated", "monthly_weeks_claimed", 
                                             "monthly_exhaustion", "monthly_first_payments_as_prop_claims"),
-                       "basicUI_claims" = c("weekly_initial_claims", "weekly_continued_claims"),
+                       "basicWeeklyClaims" = c("weekly_initial_claims", "weekly_continued_claims"),
                        "basicUI_compensated" = c("monthly_initial_claims", "monthly_first_payments", "monthly_weeks_compensated", "monthly_partial_weeks_compensated", "monthly_weeks_claimed", 
                                             "monthly_exhaustion", "monthly_first_payments_as_prop_claims"),
                        "basicUI_payment_rate" = c("monthly_initial_claims", "monthly_first_payments", "monthly_weeks_compensated", "monthly_partial_weeks_compensated", "monthly_weeks_claimed", 
                                             "monthly_exhaustion", "monthly_first_payments_as_prop_claims"),
+                       "demographics_race" = demographics_list,
+                       "demographics_ethnicity" = demographics_list,
+                       "demographics_age" = demographics_list,
+                       "demographics_sex" = demographics_list,
                        "puaData" = c("pua_initial_applications_total", "pua_initial_applications_self", "pua_eligible_total",  "pua_eligible_self" , "pua_percent_eligible", "pua_percent_eligible_self_employed", "pua_percent_applicants_self_employed"),
                        "puaClaims" = c("pua_initial_applications_total", "pua_eligible_total", "pua_first_payments", "pua_weeks_compensated"),
                        "pucClaims" = c("puc_payments_total", "puc_weeks_compensated"),
@@ -842,17 +990,22 @@ server <- function(input, output) {
                        "firstPay" = c("first_time_payment_total", "first_time_payment_Within15Days", "first_time_payment_Within35Days", "first_time_payment_total"),
                        "higherAuthority" = c("total_higher_appeals", "higher_Within45Days", "higher_Within75Days", "higher_filed", "higher_appeals_total_disposed", "higher_appeals_total_outstanding"), 
     )
+      
     col_list <- c("st", "rptdate", col_list)
     
     names_list <- switch(input$viewData,
                          "monthlyUI" = c("State UI Payments (Monthly, mov avg)", "Federal UI Payments (Monthly, mov avg)", "State UI Payments (Monthly)", "Federal UI Payments (Monthly)", "Annual UI Payments (mov avg)"),
-                         "basicUI_Claims" = c("Initial Claims", "First Payments", "Weeks Compensated", "Partial Weeks Compensated", "Weeks Claimed",
+                         "basicUI_claims" = c("Initial Claims", "First Payments", "Weeks Compensated", "Partial Weeks Compensated", "Weeks Claimed",
                                               "Number Exhausted", "Initial Payments / Initial Claims"),
                          "basicWeeklyClaims" = c("Initial Claims", "Continued Claims"),
                          "basicUI_compensated" = c("Initial Claims", "First Payments", "Weeks Compensated", "Partial Weeks Compensated", "Weeks Claimed",
                                               "Number Exhausted", "Initial Payments / Initial Claims"),
                          "basicUI_payment_rate" = c("Initial Claims", "First Payments", "Weeks Compensated", "Partial Weeks Compensated", "Weeks Claimed",
                                               "Number Exhausted", "Initial Payments / Initial Claims"),
+                         "demographics_race" = demographics_list,
+                         "demographics_ethnicity" = demographics_list,
+                         "demographics_age" = demographics_list,
+                         "demographics_sex" = demographics_list,
                          "puaData" = c("PUA Initial Applications", "PUA Initial Applications (Self-Employed)", "PUA Eligible", "PUA Eligible (Self-Employed)", "PUA % Eligible (Overall)", "PUA % Eligible (Self-Employed)", "PUA Percent Self-Employed Applicants"),
                          "puaClaims" = c("PUA Initial Applications", "PUA Eligible", "PUA First Payments", "PUA Weeks Compensated"),
                          "puaClaims" = c("PUC Total Payments", "PUC Weeks Compensated"),
@@ -913,6 +1066,10 @@ server <- function(input, output) {
                     "basicWeeklyClaims" = getUIMap(unemployed_df, date_filter_end,"weekly_initial_claims", paste("Weekly Initial UI Claims in ", date_filter_end), FALSE),
                     "basicUI_compensated" = getUIMap(unemployed_df, date_filter_end,"monthly_weeks_compensated", paste("Weeks Compensated in ", date_filter_end), FALSE),
                     "basicUI_payment_rate" = getUIMap(unemployed_df, date_filter_end,"monthly_first_payments_as_prop_claims", paste("First Payments as a Proportion of Initial Claims in ", date_filter_end), FALSE),
+                    "demographics_race" = getUIMap(unemployed_df, date_filter_end,"demographic_race_prop_black", paste("Percent Black Claimants in ", date_filter_end), FALSE),
+                    "demographics_age" = getUIMap(unemployed_df, date_filter_end,"demographic_age_prop_under25", paste("Percent Claimants Under 25yo in ", date_filter_end), FALSE),
+                    "demographics_ethnicity" = getUIMap(unemployed_df, date_filter_end,"demographic_eth_prop_latinx", paste("Percent Latinx Claimants in ", date_filter_end), FALSE),
+                    "demographics_sex" = getUIMap(unemployed_df, date_filter_end,"demographic_sex_prop_women", paste("Percent Female Claimants in ", date_filter_end), FALSE),
                     "puaData" = getUIMap(unemployed_df, date_filter_end,"pua_percent_eligible", paste("Pecent of Eligible PUA Applicants in ", date_filter_end), FALSE),
                     "puaClaims" = getUIMap(unemployed_df, date_filter_end,"pua_weeks_compensated", paste("PUA Total Weeks Compensated in ", date_filter_end), FALSE),
                     "pucClaims" = getUIMap(unemployed_df, date_filter_end,"puc_weeks", paste("PUC Total Weeks Compensated in ", date_filter_end), FALSE),
@@ -948,6 +1105,10 @@ server <- function(input, output) {
                     "basicWeeklyClaims" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "weekly_initial_claims", "Initial Claims","50-state Comparison of Weekly Initial UI Claims", free_y),
                     "basicUI_compensated" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "monthly_weeks_compensated", "Weeks Compensated","50-state Comparison of Weeks of UI Compensated", free_y),
                     "basicUI_payment_rate" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "monthly_first_payments_as_prop_claims", "Proportion","50-state Comparison of Initial Payments / Initial Claims", free_y),
+                    "demographics_race" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "demographic_race_prop_black", "Proportion","50-state Comparison of the Proportion of Black Claiamnts", free_y),
+                    "demographics_ethnicity" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "demographic_eth_prop_latinx", "Proportion","50-state Comparison of the Proportion of Latinx Claiamnts", free_y),
+                    "demographics_age" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "demographic_age_prop_under25", "Proportion","50-state Comparison of the Proportion of Claiamnts Under 25yo", free_y),
+                    "demographics_sex" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "demographic_sex_prop_women", "Proportion","50-state Comparison of the Proportion of Female Claiamnts", free_y),
                     "puaData" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "pua_percent_eligible", "PUA Eligibility Rate","50-state Comparison of PUA Eligibility Rate", free_y),
                     "puaClaims" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "pua_weeks_compensated", "Weeks Compesnated","50-state Comparison of Weeks of PUA Compensated", free_y),
                     "pucClaims" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "puc_weeks", "Weeks Compesnated","50-state Comparison of Weeks of PUC Compensated", free_y),
@@ -978,6 +1139,10 @@ server <- function(input, output) {
                      "basicWeeklyClaims" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "weekly_initial_claims", input$state, "Initial Claims",paste(input$state, "vs. US: Weekly Initial Claims")),
                      "basicUI_compensated" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "monthly_weeks_compensated", input$state, "Weeks Compensated",paste(input$state, "vs. US: Monthly Weeks Compensated")),
                      "basicUI_payment_rate" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "monthly_first_payments_as_prop_claims", input$state, "Proportion",paste(input$state, "vs. US: First Payments / Initial Claims")),
+                     "demographics_race" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "demographic_race_prop_black", input$state, "Proportion",paste(input$state, "vs. US: % Black Claimants")),
+                     "demographics_ethnicity" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "demographic_eth_prop_latinx", input$state, "Proportion",paste(input$state, "vs. US: % Latinx Claimants")),
+                     "demographics_sex" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "demographic_sex_prop_women", input$state, "Proportion",paste(input$state, "vs. US: % Female Claimants")),
+                     "demographics_age" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "demographic_age_prop_under25", input$state, "Proportion",paste(input$state, "vs. US: % Claimants Under 25yo")),
                      "puaData" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "pua_percent_eligible", input$state, "PUA Eligibility Rate",paste(input$state, "vs. US: PUA Eligibility Rate")),
                      "puaClaims" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "pua_weeks_compensated", input$state, "Weeks Compensated",paste(input$state, "vs. US: Weeks of PUA Compensated")),
                      "pucClaims" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "puc_weeks", input$state, "Weeks Compensated",paste(input$state, "vs. US: Weeks of PUC Compensated")),
