@@ -9,6 +9,10 @@
 # cases promptly
 # Made by Michael Hollander of Community Legal Services, 1/2017
 
+# shinyapps.io uses calls to 'library' to know what the environment for the
+# app should be.
+library(V8)
+library(jqr)
 library(shiny)
 library(lubridate)
 library(DT)
@@ -16,6 +20,13 @@ library(ggplot2)
 library(scales)
 library(shinycssloaders)
 library(tidyverse)
+library(geojson)
+library(gghighlight)
+library(ggrepel)
+#library(protolight)
+library(geojsonio)
+library(leaflet)
+library(arrow)
 source("helper.R")
 
 # for testing
@@ -24,6 +35,7 @@ source("helper.R")
 # read in the df of data that we need
 stored_data_location <- file.path(Sys.getenv("DATA_DIR"), "unemployment_data.parquet")
 unemployed_df <- arrow::read_parquet(stored_data_location)
+
 
 maxDate <- max(unemployed_df$rptdate)
 minDate <- min(unemployed_df$rptdate)
@@ -121,11 +133,13 @@ ui <- fluidPage(
         tabPanel("Map",withSpinner(leafletOutput("uimap"))),
         
         # the about page, which may need to be rewritten
-        tabPanel("About", br(), 
+        tabPanel("About/Terms", br(), 
                  p("This page was created by ", a(href="https://www.clsphila.org" ,"Community Legal Services"), " to visualize the unemployment data made avaialble by the US Department of Labor and Bureau of Labor Statistics."),
                  p("The DOL Data can be found here: https://ows.doleta.gov/unemploy/DataDownloads.asp and the BLS data can be found ", a(href="https://www.bls.gov/web/laus/ststdsadata.txt", "here"), "and ", a(href="https://www.bls.gov/web/laus/ststdnsadata.txt", "here.")),
                  p("If you have any suggestions for any further measures to put on the page, please email ", a(href="mailto:mhollander@clsphila.org", "Michael Hollander"), "(mhollander@clsphila.org, the creator and maintainer of this page."),
-                 p("You can find the code for this page on github here: ", a(href='https://github.com/CLSPhila/ui-data-explorer', target="_blank", "https://github.com/CLSPhila/ui-data-explorer"), ".")
+                 p("You can find the code for this page on github here: ", a(href='https://github.com/CLSPhila/ui-data-explorer', target="_blank", "https://github.com/CLSPhila/ui-data-explorer"), "."),
+                 p("This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis."),
+                 p("By using this application, you are also bound by FRED® API ", a(href="https://research.stlouisfed.org/docs/api/terms_of_use.html", target="_blank", "terms of use."))
         )
       )
     )

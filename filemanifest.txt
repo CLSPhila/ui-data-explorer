@@ -1,0 +1,10 @@
+# This file lists out the files in the bundle for shinyapps.io
+# use rsconnect::deployApp(".",appFileManifest='./filemanifest.txt')
+# to deploy to shinyapps.io
+app.R
+helper.R
+data/cb_2015_us_state_20m.zip
+data/UI Data 1-2017.zip
+data/EUC-1982-1987-USDOLData.csv
+data/unemployment_data.parquet
+.env
