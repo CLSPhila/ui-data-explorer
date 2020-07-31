@@ -4,3 +4,5 @@
 *.feather
 *.parquet
 .env
+*.swp
+.git

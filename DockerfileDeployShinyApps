@@ -13,4 +13,5 @@ RUN install2.r config RCurl zoo rsconnect V8 jqr geojson fastmap leaflet shiny g
     installGithub.r https://github.com/sboysel/fredr.git 
 RUN chmod u+x /Rscripts/unemploymentDataProcessor.R && \
     chmod u+x /Rscripts/deployShinyApps.R
+WORKDIR /Rscripts
 CMD ["Rscript","/Rscripts/unemploymentDataProcessor.R"]
