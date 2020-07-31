@@ -4,12 +4,12 @@ FROM rocker/tidyverse
 RUN apt update && apt install -y libjq-dev libv8-dev libgdal-dev libgeos-c1v5 libproj-dev libudunits2-dev
 RUN mkdir /data
 
-COPY unemploymentDataProcessor.R app.R filemanifest.txt helper.R deployShinyApps.R /Rscripts/
+COPY unemploymentDataProcessor.R app.R filemanifest.txt config.yml helper.R deployShinyApps.R /Rscripts/
 COPY data /data/
 
 # /data should be a volume mount, where the dataprocessor will write.
 
-RUN install2.r RCurl zoo rsconnect V8 jqr geojson fastmap leaflet shiny geojsonio gghighlight shinycssloaders && \
+RUN install2.r config RCurl zoo rsconnect V8 jqr geojson fastmap leaflet shiny geojsonio gghighlight shinycssloaders && \
     installGithub.r https://github.com/sboysel/fredr.git 
 RUN chmod u+x /Rscripts/unemploymentDataProcessor.R && \
     chmod u+x /Rscripts/deployShinyApps.R
