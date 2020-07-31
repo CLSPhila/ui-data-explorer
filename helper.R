@@ -1,6 +1,7 @@
 #' helper.R
 #' A series of functions to help with the UI data explorer shiny app
 
+library(config)
 library(sf)
 library(leaflet)
 library(ggplot2)
@@ -9,7 +10,7 @@ library(lubridate)
 library(geojsonio)
 
 tmp <- tempdir()
-unzip(file.path(Sys.getenv("DATA_DIR"), "cb_2015_us_state_20m.zip"), exdir = tmp)
+unzip(file.path(config::get("DATA_DIR"), "cb_2015_us_state_20m.zip"), exdir = tmp)
 
 usa <- sf::st_read(tmp) %>% sf::st_transform(crs = 4326)
 # a df of the recessions; used for graphing

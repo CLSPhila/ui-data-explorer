@@ -11,6 +11,7 @@
 
 # shinyapps.io uses calls to 'library' to know what the environment for the
 # app should be.
+library(config)
 library(V8)
 library(jqr)
 library(shiny)
@@ -29,11 +30,12 @@ library(leaflet)
 library(arrow)
 source("helper.R")
 
+
 # for testing
 # input <- list(range = as.Date(c("2008-01-01", "2020-05-30")), state = "PA")
 
 # read in the df of data that we need
-stored_data_location <- file.path(Sys.getenv("DATA_DIR"), "unemployment_data.parquet")
+stored_data_location <- file.path(config::get("DATA_DIR"), "unemployment_data.parquet")
 unemployed_df <- arrow::read_parquet(stored_data_location)
 
 

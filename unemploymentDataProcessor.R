@@ -6,6 +6,7 @@
 
 library(RCurl)
 library(ggplot2)
+library(config)
 library(lubridate)
 library(tidyverse)
 library(zoo)
@@ -389,7 +390,7 @@ get_basic_ui_information <- function() {
   ucClaimsPaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au5159.csv") #5159 report
 
   # EUC data from the 80s isn't available on the DOL website, but DOL provided a copy of those claims
-  ucClaimsPaymentsEUC80s <- read.csv(file.path(Sys.getenv("DATA_DIR"), "EUC-1982-1987-USDOLData.csv"))
+  ucClaimsPaymentsEUC80s <- read.csv(file.path(config::get("DATA_DIR"), "EUC-1982-1987-USDOLData.csv"))
   ucClaimsPaymentsEUC80s <- ucClaimsPaymentsEUC80s %>% 
     mutate(rptdate =  as.Date(rptdate))
   
@@ -1029,8 +1030,8 @@ unemployment_df <-
 
 
 message("Writing Parquet File")
-arrow::write_parquet(unemployment_df, file.path(Sys.getenv("DATA_DIR"), "unemployment_data.parquet"))
+arrow::write_parquet(unemployment_df, file.path(config::get("DATA_DIR"), "unemployment_data.parquet"), compression = "uncompressed")
 
 # Writing All Files to CSV
-write_csv_files(unemployment_df, file.path(Sys.getenv("DATA_DIR")))
+write_csv_files(unemployment_df, file.path(config::get("DATA_DIR")))
 

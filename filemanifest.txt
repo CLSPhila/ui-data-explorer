@@ -7,4 +7,4 @@ data/cb_2015_us_state_20m.zip
 data/UI Data 1-2017.zip
 data/EUC-1982-1987-USDOLData.csv
 data/unemployment_data.parquet
-.env
+config.yml

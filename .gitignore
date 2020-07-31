@@ -5,7 +5,7 @@ rsconnect/
 .RData
 .Ruserdata
 UC Timeliness - 2007 to present.xls
-data/*
+data/**
 !data/UI Data 1-2017.zip
 !data/cb_2015_us_state_20m.zip
 !data/EUC-1982-1987-USDOLData.csv

@@ -1,0 +1,3 @@
+default: 
+    DATA_DIR: "data"
+    PROJECT_ROOT: "."
