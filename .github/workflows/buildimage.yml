@@ -1,5 +1,5 @@
 name: Build docker image to download unemployment data
-on: [workflow_dispatch]
+on: [push]
 env:
   IMAGE_NAME: uidatadownloader
 jobs:
