@@ -2,7 +2,7 @@
 # This is a Shiny web application. You can run the application by clicking
 # the 'Run App' button above.
 #
-# An explorer of UI data, which can be downlaoded from here: https://ows.doleta.gov/unemploy
+# An explorer of UI data, which can be downlaoded from here: https://oui.doleta.gov/unemploy
 # This data concerns the administration of the UI program in each state. 
 # Specifically, this focuses on data regarding payment and decision timelapses, to ensure that
 # states are holding up their end of the bargain in promptly paying claimants or at least adjudicating their 
@@ -72,12 +72,14 @@ ui <- fluidPage(
       # having to handcode each dataset here and in 10 other places
       selectInput("viewData",
                   label = 'Select Data to View',
-                  size=22, selectize=FALSE,
+                  size=33, selectize=FALSE,
                   choices = c("Basic UI Data" = "basicUI_claims",
                               "--Weeks Claims/Compensated" = "basicUI_compensated",
                               "--Weekly Initial and Continued Claims" = "basicWeeklyClaims",
                               "--Monthly UI Payments" = "monthlyUI", 
                               "--Init. Payments / Claims" = "basicUI_payment_rate",
+                              "--Workshare Initial Claims" = "basicUI_workshare_initial",
+                              "--Workshare Continued Claims" = "basicUI_workshare_continued",
                               "--Unemployment Rate (SA)" = "uirate",
                               "Demographics: Race" = "demographics_race",
                               "--Demographics: Ethnicity" = "demographics_ethnicity",
@@ -99,7 +101,11 @@ ui <- fluidPage(
                               "--Separation Denial Breakdown" = "nonMonSep",
                               "--Separation Denial Rates" = "nonMonSepRate",
                               "--Non-Separation Denial Breakdown" = "nonMonNonSep",
-                              "--Non-Separation Denial Rates" = "nonMonNonSepRate"),
+                              "--Non-Separation Denial Rates" = "nonMonNonSepRate",
+                              "Monetary Determinations" = "monetaryDeterminations",
+                              "--Percent Receiving Max Weekly Benefit" = "monetaryDeterminations_max_weekly",
+                              "--Average Weeks Duration" = "monetaryDeterminations_average_weeks"),
+
                   # the default selected is the recipiency Rate, but this coudl be anythign
                   selected = "basicUI_claims"),
       
@@ -137,7 +143,7 @@ ui <- fluidPage(
         # the about page, which may need to be rewritten
         tabPanel("About/Terms", br(), 
                  p("This page was created by ", a(href="https://www.clsphila.org" ,"Community Legal Services"), " to visualize the unemployment data made avaialble by the US Department of Labor and Bureau of Labor Statistics."),
-                 p("The DOL Data can be found here: https://ows.doleta.gov/unemploy/DataDownloads.asp and the BLS data can be found ", a(href="https://www.bls.gov/web/laus/ststdsadata.txt", "here"), "and ", a(href="https://www.bls.gov/web/laus/ststdnsadata.txt", "here.")),
+                 p("The DOL Data can be found here: https://oui.doleta.gov/unemploy/DataDownloads.asp and the BLS data can be found ", a(href="https://www.bls.gov/web/laus/ststdsadata.txt", "here"), "and ", a(href="https://www.bls.gov/web/laus/ststdnsadata.txt", "here.")),
                  p("If you have any suggestions for any further measures to put on the page, please email ", a(href="mailto:mhollander@clsphila.org", "Michael Hollander"), "(mhollander@clsphila.org, the creator and maintainer of this page."),
                  p("You can find the code for this page on github here: ", a(href='https://github.com/CLSPhila/ui-data-explorer', target="_blank", "https://github.com/CLSPhila/ui-data-explorer"), "."),
                  p("This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis."),
@@ -210,7 +216,7 @@ server <- function(input, output) {
       
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 539, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 539, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Weekly Initial and Continued Claims Claims from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks=  metric_filter,
                             labels=c("Initial Claims", "Continued Claims")) + 
@@ -230,7 +236,7 @@ server <- function(input, output) {
       
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 5129, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 5129, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Monthly State Claims, Payments and Exhaustion Eligibility from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks=  c("monthly_initial_claims", "monthly_first_payments", "monthly_exhaustion" ),
                             labels=c("Initial Claims", "First Payments", "Exhaustion")) + 
@@ -249,7 +255,7 @@ server <- function(input, output) {
         filter(metric %in% metric_filter)  
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 5129, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 5129, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Monthly Compensation (state), Weeks Compensated from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks= metric_filter,
                             labels=c("Weeks Compensated", "Partial Weeks Compensated")) + 
@@ -268,7 +274,7 @@ server <- function(input, output) {
         filter(metric %in% metric_filter)  
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 5129, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 5129, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} First Payments as a Proportion of Initial Claims from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks= metric_filter,
                             labels=c("Monthly Payments as a Proportion of Initial Claims")) + 
@@ -277,6 +283,41 @@ server <- function(input, output) {
       
       # adjustment for finding the max height of the graph
       metric_filter = c("monthly_first_payments_as_prop_claims")
+    }
+    
+    
+    else if (input$viewData == "basicUI_workshare_initial")
+    {
+      
+      metric_filter = c("workshare_initial_claims")
+      df <- df %>% 
+        filter(metric %in% metric_filter)
+      
+      
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA aw5159, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Monthly Workshare Initial Claims from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks=  metric_filter,
+                            labels=c("Initial Claims")) + 
+        scale_y_continuous(labels = comma)
+      
+    }
+    
+    else if (input$viewData == "basicUI_workshare_continued")
+    {
+      
+      metric_filter = c("workshare_continued_claims")
+      df <- df %>% 
+        filter(metric %in% metric_filter)
+      
+      
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA aw5159, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Monthly Workshare Continued Claims from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks=  metric_filter,
+                            labels=c("Continued Claims")) + 
+        scale_y_continuous(labels = comma)
+      
     }
     
     else if (input$viewData == "demographics_race")
@@ -290,7 +331,7 @@ server <- function(input, output) {
       
       
       uPlot <- get_area_chart(df, xlab = "Date", ylab = "",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 203, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 203, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Racial Composition of UI Recipients from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks= metric_filter,
                             labels=c("% Native American/Native Alaskan", "% Asian/Pacific Islander", "% Unknown", "% Black", "% White")) + 
@@ -308,7 +349,7 @@ server <- function(input, output) {
       
       
       uPlot <- get_area_chart(df, xlab = "Date", ylab = "",
-                              caption = "Data courtesy of the USDOL.  Report used is ETA 203, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                              caption = "Data courtesy of the USDOL.  Report used is ETA 203, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                               title = glue::glue("{input$state} Sex Composition of UI Recipients from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                               breaks= metric_filter,
                               labels=c("% Women", "% Men")) + 
@@ -328,7 +369,7 @@ server <- function(input, output) {
       
       
       uPlot <- get_area_chart(df, xlab = "Date", ylab = "",
-                              caption = "Data courtesy of the USDOL.  Report used is ETA 203, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                              caption = "Data courtesy of the USDOL.  Report used is ETA 203, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                               title = glue::glue("{input$state} Latinx Composition of UI Recipients from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                               breaks= metric_filter,
                               labels=c("% Latinx", "% Non-Latinx")) + 
@@ -348,7 +389,7 @@ server <- function(input, output) {
       
       
       uPlot <- get_area_chart(df, xlab = "Date", ylab = "",
-                              caption = "Data courtesy of the USDOL.  Report used is ETA 203, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                              caption = "Data courtesy of the USDOL.  Report used is ETA 203, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                               title = glue::glue("{input$state} Age Composition of UI Recipients from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                               breaks= metric_filter,
                               labels=c("% Unknown", "% 55+", "% 45-54", "% 35-44", "% 25-34", "% Under 25")) + 
@@ -364,7 +405,7 @@ server <- function(input, output) {
         filter(metric %in% metric_filter)  
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 902p, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 902p, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} PUA Eligibility: General and Self Employed from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks= metric_filter,
                             labels=c("Overall Eligibility Rate", "Self-Employed Eligibility Rate", "% Self-Employed Applicants")) + 
@@ -382,7 +423,7 @@ server <- function(input, output) {
         filter(metric %in% metric_filter) 
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "Weeks Compensated (Thousands)",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 2112, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 2112, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} PUC Payments: Weeks and Total Amount Compensated from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks= metric_filter,
                             labels=c("PUC $600 Payment")) + 
@@ -405,7 +446,7 @@ server <- function(input, output) {
       
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 902p, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 902p, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} PUA Claims and Payments from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks= metric_filter,
                             labels=c("Initial Applications", "Total Eligible", "First Payments", "Weeks Compensated")) +
@@ -458,7 +499,7 @@ server <- function(input, output) {
         filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
-                     caption = "Outstanding overpayment balance divided by the total benefits paid in all federal and state programs over the last 12 months.\n Data courtesy of the USDOL.  Reports used are ETA 227 and 5159, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                     caption = "Outstanding overpayment balance divided by the total benefits paid in all federal and state programs over the last 12 months.\n Data courtesy of the USDOL.  Reports used are ETA 227 and 5159, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                      title = glue::glue("{input$state} Overpayment Balance vs Montly UI Payments from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                      breaks=c("outstanding_proportion"),
                      labels=c("Overpayment Balance / Annual UI Payments"))
@@ -472,7 +513,7 @@ server <- function(input, output) {
         filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 227, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Fraud Overpayments as a Percent of All Overpayments from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks=c("fraud_num_percent"),
                             labels=c("% Fraud Overpayments")) + 
@@ -488,7 +529,7 @@ server <- function(input, output) {
         filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "Total Overpayment Recovery",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 227, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Tax Program Overpayment Recovery from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks=c("state_tax_recovery", "federal_tax_recovery"),
                             labels=c("State Tax Recover", "Federal Tax Recovery")) + 
@@ -508,7 +549,7 @@ server <- function(input, output) {
       metric_filter = c("recipiency_annual_total")
       
       uPlot <- getRibbonPlot(df, xlab = "Date", ylab = "Recipiency Rate",
-                             caption = "Recipiency rate calculated by dividing 12 month moving average of unemployment continuing claims divided by 12 month moving average of total unemployed.\nData not seasonally adjusted.  \nSource: Continuing claims can be found in ETA report 5159, found here: https://ows.doleta.gov/unemploy/DataDownloads.asp.\nUnemployed numbers courtesy the BLS: https://www.bls.gov/web/laus/ststdnsadata.txt.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",  
+                             caption = "Recipiency rate calculated by dividing 12 month moving average of unemployment continuing claims divided by 12 month moving average of total unemployed.\nData not seasonally adjusted.  \nSource: Continuing claims can be found in ETA report 5159, found here: https://oui.doleta.gov/unemploy/DataDownloads.asp.\nUnemployed numbers courtesy the BLS: https://www.bls.gov/web/laus/ststdnsadata.txt.  \nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",  
                              title = glue::glue("{input$state} Recipiency Rate from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                              breaks=c("recipiency_annual_reg","recipiency_annual_fed"),
                              labels=c("Regular Programs", "Federal Programs"))
@@ -523,7 +564,7 @@ server <- function(input, output) {
         filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 227, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 227, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Outstanding State Overpayments vs State $ Recovered from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks=c("outstanding", "recovered"),
                             labels=c("Outstanding Overpayments", "Overpayments Recovered")) + 
@@ -541,7 +582,7 @@ server <- function(input, output) {
         filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of non-monetary determinations",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Proportion of Denials for Separation and Non-Separation Reasons\n in Non-Monetary Decisions {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks=c("denial_sep_percent", "denial_non_percent", "denial_rate_overall"),
                             labels=c("Separation Denials", "Non-Separation Denials", "Total Denial Rate"))
@@ -556,7 +597,7 @@ server <- function(input, output) {
         filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of separation denials",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Proportion of Non-Monetary Separation Denials from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks=c("denial_sep_misconduct_percent","denial_sep_vol_percent", "denial_sep_other_percent"),
                             labels=c("Misconduct", "Voluntary Quit", "Other"))
@@ -571,10 +612,11 @@ server <- function(input, output) {
         filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of separation denials",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Non-Monetary Separation Denial Rate from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks=c("denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate"),
-                            labels=c("Misconduct", "Voluntary Quit", "Other"))
+                            labels=c("Misconduct", "Voluntary Quit", "Other")) + 
+        scale_y_continuous(labels = scales::percent)
     
     }
     
@@ -586,7 +628,7 @@ server <- function(input, output) {
         filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of non-separation denials",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Proportion of Non-Monetary Non-Separation Denials from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks=c("denial_non_aa_percent","denial_non_income_percent", "denial_non_refusework_percent", "denial_non_reporting_percent", "denial_non_referrals_percent", "denial_non_other_percent"),
                             labels=c("Able and Available", "Disqualifying Income", "Refusal of Suitable Work", "Reporting/Call Ins/Etc...", "Refusal of Referral", "Other"))
@@ -601,22 +643,67 @@ server <- function(input, output) {
         filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of non-separation denials",
-                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Denial Rates for Non-Monetary Non-Separation Denials from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks=c("denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate"),
-                            labels=c("Able and Available", "Disqualifying Income", "Refusal of Suitable Work", "Reporting/Call Ins/Etc...", "Refusal of Referral", "Other"))
+                            labels=c("Able and Available", "Disqualifying Income", "Refusal of Suitable Work", "Reporting/Call Ins/Etc...", "Refusal of Referral", "Other")) + 
+        scale_y_continuous(labels = scales::percent)
       
     
     }
     
-    else if (input$viewData == "lowerAuthority") {
+    else if (input$viewData == "monetaryDeterminations")
+    {
+      
+      metric_filter = c("monetaryDet_mon_eligible_prop")
+      df <- df %>% 
+        filter(metric %in% metric_filter)
+      
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA ar218, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Monetary Eligibility Rate from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks= metric_filter,
+                            labels= c("Proportion Monetarily Eligible")) +
+        scale_y_continuous(labels = scales::percent)
+    }
+    
+    else if (input$viewData == "monetaryDeterminations_max_weekly")
+    {
+      
+      metric_filter = c("monetaryDet_max_benefit_prop")
+      df <- df %>% 
+        filter(metric %in% metric_filter)
+      
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA ar218, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Maximum Weekly Benefit Eligibility Rate from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks= metric_filter,
+                            labels= c("Proportion Eligible for Max Weekly Benefit")) +
+        scale_y_continuous(labels = scales::percent)
+    
+      
+    } else if (input$viewData == "monetaryDeterminations_average_weeks") {
+
+    
+      metric_filter = c("monetaryDet_avg_weeks_duration")
+      df <- df %>% 
+        filter(metric %in% metric_filter)
+      
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "Weeks",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA ar218, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Average Weeks Duration of Benefit Received from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks= metric_filter,
+                            labels= c("Average Weeks Duration"))
+  
+    
+    } else if (input$viewData == "lowerAuthority") {
       
       metric_filter = c("lower_Within30Days", "lower_Within45Days")
       df <- df %>% 
         filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
-                            caption = "Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Lower Authority Decision Timeliness from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}")) %>% 
         add_line_with_label(x = min(df$rptdate), y = .6, label = "30-day threshold") %>% 
         add_line_with_label(x = min(df$rptdate), y = .8, label = "45-day threshold") 
@@ -628,7 +715,7 @@ server <- function(input, output) {
         filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
-                            caption = "Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} First Payment Timeliness from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}")) %>% 
         add_line_with_label(x = min(df$rptdate), y = .87, label = "15-day threshold") %>% 
         add_line_with_label(x = min(df$rptdate), y = .93, label = "35-day threshold") 
@@ -641,7 +728,7 @@ server <- function(input, output) {
         filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
-                            caption = "Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://ows.doleta.gov/unemploy/DataDownloads.asp.",
+                            caption = "Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
                             title = glue::glue("{input$state} Higher Authority Decision Timeliness from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}")) %>% 
         add_line_with_label(x = min(df$rptdate), y = .4, label = "45-day threshold") %>% 
         add_line_with_label(x = min(df$rptdate), y = .8, label = "75-day threshold") 
@@ -691,15 +778,15 @@ server <- function(input, output) {
       
     }
 
-    if (input$viewData %in% c("basicUI_claims", "basicUI_compensated", "basicUI_payment_rate"))
+    if (input$viewData %in% c("basicUI_claims", "basicUI_compensated", "basicUI_payment_rate", "basicUI_workshare_continued", "basicUI_workshare_initial"))
     {
       
       col_list = c("monthly_initial_claims", "monthly_first_payments", "monthly_weeks_compensated", "monthly_partial_weeks_compensated", "monthly_weeks_claimed", 
-                   "monthly_exhaustion", "monthly_first_payments_as_prop_claims") 
+                   "monthly_exhaustion", "monthly_first_payments_as_prop_claims", "workshare_initial_claims", "workshare_continued_claims", "workshare_weeks_compensated", "workshare_first_payments") 
       names_list <- c("State","Report Date", "Initial Claims", "First Payments", "Weeks Compensated", "Partial Weeks Compensated", "Weeks Claimed",
-                      "Number Exhausted", "Initial Payments / Initial Claims")
+                      "Number Exhausted", "Initial Payments / Initial Claims", "Workshare Initial Claims", "Workshare Continued Claims", "Workshare Weeks Compensated", "Workshare First Payments")
       uiDT <- get_UI_DT_datable(df, col_list, names_list) %>% 
-        formatRound(columns = c(3:8), digits = 0) %>% 
+        formatRound(columns = c(3:8, 10:13), digits = 0) %>% 
         formatRound(columns=c(9), digits=2)
     }
     
@@ -866,6 +953,18 @@ server <- function(input, output) {
       uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe")
     }
     
+    else if (startsWith(input$viewData, "monetaryDeterminations"))
+    {
+      col_list <- c("monetaryDet_total", "monetaryDet_not_eligible", "monetaryDet_num_establish_duration", "monetaryDet_num_max_benefit", "monetaryDet_avg_weeks_duration", "monetaryDet_mon_eligible_prop", "monetaryDet_max_benefit_prop") 
+      names_list <- c("State","Report Date", "Total Monetary Determinations", "Not Monetarily Eligible", "Total Establishing Benefit Years", "Num Max Weekly Benefit", "Average Weeks Duration (after final payment)", "Proportion Monetarily Eligible", "Proportion Eligible for the Maximum Weekly Benefit")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
+        formatRound(columns = c(3:6), digits = 0) %>% 
+        formatRound(columns = c(7), digits = 2) %>% 
+        formatPercentage(columns = c(8:9))
+      
+    }
+    
+    
     else if (input$viewData == "recipBreakdown")
     {
       col_list <- c("total_week_mov_avg", "unemployed_avg", "recipiency_annual_total")
@@ -931,6 +1030,8 @@ server <- function(input, output) {
                          "basicWeeklyClaims" = "Weekly_UI_Claims",
                          "basicUI_compensated" = "Basic_UI_Payments_Claims",
                          "basicUI_payment_rate" = "Basic_UI_Payments_Claims",
+                         "basicUI_workshare_initial" = "Basic_UI_Payments_Claims",
+                         "basicUI_workshare_continued" = "Basic_UI_Payments_Claims",
                          "demographics_race" = "UI_Demographics",
                          "demographics_ethnicity" = "UI_Demographics",
                          "demographics_sex" = "UI_Demographics",
@@ -947,6 +1048,9 @@ server <- function(input, output) {
                          "nonMonSepRate" = "Monthly_UI_Non_Monetary_Separation_Rates",
                          "nonMonNonSep" = "Monthly_Non_Monetary_Non_Separation_Denials",
                          "nonMonNonSepRate" = "Monthly_Non_Monetary_Non_Separation_Rates",
+                         "monetaryDeterminations" = "Monthly_Monetary_Determinations",
+                         "monetaryDeterminations_max_weekly" = "Monthly_Monetary_Determinations",
+                         "monetaryDeterminations_average_weeks" = "Monthly_Monetary_Determinations",
                          "uirate" = "Monthly_UI_Rate",
                          "recipRate" = "Monthly_UI_Recipiency_Rate",
                          "recipBreakdown" = "Monthly_UI_Recipiency_Rate_Breakdown",
@@ -974,15 +1078,19 @@ server <- function(input, output) {
                             "demographic_race_prop_black", "demographic_race_prop_white", "demographic_race_prop_native_american_alaskan", "demographic_race_prop_asian_pacific_islander","demographic_race_prop_unk", 
                             "demographic_age_prop_under25", "demographic_age_prop_25_34", "demographic_age_prop_35_44", "demographic_age_prop_45_54", "demographic_age_prop_55_and_older", "demographic_age_prop_unk")
 
+      basicUI_list <- c("monthly_initial_claims", "monthly_first_payments", "monthly_weeks_compensated", "monthly_partial_weeks_compensated", "monthly_weeks_claimed", 
+                        "monthly_exhaustion", "monthly_first_payments_as_prop_claims", "workshare_initial_claims", "workshare_continued_claims", "workshare_weeks_compensated", "workshare_first_payments")
+      
+      monetary_determinations_list <- c("monetaryDet_total", "monetaryDet_not_eligible", "monetaryDet_num_establish_duration", "monetaryDet_num_max_benefit", "monetaryDet_avg_weeks_duration", "monetaryDet_mon_eligible_prop", "monetaryDet_max_benefit_prop") 
+      
       col_list <- switch(input$viewData,
                        "monthlyUI" = c("total_state_compensated_mov_avg", "total_federal_compensated_mov_avg", "total_state_compensated", "total_federal_compensated", "total_paid_annual_mov_avg"),
-                       "basicUI_claims" = c("monthly_initial_claims", "monthly_first_payments", "monthly_weeks_compensated", "monthly_partial_weeks_compensated", "monthly_weeks_claimed", 
-                                            "monthly_exhaustion", "monthly_first_payments_as_prop_claims"),
+                       "basicUI_claims" = basicUI_list,
                        "basicWeeklyClaims" = c("weekly_initial_claims", "weekly_continued_claims"),
-                       "basicUI_compensated" = c("monthly_initial_claims", "monthly_first_payments", "monthly_weeks_compensated", "monthly_partial_weeks_compensated", "monthly_weeks_claimed", 
-                                            "monthly_exhaustion", "monthly_first_payments_as_prop_claims"),
-                       "basicUI_payment_rate" = c("monthly_initial_claims", "monthly_first_payments", "monthly_weeks_compensated", "monthly_partial_weeks_compensated", "monthly_weeks_claimed", 
-                                            "monthly_exhaustion", "monthly_first_payments_as_prop_claims"),
+                       "basicUI_compensated" = basicUI_list,
+                       "basicUI_payment_rate" = basicUI_list,
+                       "basicUI_workshare_initial" = basicUI_list,
+                       "basicUI_workshare_continued" = basicUI_list,
                        "demographics_race" = demographics_list,
                        "demographics_ethnicity" = demographics_list,
                        "demographics_age" = demographics_list,
@@ -999,6 +1107,9 @@ server <- function(input, output) {
                        "nonMonSepRate" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
                        "nonMonNonSep" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
                        "nonMonNonSepRate" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
+                       "monetaryDeterminations" = monetary_determinations_list,
+                       "monetaryDeterminations_max_weekly" = monetary_determinations_list,
+                       "monetaryDeterminations_average_weeks" = monetary_determinations_list,
                        "uirate" = c("civilian_non_insitutionalized_population_sa", "labor_force_sa", "total_unemployed_sa", "unemployment_rate_sa"),
                        "recipRate" = c("recipiency_annual_reg","recipiency_annual_total"),
                        "recipBreakdown" = c("total_week_mov_avg","unemployed_avg","recipiency_annual_total"),
@@ -1009,15 +1120,19 @@ server <- function(input, output) {
       
     col_list <- c("st", "rptdate", col_list)
     
+    
+    basicUI_names_list <- c("Initial Claims", "First Payments", "Weeks Compensated", "Partial Weeks Compensated", "Weeks Claimed",
+                                                    "Number Exhausted", "Initial Payments / Initial Claims", "Workshare Initial Claims", 
+                                                    "Workshare Continued Claims", "Workshare Weeks Compensated", "Workshare First Time Payments")
+    
+    monetary_determinations_names_list <- c("Total Monetary Determinations", "Not Monetarily Eligible", "Total Establishing Benefit Years", "Num Max Weekly Benefit", "Average Weeks Duration (after final payment)", "Proportion Monetaryily Eligible", "Proportion Eligible for the Maximum Weekly Benefit")
+    
     names_list <- switch(input$viewData,
                          "monthlyUI" = c("State UI Payments (Monthly, mov avg)", "Federal UI Payments (Monthly, mov avg)", "State UI Payments (Monthly)", "Federal UI Payments (Monthly)", "Annual UI Payments (mov avg)"),
-                         "basicUI_claims" = c("Initial Claims", "First Payments", "Weeks Compensated", "Partial Weeks Compensated", "Weeks Claimed",
-                                              "Number Exhausted", "Initial Payments / Initial Claims"),
+                         "basicUI_claims" = basicUI_names_list,
                          "basicWeeklyClaims" = c("Initial Claims", "Continued Claims"),
-                         "basicUI_compensated" = c("Initial Claims", "First Payments", "Weeks Compensated", "Partial Weeks Compensated", "Weeks Claimed",
-                                              "Number Exhausted", "Initial Payments / Initial Claims"),
-                         "basicUI_payment_rate" = c("Initial Claims", "First Payments", "Weeks Compensated", "Partial Weeks Compensated", "Weeks Claimed",
-                                              "Number Exhausted", "Initial Payments / Initial Claims"),
+                         "basicUI_compensated" = basicUI_names_list,
+                         "basicUI_payment_rate" = basicUI_names_list,
                          "demographics_race" = demographics_list,
                          "demographics_ethnicity" = demographics_list,
                          "demographics_age" = demographics_list,
@@ -1049,6 +1164,9 @@ server <- function(input, output) {
                                                 "Non-monetary Able & Available Determations", "Non-monetary Disqualifying Income Determations", "Non-monetary Refusal of Suitable Work Determations", "Non-monetary Reporting/Call-ins/Etc Determations", "Non-monetary Refusal of Referral Determations", "Non-monetary Other Determations", 
                                                 "Total Separation Denials", "Total Non-Separation Denials", "Separation-Misconduct Denials", "Separation-Voluntaray Quit Denials", "Separation-Other Denials", 
                                                 "Non-monetary Able & Available Denials", "Non-monetary Disqualifying Income Denials", "Non-monetary Refusal of Suitable Work Denials", "Non-monetary Reporting/Call-ins/Etc Denials", "Non-monetary Refusal of Referral Denials", "Non-monetary Other Denials"),
+                         "monetaryDeterminations" = monetary_determinations_names_list,
+                         "monetaryDeterminations_max_weekly" = monetary_determinations_names_list,
+                         "monetaryDeterminations_average_weeks" = monetary_determinations_names_list,
                          "uirate" = c("Civilian Non-Institutionalized Population", "Labor Force", "Unemployed", "Unemployment Rate"),
                          "recipRate" = c("Annual Recipiency Rate (Regular UI)","Annual Recipiency Rate (Regular + Federal)"),
                          "recipBreakdown" = c("Weekly Continuing Claims (12-mo moving avg)", "Total Unemployed (12-mo moving avg)", "Recipiency Rate (state + federal programs)"),
@@ -1082,6 +1200,8 @@ server <- function(input, output) {
                     "basicWeeklyClaims" = getUIMap(unemployed_df, date_filter_end,"weekly_initial_claims", paste("Weekly Initial UI Claims in ", date_filter_end), FALSE),
                     "basicUI_compensated" = getUIMap(unemployed_df, date_filter_end,"monthly_weeks_compensated", paste("Weeks Compensated in ", date_filter_end), FALSE),
                     "basicUI_payment_rate" = getUIMap(unemployed_df, date_filter_end,"monthly_first_payments_as_prop_claims", paste("First Payments as a Proportion of Initial Claims in ", date_filter_end), FALSE),
+                    "basicUI_workshare_initial" = getUIMap(unemployed_df, date_filter_end,"workshare_initial_claims", paste("Workshare Initial Claims in ", date_filter_end), FALSE),
+                    "basicUI_workshare_continued" = getUIMap(unemployed_df, date_filter_end,"workshare_continued_claims", paste("Workshare Continued Claims in ", date_filter_end), FALSE),
                     "demographics_race" = getUIMap(unemployed_df, date_filter_end,"demographic_race_prop_black", paste("Percent Black Claimants in ", date_filter_end), FALSE),
                     "demographics_age" = getUIMap(unemployed_df, date_filter_end,"demographic_age_prop_under25", paste("Percent Claimants Under 25yo in ", date_filter_end), FALSE),
                     "demographics_ethnicity" = getUIMap(unemployed_df, date_filter_end,"demographic_eth_prop_latinx", paste("Percent Latinx Claimants in ", date_filter_end), FALSE),
@@ -1097,6 +1217,9 @@ server <- function(input, output) {
                     "nonMonSepRate" = getUIMap(unemployed_df, date_filter_end,"denial_sep_rate", paste("Non-Monetary Denial Rate in ",date_filter_end),FALSE),
                     "nonMonNonSep" = getUIMap(unemployed_df, date_filter_end,"denial_non_percent", paste("Proportion of Non-Monetary Denials that are Non-Separation Related in ",date_filter_end),FALSE),
                     "nonMonNonSepRate" = getUIMap(unemployed_df, date_filter_end,"denial_non_rate", paste("Non-Monetary Non-Separation Denial Rate in ",date_filter_end),FALSE),
+                    "monetaryDeterminations" = getUIMap(unemployed_df, date_filter_end,"monetaryDet_mon_eligible_prop", paste("Proportion Monetarily Eligible in ",date_filter_end),FALSE),
+                    "monetaryDeterminations_max_weekly" = getUIMap(unemployed_df, date_filter_end,"monetaryDet_max_benefit_prop", paste("Proportion Eligible for Max Weekly Benefit in ",date_filter_end),FALSE),
+                    "monetaryDeterminations_average_weeks" = getUIMap(unemployed_df, date_filter_end,"monetaryDet_avg_weeks_duration", paste("Average Weeks Duration in ",date_filter_end),FALSE),
                     "TOPS" = getUIMap(unemployed_df, date_filter_end,"federal_tax_recovery", paste("Federal Tax Intercepts in Quarter ending ",date_filter_end), FALSE, scale = 1/1000000, prefix = "$", suffix = "M", round_digits = 0),
                     "recipRate" = getUIMap(unemployed_df, date_filter_end,"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",date_filter_end), TRUE),
                     "recipBreakdown" = getUIMap(unemployed_df, date_filter_end,"recipiency_annual_total", paste("Recipiency Rate (State+Federal) in ",date_filter_end), TRUE),
@@ -1121,6 +1244,8 @@ server <- function(input, output) {
                     "basicWeeklyClaims" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "weekly_initial_claims", "Initial Claims","50-state Comparison of Weekly Initial UI Claims", free_y),
                     "basicUI_compensated" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "monthly_weeks_compensated", "Weeks Compensated","50-state Comparison of Weeks of UI Compensated", free_y),
                     "basicUI_payment_rate" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "monthly_first_payments_as_prop_claims", "Proportion","50-state Comparison of Initial Payments / Initial Claims", free_y),
+                    "basicUI_workshare_initial" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "workshare_initial_claims", "Initial Claims","50-state Comparison of Workshare Initial Claims", free_y),
+                    "basicUI_workshare_continued" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "workshare_continued_claims", "Continued Claims","50-state Comparison of Workshare Continued Claims", free_y),
                     "demographics_race" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "demographic_race_prop_black", "Proportion","50-state Comparison of the Proportion of Black Claiamnts", free_y),
                     "demographics_ethnicity" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "demographic_eth_prop_latinx", "Proportion","50-state Comparison of the Proportion of Latinx Claiamnts", free_y),
                     "demographics_age" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "demographic_age_prop_under25", "Proportion","50-state Comparison of the Proportion of Claiamnts Under 25yo", free_y),
@@ -1136,6 +1261,9 @@ server <- function(input, output) {
                     "nonMonSepRate" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "denial_sep_rate", "Non-Monetary Separation Denial Rate","50-state Comparison of Denial Rate for Separation Reasons", free_y),
                     "nonMonNonSep" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "denial_non_percent", "Proportion of all Non-Monetary Determinations","50-state Comparison of Denials for Non-Separation Reasons", free_y),
                     "nonMonNonSepRate" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "denial_non_rate", "Non-Monetary Non-Separation Denial Rate","50-state Comparison of Denial Rate for Non-Separation Reasons", free_y),
+                    "monetaryDeterminations" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "monetaryDet_mon_eligible_prop", "Proportion Monetarily Eligible","50-state Comparison of Monetary Eligibility Rates", free_y),
+                    "monetaryDeterminations_max_weekly" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "monetaryDet_max_benefit_prop", "Proportion Receiving Max Weekly Benefit","50-state Comparison of Max Weekly Benefit Rates", free_y),
+                    "monetaryDeterminations_average_weeks" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "monetaryDet_avg_weeks_duration", "Average Weeks Duration","50-state Comparison of the Average Weeks Duration of Final Payments", free_y),
                     "TOPS" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "federal_tax_recovery", "Fed Tax Intercept $","50-state Comparison of Fed Tax Intercepts (Quarterly)", free_y, scale = 1/1000000, prefix = "$", suffix = "M"),
                     "recipRate" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rate", free_y),
                     "recipBreakdown" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "recipiency_annual_total", "Recipiency Rate", "50-state Comparison of UI Recipiency Rates", free_y),
@@ -1155,6 +1283,8 @@ server <- function(input, output) {
                      "basicWeeklyClaims" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "weekly_initial_claims", input$state, "Initial Claims",paste(input$state, "vs. US: Weekly Initial Claims")),
                      "basicUI_compensated" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "monthly_weeks_compensated", input$state, "Weeks Compensated",paste(input$state, "vs. US: Monthly Weeks Compensated")),
                      "basicUI_payment_rate" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "monthly_first_payments_as_prop_claims", input$state, "Proportion",paste(input$state, "vs. US: First Payments / Initial Claims")),
+                     "basicUI_workshare_initial" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "workshare_initial_claims", input$state, "Initial Claims",paste(input$state, "vs. US: Workshare Initial Claims")),
+                     "basicUI_workshare_continued" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "workshare_continued_claims", input$state, "Continued Claims",paste(input$state, "vs. US: Workshare Continued Claims")),
                      "demographics_race" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "demographic_race_prop_black", input$state, "Proportion",paste(input$state, "vs. US: % Black Claimants")),
                      "demographics_ethnicity" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "demographic_eth_prop_latinx", input$state, "Proportion",paste(input$state, "vs. US: % Latinx Claimants")),
                      "demographics_sex" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "demographic_sex_prop_women", input$state, "Proportion",paste(input$state, "vs. US: % Female Claimants")),
@@ -1170,6 +1300,9 @@ server <- function(input, output) {
                      "nonMonSepRate" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "denial_sep_rate", input$state, "Non-Monetary Separation Denial Rate",paste(input$state, "vs. US: Denial Rate for Separation Reasons")),
                      "nonMonNonSep" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "denial_non_percent", input$state, "Proportion of all Non-Monetary Determinations",paste(input$state, "vs. US: Denials for Non-Separation Reasons")),
                      "nonMonNonSepRate" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "denial_non_rate", input$state, "Non-Monetary Non-Separation Denial Rate",paste(input$state, "vs. US: Denial Rate for Non-Separation Reasons")),
+                     "monetaryDeterminations" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "monetaryDet_mon_eligible_prop", input$state, "Monetary Eligibility Rate",paste(input$state, "vs. US: Monetary Eligibility Rate")),
+                     "monetaryDeterminations_max_weekly" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "monetaryDet_max_benefit_prop", input$state, "Max Weekly Benefit Eligibility Rate",paste(input$state, "vs. US: Max Weekly Benefit Eligibility Rate")),
+                     "monetaryDeterminations_average_weeks" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "monetaryDet_avg_weeks_duration", input$state, "Average Weeks Duration",paste(input$state, "vs. US: Average Weeks Duration")),
                      "TOPS" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "federal_tax_recovery", input$state, "Fed Tax Intercept $",paste(input$state, "vs. US: Fed Tax Intercepts (Quarterly)"), scale = 1/1000000, prefix = "$", suffix = "M"),
                      "recipRate" = get50StateComparisonPlot(unemployed_df, date_filter_start, date_filter_end, "recipiency_annual_total", input$state, "Recipiency Rate", paste(input$state, "vs. US: UI Recipiency Rate")),
                      "recipBreakdown" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "recipiency_annual_total", input$state, "Recipiency Rate", paste(input$state, "vs. US: UI Recipiency Rates")),
