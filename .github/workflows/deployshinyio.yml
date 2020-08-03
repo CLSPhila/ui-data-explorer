@@ -37,4 +37,5 @@ jobs:
           [ "$VERSION" == "$default-branch" ] && VERSION=latest
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION
-          docker-compose run --rm shinyappsdeploy
+          # TODO FIX. IMAGE_ID isn't getting passed to docker-compose.
+          docker-compose run --rm -e IMAGE_ID=$IMAGE_ID shinyappsdeploy
