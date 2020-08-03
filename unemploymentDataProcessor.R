@@ -388,6 +388,7 @@ get_basic_ui_information <- function() {
   ucClaimsPaymentsEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac5159.csv") #5159 report
   ucClaimsPaymentsTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at5159.csv") #5159 report
   ucClaimsPaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au5159.csv") #5159 report
+  ucClaimsPaymentsWorksharing <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au5159.csv")
 
   # EUC data from the 80s isn't available on the DOL website, but DOL provided a copy of those claims
   ucClaimsPaymentsEUC80s <- read.csv(file.path(config::get("DATA_DIR"), "EUC-1982-1987-USDOLData.csv"))
@@ -473,6 +474,13 @@ get_basic_ui_information <- function() {
            euc08_ucfe_ucx_compensated = c37) %>% 
     select(-starts_with("c"))
   
+  ucClaimsPaymentsWorksharing <- ucClaimsPaymentsWorksharing %>% 
+    mutate(workshare_initial_claims = c1 + c2) %>% 
+    rename(workshare_continued_claims = c3,
+           workshare_weeks_compensated = c4,
+           workshare_first_payments = c6) %>% 
+    select(-starts_with("c"))
+  
   
   # merge the different datasets together and backfill with 0 if there is no data for a month
   all_cols <- c("st","rptdate")
@@ -482,6 +490,7 @@ get_basic_ui_information <- function() {
     left_join(ucClaimsPaymentsTEUC02, by = all_cols) %>% 
     left_join(ucClaimsPaymentsEUC08, by = all_cols) %>% 
     left_join(ucClaimsPaymentsEUC80s, by = all_cols) %>%
+    left_join(ucClaimsPaymentsWorksharing, by = all_cols) %>% 
     #left_join(pua_claims, by = all_cols) %>% 
     replace(is.na(.), 0)
   
@@ -584,6 +593,33 @@ getRecipiency <- function (bls_unemployed, ucClaimsPaymentsMonthly, pua_claims)
   return(ucRecipiency)
 }
 
+# gets basic information about monetary determinations
+getMonetaryDeterminations <- function() {
+  ucMonetaryRegular <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar218.csv") #218 report
+
+  ucMonetaryRegular <- ucMonetaryRegular %>% 
+    rename(monetaryDet_total = c1,
+           monetaryDet_not_eligible = c2,
+           monetaryDet_num_max_benefit = c5,
+           monetaryDet_num_establish_duration = c4,
+           monetaryDet_avg_weeks_duration = c36
+           ) %>% 
+    mutate(monetaryDet_mon_eligible_prop = 1 - monetaryDet_not_eligible / monetaryDet_total,
+           monetaryDet_max_benefit_prop = monetaryDet_num_max_benefit / monetaryDet_num_establish_duration) %>% 
+    select(-starts_with("c"))
+  
+  
+  # compute US Averages and add them into the df
+  usAvg <- ucMonetaryRegular %>% 
+    group_by(rptdate) %>% 
+    summarize(across(where(is.numeric), mean, na.rm = T))
+  
+  ucMonetaryRegular <- ucMonetaryRegular %>% 
+    bind_rows(usAvg %>% mutate(st = "US"))
+  
+  return(ucMonetaryRegular)  
+  
+}
 
 # sort through the non monetary determinations to get information about separation and non-separation issues
 getNonMonetaryDeterminations <- function(pua_claims)
@@ -900,7 +936,9 @@ write_csv_files <- function(df, save_dir) {
   
   message("Writing Determinations and Denials CSV")
   df %>% 
+
     write_data_as_csv(file.path(save_dir, "determinations_and_denials.csv"), "^denial|^determ")
+
   
   message("Writing Overpayment Information CSV")  
   df %>% 
@@ -933,6 +971,7 @@ write_csv_files <- function(df, save_dir) {
   message("Writing Basic Monthly UI Data")
   df %>% 
     write_data_as_csv(file.path(save_dir, "monthly_claims_and_payments.csv"), "^monthly_|^ucx_|^ext_|^euc91|^teuc02_|^euc08_")
+
 
   message("Writing Basic Weekly UI Data")
   df %>% 
@@ -1014,13 +1053,14 @@ ucOverpayments$outstanding_proportion <- round(ucOverpayments$outstanding / ucOv
 
 # get determination data
 ucNonMonetary <- getNonMonetaryDeterminations(pua_claims)
+ucMonetary <- getMonetaryDeterminations()
 
 
 
 # make long-uberdf
 unemployment_df <- 
   map_dfr(list(ucClaimsPaymentsMonthly, ucClaimsWeekly, ucNonMonetary, ucOverpayments, ucRecipiency, ucFirstTimePaymentLapse, 
-             ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher, pua_claims, puc_payments, ucDemographicData), 
+             ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher, pua_claims, puc_payments, ucDemographicData, ucMonetary), 
         function(x) { 
           x %>% 
             pivot_longer(cols = !one_of(c("rptdate", "st")), names_to = "metric", values_to = "value")}) %>% 
@@ -1030,7 +1070,7 @@ unemployment_df <-
 
 
 message("Writing Parquet File")
-arrow::write_parquet(unemployment_df, file.path(config::get("DATA_DIR"), "unemployment_data.parquet"), compression = "uncompressed")
+arrow::write_parquet(unemployment_df, file.path(config::get("DATA_DIR"), "unemployment_data.parquet"), compression = "gzip")
 
 # Writing All Files to CSV
 write_csv_files(unemployment_df, file.path(config::get("DATA_DIR")))
