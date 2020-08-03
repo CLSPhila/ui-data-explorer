@@ -1,3 +1,7 @@
+# Workflow to build a docker image that can be used to download and process unemployment data.
+#
+# Other workflows use this image to either publish the data or to collect the data and then
+# publish the web app.
 name: Build docker image to download unemployment data
 on: [workflow_dispatch]
 env:

@@ -936,47 +936,50 @@ write_csv_files <- function(df, save_dir) {
   
   message("Writing Determinations and Denials CSV")
   df %>% 
-    write_data_as_csv("determinations_and_denials.csv", "^denial|^determ|^monetary")
+
+    write_data_as_csv(file.path(save_dir, "determinations_and_denials.csv"), "^denial|^determ")
+
   
   message("Writing Overpayment Information CSV")  
   df %>% 
-    write_data_as_csv("overpayments_and_fraud.csv", "^outstanding|fraud_|_tax_|recover")
+    write_data_as_csv(file.path(save_dir, "overpayments_and_fraud.csv"), "^outstanding|fraud_|_tax_|recover")
   
   message("Writing PUA Data CSV")  
   df %>% 
-    write_data_as_csv("pua_data.csv", "^pua")
+    write_data_as_csv(file.path(save_dir, "pua_data.csv"), "^pua")
 
   message("Writing PUC Data CSV")  
   df %>% 
-    write_data_as_csv("puc_data.csv", "^puc")
+    write_data_as_csv(file.path(save_dir, "puc_data.csv"), "^puc")
   
   message("Writing Appeals Information CSV")  
   df %>% 
-    write_data_as_csv("lower_and_higher_appeals.csv", "higher_|lower_")
+    write_data_as_csv(file.path(save_dir, "lower_and_higher_appeals.csv"), "higher_|lower_")
   
   message("Writing First Time Payment CSV")
   df %>% 
-    write_data_as_csv("first_time_payments.csv", "^first_time")
+    write_data_as_csv(file.path(save_dir, "first_time_payments.csv"), "^first_time")
   
   message("Writing Labor Force CSV")
   df %>% 
-    write_data_as_csv("labor_force_data.csv", "_sa$|_nsa$")
+    write_data_as_csv(file.path(save_dir, "labor_force_data.csv"), "_sa$|_nsa$")
   
   message("Writing Recipiency CSV")
   df %>% 
-    write_data_as_csv("recipiency_data.csv", "recipiency_|total_week_mov|unemployed_avg|_mov_avg$|compensated$")
+    write_data_as_csv(file.path(save_dir, "recipiency_data.csv"), "recipiency_|total_week_mov|unemployed_avg|_mov_avg$|compensated$")
   
   message("Writing Basic Monthly UI Data")
   df %>% 
-    write_data_as_csv("monthly_claims_and_payments.csv", "^monthly_|^ucx_|^ext_|^euc91|^teuc02_|^euc08_|^workshare_")
+    write_data_as_csv(file.path(save_dir, "monthly_claims_and_payments.csv"), "^monthly_|^ucx_|^ext_|^euc91|^teuc02_|^euc08_")
+
 
   message("Writing Basic Weekly UI Data")
   df %>% 
-    write_data_as_csv("weekly_claims.csv", "^weekly_")
+    write_data_as_csv(file.path(save_dir, "weekly_claims.csv"), "^weekly_")
   
   message("Writing Demographic Data")
   df %>% 
-    write_data_as_csv("ui_demographics.csv", "^demographic_")
+    write_data_as_csv(file.path(save_dir, "ui_demographics.csv"), "^demographic_")
   
 }
 
