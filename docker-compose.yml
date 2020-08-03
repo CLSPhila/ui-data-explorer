@@ -17,6 +17,7 @@ services:
     build:
       context: .
       dockerfile: DockerfileDeployShinyApps
+    #image: $IMAGE_ID
     environment:
       R_CONFIG_ACTIVE: docker
       FRED_KEY: ${FRED_KEY}
