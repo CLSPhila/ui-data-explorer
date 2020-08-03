@@ -1,17 +1,22 @@
 #!/bin/bash
 
 
-# note - to run using env vars in the running shell,run with `. .updateRelease`
+#' note - to run using env vars in the running shell,run with `. .updateRelease`
 release_name=uiExplorerData
 asset_name=unemployment_data.parquet
 owner=clsphila
 repository=ui-data-explorer
 
+if [ "$GITHUB_TOKEN" == "" ]; then
+  echo "Expected github token missing. Have you set up environment variables?"
+  exit 1
+fi
+
 echo "Updating release $release_name"
 
 function upload_asset {
   release_id=$1
-  echo "Uploading asset to $release_id"
+  echo "  Uploading asset to release '$release_id'."
   uploaded_response=$(curl \
     -X POST \
     -u natev:"$GITHUB_TOKEN" \
@@ -20,7 +25,9 @@ function upload_asset {
     --data-binary @"data/unemployment_data.parquet" \
     "https://uploads.github.com/repos/$owner/$repository/releases/$release_id/assets?name=$asset_name"
     )
-  echo "finished uploading asset."
+  echo "  Finished uploading asset."
+  echo "  $uploaded_response"
+  echo "--------------------------"
 }
 
 function create_release {
@@ -56,14 +63,17 @@ function clear_assets {
 }
 
 function replace_asset {
-  echo "Replacing asset."
   release=$1
   release_id=$(jq '.id' <<< "$release")
+  echo "  Replacing assets for the release $release_id."
   assets=$(jq '.assets' <<< "$release")
   asset_count=$(jq '. | length'  <<< "$assets")  
+  echo "  The release has $asset_count assets."
   if [ $asset_count != "0" ]; then
-    echo "need to delete assets."
+    echo "  We need to delete assets before uploading."
     clear_assets $assets
+  else:
+    echo "  We do not need to delete any assets before uploading."
   fi
 
   assets_url=$(jq '.assets_url' <<< "$release")
@@ -84,20 +94,26 @@ releases=$(jq --arg release_name "$release_name" '[.[] | select(.name==$release_
 # if this release doesn't exist, create it and upload the asset.
 length=$(jq '. | length' <<< "$releases")
 
+echo "  We found $length releases named '$release_name' already published."
+
+
 if [ $length == "0" ];
 then
   create_release
 else
   if [ $length == "1" ];
   then
+    # There should only be 1 release with the name $release_name. 
     release=$(jq '.[0]' <<< "$releases")
     replace_asset "$release"
   else
     echo "More than one release named $release_name found. Not sure what to do. Exiting." 
+    exit 1
   fi
 fi
 
 
-
+echo "---COMPLETED---"
+exit 0
    
 
