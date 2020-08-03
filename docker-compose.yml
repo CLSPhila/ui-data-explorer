@@ -29,7 +29,7 @@ services:
     volumes:
       - type: bind
         source: ./data
-        target: Rscripts/data
+        target: /Rscripts/data
   shinyappsdeploywithrelease:
     # deploy the app to shinyapps using the github-released version of the data.
     # (this does not download the release - it assumes the release is present)
@@ -47,6 +47,6 @@ services:
     volumes:
       - type: bind
         source: ./data
-        target: Rscripts/data
+        target: /Rscripts/data
 volumes:
   data:
