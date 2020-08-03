@@ -1,18 +1,19 @@
 #!/bin/bash
 
 
-#' note - to run using env vars in the running shell,run with `. .updateRelease`
-release_name=uiExplorerData
-asset_name=unemployment_data.parquet
-owner=clsphila
-repository=ui-data-explorer
+# note - to run using env vars in the running shell,run with `. .updateRelease`
+owner="${1:-clsphila}"
+repository="${2:-ui-data-explorer}"
+release_name="${3:-uiExplorerData}"
+asset_name="${4:-unemployment_data.parquet}"
 
 if [ "$GITHUB_TOKEN" == "" ]; then
   echo "Expected github token missing. Have you set up environment variables?"
-  exit 1
+  return 1
 fi
 
-echo "Updating release $release_name"
+echo "----------"
+echo "Updating $owner/$repository, release '$release_name' with the asset '$asset_name'."
 
 function upload_asset {
   release_id=$1
@@ -108,12 +109,11 @@ else
     replace_asset "$release"
   else
     echo "More than one release named $release_name found. Not sure what to do. Exiting." 
-    exit 1
+    return 1
   fi
 fi
 
 
 echo "---COMPLETED---"
-exit 0
    
 
