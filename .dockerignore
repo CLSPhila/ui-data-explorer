@@ -1,0 +1,8 @@
+*.md
+*.sh
+!EUC-1982-1987-USDOLData.csv
+*.feather
+*.parquet
+.env
+*.swp
+.git

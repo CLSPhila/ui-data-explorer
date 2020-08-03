@@ -1,0 +1,29 @@
+# Workflow to pull the datadownload docker image, run it, and store the created data.
+name: Process and publish unemployment data as a parquet file and a collection of csv files
+on: [workflow_dispatch]
+env:
+  IMAGE_ID: clsphila/ui-data-explorer/uidatadownloader:dockerize-update-2020
+  FRED_KEY: ${{secrets.FRED_KEY}}
+  GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+jobs:
+  build:
+    name: Download Data
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Download and process data
+        run: |
+          docker-compose run --rm datadownload
+      - name: Create release for the parquet data, or update if necessary.
+        run: . ./updateRelease.sh clsphila ui-data-explorer \
+          uiExplorerData \
+          unemployment_data.parquet
+      - name: Zip csv data, to release it.
+        run: zip data/unemployment_data.zip data/*.csv
+      - name: Create or update release for csv data.
+        run: |
+          rm data/EUC-1982-1987-USDOLData.csv
+          . ./updateRelease.sh clsphila ui-data-explorer \
+                               uiExplorerCSV \
+                               unemployment_data.zip

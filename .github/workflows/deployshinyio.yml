@@ -1,0 +1,41 @@
+# Workflow to download and process unemployment data and then deploy the app to shinyapps.io
+
+# Do this by running the ui-explorer container with a CMD that calls the r script that deploys the app. (and overrides the default r script that
+#   processes the data. )
+name: Deploy ui-explorer to shinyapps.io
+on:
+  workflow_dispatch: # when complete, run this when the 'release data' workflow completes,  https://docs.github.com/en/actions/reference/events-that-trigger-workflows#release
+env:
+  IMAGE_NAME: uidatadownloader
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Deploy ui-explorer to shinyapps.io
+    steps:
+      - name: Setup repository
+        uses: actions/checkout@v2
+      - name: Run docker with CMD set to run the script that deploys the app.
+        env:
+          R_CONFIG_ACTIVE: docker
+          FRED_KEY: ${{secrets.FRED_KEY}}
+          SHINYAPPS_SECRET: ${{secrets.SHINYAPPS_SECRET}}
+          SHINYAPPS_TOKEN: ${{secrets.SHINYAPPS_TOKEN}}
+          SHINYAPPS_ACCOUNT: ${{secrets.SHINYAPPS_ACCOUNT}}
+        run: |
+          IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
+          # Change all uppercase to lowercase
+
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "$default-branch" ] && VERSION=latest
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+          # TODO FIX. IMAGE_ID isn't getting passed to docker-compose.
+          docker-compose run --rm -e IMAGE_ID=$IMAGE_ID shinyappsdeploy

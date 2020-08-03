@@ -1,0 +1,6 @@
+default:
+  DATA_DIR: "data"
+  PROJECT_ROOT: "."
+docker:
+  DATA_DIR: "/data"
+  PROJECT_ROOT: "/Rscripts"
