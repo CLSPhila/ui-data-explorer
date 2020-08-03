@@ -59,6 +59,7 @@ getOverpayments <- function() {
   ucOverpaymentsEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac227.csv") #227 report
   ucOverpaymentsTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at227.csv") #227 report
   ucOverpaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au227.csv") #227 report
+
   
   # cols that we want to keep
   overpayment_cols <- c("st", "rptdate", "regular_fraud_num", "federal_fraud_num", "regular_fraud_dol", "federal_fraud_dol", "regular_nonfraud_num", 
@@ -68,6 +69,7 @@ getOverpayments <- function() {
   detection_cols <- c("federal_fraud_num", "federal_fraud_dol", "federal_nonfraud_num", "federal_nonfraud_dol", "outstanding_fed_programs", "recovered_fed_programs")
   recovery_cols <- c("state_tax_recovery_fed_programs","federal_tax_recovery_fed_programs")
   
+
   
   # just pull out the columns that we care about
   ucOverpaymentsRegular <- ucOverpaymentsRegular %>%
@@ -376,6 +378,7 @@ get_puc_600_data <- function() {
   
   df <- df %>% 
     bind_rows(usAvg %>% mutate(st = "US"))
+
   
 }
 
@@ -629,8 +632,10 @@ getNonMonetaryDeterminations <- function(pua_claims)
   ucNonMonetaryEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac207.csv") #207 report
   ucNonMonetaryTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at207.csv") #207 report
   ucNonMonetaryEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au207.csv") #207 report
+
   pua_claims <- pua_claims %>% 
     select(st, rptdate, starts_with("pua_appeals"))
+
   
   # name the columns that we care about for later code readability
   # EUC08 and TEUC appear to have the same structure as extended benefits, not euc91
@@ -770,6 +775,7 @@ getUCFirstTimePaymentLapse <- function() {
   # download the data
   ucFirstTimePaymentLapse <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9050.csv") # 9050 report
 
+
   #set some names
   ucFirstTimePaymentLapse <- ucFirstTimePaymentLapse %>% 
     rename_at(vars(c("c1", "c9", "c17", "c25", "c33", "c41", "c49", "c57", "c65","c73","c81","c89")), 
@@ -815,9 +821,11 @@ getUCFirstTimePaymentLapse <- function() {
 
 getUCAppealsTimeLapseLower <- function(ucBenefitAppealsRegular) {
 
+
   # get the data
   ucAppealsTimeLapseLower <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9054l.csv") # 9054 report
   ucAppealsCaseAgingLower <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9055l.csv") # 9055 report
+
   
   # set some names
   ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
@@ -1074,4 +1082,5 @@ arrow::write_parquet(unemployment_df, file.path(config::get("DATA_DIR"), "unempl
 
 # Writing All Files to CSV
 write_csv_files(unemployment_df, file.path(config::get("DATA_DIR")))
+
 
