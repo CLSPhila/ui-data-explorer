@@ -10,8 +10,7 @@ services:
         source: ./data
         target: /data
     environment:
-      DATA_DIR: /data
-      PROJECT_ROOT: /Rscripts
+      R_CONFIG_ACTIVE: docker
       FRED_KEY: ${FRED_KEY}
   shinyappsdeploy:
     # deploy the app to shinyapps and download and process the data.
@@ -38,8 +37,7 @@ services:
       context: .
       dockerfile: DockerfileDeployShinyApps
     environment:
-      DATA_DIR: /data
-      PROJECT_ROOT: /Rscripts
+      R_CONFIG_ACTIVE: docker
       FRED_KEY: ${FRED_KEY}
       SHINYAPPS_SECRET: ${SHINYAPPS_SECRET}
       SHINYAPPS_TOKEN: ${SHINYAPPS_TOKEN}

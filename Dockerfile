@@ -9,5 +9,7 @@ COPY unemploymentDataProcessor.R config.yml /Rscripts/
 RUN install2.r RCurl zoo config &&\
     installGithub.r https://github.com/sboysel/fredr.git 
 RUN chmod u+x /Rscripts/unemploymentDataProcessor.R
-WORKDIR /RScripts
+# we need to be working in the Rscripts directory
+# so that the processor.R file can find the config.yml file.
+WORKDIR /Rscripts
 CMD ["Rscript","/Rscripts/unemploymentDataProcessor.R"]
