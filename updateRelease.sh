@@ -50,7 +50,7 @@ function create_release {
 }
 
 function clear_assets {
-  $assets=$1
+  assets=$1
   for row in $(echo "${assets}" | jq -r '.[] | @base64'); do
     _jq() {
      echo ${row} | base64 --decode | jq -r ${1}

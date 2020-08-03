@@ -65,3 +65,5 @@ Running `docker-compose run --rm shinyappdeploy` will start a docker service tha
 
 **Github Actions**
 The Github workflow `.github/workflows/deployshinyio` describes a workflow that processes the data and publishes to Shinyapps. The workflow `.github/workflows/deployshinyiofromrelease` describes a workflow that uses the released parquet data to publish to shinyapps.
+
+To use these workflows, you'll need to add your shiny token, account, and secret as Github Secrets.
