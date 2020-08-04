@@ -76,7 +76,7 @@ function replace_asset {
   if [ $asset_count != "0" ]; then
     echo "  We need to delete assets before uploading."
     clear_assets $assets
-  else:
+  else
     echo "  We do not need to delete any assets before uploading."
   fi
 
