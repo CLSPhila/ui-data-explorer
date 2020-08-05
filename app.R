@@ -35,14 +35,14 @@ source("helper.R")
 # input <- list(range = as.Date(c("2008-01-01", "2020-05-30")), state = "PA")
 
 # read in the df of data that we need
-stored_data_location <- file.path(config::get("DATA_DIR"), "unemployment_data.parquet")
+stored_data_location <- file.path(get("DATA_DIR"), "unemployment_data.parquet")
 unemployed_df <- arrow::read_parquet(stored_data_location)
 
 
 maxDate <- max(unemployed_df$rptdate)
 minDate <- min(unemployed_df$rptdate)
 states <- sort(unique(unemployed_df$st))
-
+pua_earliest <- ymd("2020-01-31")
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -169,17 +169,25 @@ server <- function(input, output) {
   makeReactiveBinding("date_filter_start")
   makeReactiveBinding("date_filter_end")
   
-  observeEvent(input$range, { 
+  
+  toListen <- reactive({list(input$range, input$viewData)})
+  
+  observeEvent(toListen(), { 
     date_filter_start <<- get_last_day_of_month_from_range(input$range[1])
     date_filter_end <<- get_last_day_of_month_from_range(input$range[2])
+    
+    # set the start and end date to no earlier than the 1/31/2020 if we selected PUA
+    if(input$viewData %in% c("puaData", "puaClaims", "pucClaims")) {
+      if(date_filter_start < pua_earliest) date_filter_start <<- pua_earliest
+      if(date_filter_end < pua_earliest) date_filter_end <<- date_filter_start + months(4)
+    } 
+    
   })
-  
+
   # render the plot
   output$uiplot <- renderPlot({
 
-#browser()
     # get start and end date filters
-    
     df <- unemployed_df %>%
       filter(st == input$state,
              rptdate >= date_filter_start,

@@ -288,7 +288,13 @@ get_weekly_claims_data <- function() {
     summarize(across(where(is.numeric), mean, na.rm = T))
   
   df <- df %>% 
-    bind_rows(usAvg %>% mutate(st = "US"))
+    bind_rows(usAvg %>% mutate(st = "US")) %>% 
+    group_by(st) %>% 
+    mutate(weekly_initial_claims_52_week_avg = rollmean(weekly_initial_claims, k=52, align="right", na.pad=T),
+           weekly_continued_claims_52_week_avg = rollmean(weekly_continued_claims, k=52, align="right", na.pad=T)) %>% 
+    ungroup()
+  
+  
 }
 
 # disaster unemployment assistance information
@@ -503,7 +509,12 @@ get_basic_ui_information <- function() {
     summarize(across(where(is.numeric), mean, na.rm = T))
   
   ucClaimsPayments <- ucClaimsPayments %>% 
-    bind_rows(usAvg %>% mutate(st = "US"))
+    bind_rows(usAvg %>% mutate(st = "US")) %>% 
+    group_by(st) %>% 
+    mutate(monthly_initial_claims_12_mo_avg = rollmean(monthly_initial_claims, 12, align = "right", na.pad = T),
+           monthly_first_payments_12_mo_avg = rollmean(monthly_first_payments, 12, align = "right", na.pad = T),
+           monthly_exhaustion_12_mo_avg = rollmean(monthly_exhaustion, 12, align = "right", na.pad = T)) %>% 
+    ungroup()
     
   return(ucClaimsPayments)
   
