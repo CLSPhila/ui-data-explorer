@@ -1060,7 +1060,9 @@ ucRecipiency$total_paid_annual_mov_avg <- ucRecipiency$total_compensated_mov_avg
 ucOverpayments$outstanding_proportion <- round(ucOverpayments$outstanding / ucOverpayments$total_paid_annual_mov_avg,4) 
 
 # get determination data
+message("Collecting NonMonetary Information")
 ucNonMonetary <- getNonMonetaryDeterminations(pua_claims)
+message("Collecting Monetary Information")
 ucMonetary <- getMonetaryDeterminations()
 
 
