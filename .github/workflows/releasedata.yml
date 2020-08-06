@@ -1,6 +1,12 @@
 # Workflow to pull the datadownload docker image, run it, and store the created data.
 name: Process and publish unemployment data as a parquet file and a collection of csv files
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
+  # to run manually.
+  schedule:
+    # update data daily.
+    - cron: "0 4 * * *"
+
 env:
   IMAGE_ID: clsphila/ui-data-explorer/uidatadownloader:dockerize-update-2020
   FRED_KEY: ${{secrets.FRED_KEY}}

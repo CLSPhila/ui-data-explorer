@@ -3,7 +3,19 @@
 # Do this by running the ui-explorer container with a CMD that calls the r script that deploys the app. (and overrides the default r script that
 #   processes the data. )
 name: Deploy ui-explorer to shinyapps.io using the Released verion of the parquet data.
-on: [workflow_dispatch] # when complete, run this when the 'release data' workflow completes,  https://docs.github.com/en/actions/reference/events-that-trigger-workflows#release
+on:
+  workflow_dispatch: # when complete, run this when the 'release data' workflow completes,  https://docs.github.com/en/actions/reference/events-that-trigger-workflows#release
+  workflow_run:
+    # run when the release workflow finishes.
+    # See https://docs.github.com/en/actions/reference/events-that-trigger-workflows#workflow_run
+    workflows:
+      [
+        "Process and publish unemployment data as a parquet file and a collection of csv files",
+      ]
+    branches: [main]
+    types:
+      - completed
+
 env:
   IMAGE_NAME: uidatadownloader
 jobs:
