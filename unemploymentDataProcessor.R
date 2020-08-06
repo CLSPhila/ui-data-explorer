@@ -1093,7 +1093,7 @@ unemployment_df <-
 
 
 message("Writing Parquet File")
-arrow::write_parquet(unemployment_df, file.path(config::get("DATA_DIR"), "unemployment_data.parquet"), compression = "gzip")
+arrow::write_parquet(unemployment_df, file.path(config::get("DATA_DIR"), "unemployment_data.parquet"), compression = "uncompressed")
 
 # Writing All Files to CSV
 write_csv_files(unemployment_df, file.path(config::get("DATA_DIR")))

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Update a single asset on a single release in a github repository.
+
 
 # note - to run using env vars in the running shell,run with `. .updateRelease`
 
@@ -16,8 +18,7 @@ if [ "$GITHUB_TOKEN" == "" ]; then
 fi
 
 echo "----------"
-echo "Updating $owner/$repository, release '$release_name' with the asset '$asset_name'."
-
+echo "Updating '$owner/$repository', release '$release_name' with the asset '$data_dir/$asset_name'."
 function upload_asset {
   release_id=$1
   echo "  Uploading asset to release '$release_id'."
@@ -51,6 +52,7 @@ function create_release {
 
 function clear_assets {
   assets=$1
+  echo "Deleting assets."
   for row in $(echo "${assets}" | jq -r '.[] | @base64'); do
     _jq() {
      echo ${row} | base64 --decode | jq -r ${1}
@@ -75,7 +77,7 @@ function replace_asset {
   echo "  The release has $asset_count assets."
   if [ $asset_count != "0" ]; then
     echo "  We need to delete assets before uploading."
-    clear_assets $assets
+    clear_assets "$assets"
   else
     echo "  We do not need to delete any assets before uploading."
   fi
