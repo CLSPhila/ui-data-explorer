@@ -16,14 +16,10 @@ jobs:
         run: |
           docker-compose run --rm datadownload
       - name: Create release for the parquet data, or update if necessary.
-        run: . ./updateRelease.sh clsphila ui-data-explorer \
-          uiExplorerData \
-          unemployment_data.parquet
+        run: . ./updateRelease.sh clsphila ui-data-explorer uiExplorerData unemployment_data.parquet
       - name: Zip csv data, to release it.
         run: zip data/unemployment_data.zip data/*.csv
       - name: Create or update release for csv data.
         run: |
           rm data/EUC-1982-1987-USDOLData.csv
-          . ./updateRelease.sh clsphila ui-data-explorer \
-                               uiExplorerCSV \
-                               unemployment_data.zip
+          . ./updateRelease.sh clsphila ui-data-explorer uiExplorerCSV unemployment_data.zip
