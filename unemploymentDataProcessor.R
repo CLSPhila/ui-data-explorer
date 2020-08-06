@@ -156,7 +156,7 @@ getOverpayments <- function() {
     summarize(across(where(is.numeric), ~round(mean(., 1))))
   
   ucOverpayments <- ucOverpayments %>%
-    bind_rows(usAvg %>% mutate(st = "US")) %>%
+    bind_rows(usAvg %>% mutate(st = "US (avg)")) %>%
     mutate(
       # then calculate the fraud percent
       fraud_num_percent = round((regular_fraud_num) / (regular_fraud_num + regular_nonfraud_num ), 
@@ -271,7 +271,7 @@ get_demographic_data <- function() {
     summarize(across(where(is.numeric), mean, na.rm = T))
 
   df <- df %>% 
-    bind_rows(usAvg %>% mutate(st = "US"))
+    bind_rows(usAvg %>% mutate(st = "US (avg)"))
 }
 
 # weekly claims data 
@@ -288,7 +288,7 @@ get_weekly_claims_data <- function() {
     summarize(across(where(is.numeric), mean, na.rm = T))
   
   df <- df %>% 
-    bind_rows(usAvg %>% mutate(st = "US")) %>% 
+    bind_rows(usAvg %>% mutate(st = "US (avg)")) %>% 
     group_by(st) %>% 
     mutate(weekly_initial_claims_52_week_avg = rollmean(weekly_initial_claims, k=52, align="right", na.pad=T),
            weekly_continued_claims_52_week_avg = rollmean(weekly_continued_claims, k=52, align="right", na.pad=T)) %>% 
@@ -383,7 +383,7 @@ get_puc_600_data <- function() {
     summarize(across(where(is.numeric), mean, na.rm = T))
   
   df <- df %>% 
-    bind_rows(usAvg %>% mutate(st = "US"))
+    bind_rows(usAvg %>% mutate(st = "US (avg)"))
 
   
 }
@@ -509,11 +509,12 @@ get_basic_ui_information <- function() {
     summarize(across(where(is.numeric), mean, na.rm = T))
   
   ucClaimsPayments <- ucClaimsPayments %>% 
-    bind_rows(usAvg %>% mutate(st = "US")) %>% 
+    bind_rows(usAvg %>% mutate(st = "US (avg)")) %>% 
     group_by(st) %>% 
     mutate(monthly_initial_claims_12_mo_avg = rollmean(monthly_initial_claims, 12, align = "right", na.pad = T),
            monthly_first_payments_12_mo_avg = rollmean(monthly_first_payments, 12, align = "right", na.pad = T),
-           monthly_exhaustion_12_mo_avg = rollmean(monthly_exhaustion, 12, align = "right", na.pad = T)) %>% 
+           monthly_exhaustion_12_mo_avg = rollmean(monthly_exhaustion, 12, align = "right", na.pad = T),
+           monthly_first_payments_as_prop_claims_12_mo_avg = monthly_first_payments_12_mo_avg / monthly_initial_claims_12_mo_avg) %>% 
     ungroup()
     
   return(ucClaimsPayments)
@@ -544,7 +545,7 @@ getRecipiency <- function (bls_unemployed, ucClaimsPaymentsMonthly, pua_claims)
   
   # sum the various numbers that we care about and then divide by the number of weeks in the month to get a weekly number rather than a monthly number
   ucRecipiency <- ucClaimsPaymentsMonthly %>% 
-    filter(st != "US") %>% 
+    filter(st != "US (avg)") %>% 
     mutate(reg_total = state_intrastate + state_liable + ucfe_instrastate + ufce_liable + ucx_intrastate + ucx_liable,
            fed_total = ext_state_intrastate + ext_state_liable + ext_ucfe_instrastate + ext_ufce_liable + ext_ucx_intrastate + 
              ext_ucx_liable + euc91_state_intrastate + euc91_state_liable + euc91_ucfe_instrastate + euc91_ufce_liable + 
@@ -592,7 +593,7 @@ getRecipiency <- function (bls_unemployed, ucClaimsPaymentsMonthly, pua_claims)
     summarize(across(where(is.numeric), mean, na.rm = T))
   
   ucRecipiency <- ucRecipiency %>% 
-    bind_rows(usAvg %>% mutate(st = "US")) %>%
+    bind_rows(usAvg %>% mutate(st = "US (avg)")) %>%
     mutate(
       # get recipiency rates
       recipiency_annual_reg = round(reg_total_week_mov_avg / unemployed_avg,3),
@@ -629,7 +630,7 @@ getMonetaryDeterminations <- function() {
     summarize(across(where(is.numeric), mean, na.rm = T))
   
   ucMonetaryRegular <- ucMonetaryRegular %>% 
-    bind_rows(usAvg %>% mutate(st = "US"))
+    bind_rows(usAvg %>% mutate(st = "US (avg)"))
   
   return(ucMonetaryRegular)  
   
@@ -775,7 +776,7 @@ getNonMonetaryDeterminations <- function(pua_claims)
     summarize(across(where(is.numeric), mean))
   
   ucNonMonetary <- ucNonMonetary %>% 
-    bind_rows(usAvg %>% mutate(st = "US"))
+    bind_rows(usAvg %>% mutate(st = "US (avg)"))
   
   
   return(ucNonMonetary)  
@@ -796,6 +797,7 @@ getUCFirstTimePaymentLapse <- function() {
   ucFirstTimePaymentLapse <- ucFirstTimePaymentLapse %>% 
     mutate(
       first_time_payment_Within15Days = round((x0x7 + x8x14) / first_time_payment_total, 3),
+      first_time_payment_Within21Days = round((x0x7 + x8x14 + x15x21) / first_time_payment_total, 3),
       first_time_payment_Within35Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35) / first_time_payment_total, 3),
       first_time_payment_Within49Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42 + x43x49) / first_time_payment_total, 3),
       first_time_payment_Within70Days = round((x0x7 + x8x14 + x15x21 + x22x28 + x29x35 + x36x42+ x43x49 + 
@@ -804,7 +806,7 @@ getUCFirstTimePaymentLapse <- function() {
                             x57x63 + x64x70 + xOver70) / first_time_payment_total, 3)) %>% 
   
     # we only need to choose certai n columns, so this isn't strictly necessary, but is a convenience
-    select(st, rptdate, first_time_payment_total, first_time_payment_Within15Days, first_time_payment_Within35Days, first_time_payment_Within49Days, 
+    select(st, rptdate, first_time_payment_total, first_time_payment_Within15Days, first_time_payment_Within21Days, first_time_payment_Within35Days, first_time_payment_Within49Days, 
            first_time_payment_Within70Days) 
   
   #compute US Averages
@@ -815,7 +817,7 @@ getUCFirstTimePaymentLapse <- function() {
     mutate(first_time_payment_total = NA) # this is ported from earlier code; I'm not sure why I did this back then
   
   ucFirstTimePaymentLapse <- ucFirstTimePaymentLapse %>% 
-    bind_rows(usAvg %>% mutate(st = "US")) %>% 
+    bind_rows(usAvg %>% mutate(st = "US (avg)")) %>% 
     mutate(st = as.factor(st))
   
   
@@ -865,7 +867,7 @@ getUCAppealsTimeLapseLower <- function(ucBenefitAppealsRegular) {
     mutate(total_lower_appeals = NA) # this is ported from earlier code; I'm not sure why I did this back then
   
   ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
-    bind_rows(usAvg %>% mutate(st = "US")) %>% 
+    bind_rows(usAvg %>% mutate(st = "US (avg)")) %>% 
     mutate(st = as.factor(st))
 
   # mgh: note to self - same.  We are making averges and then adding them to each row
@@ -911,7 +913,7 @@ getucAppealsTimeLapseHigher <- function() {
     mutate(total_higher_appeals = NA) # this is ported from earlier code; I'm not sure why I did this back then
   
   ucAppealsTimeLapseHigher <- ucAppealsTimeLapseHigher %>% 
-    bind_rows(usAvg %>% mutate(st = "US")) %>% 
+    bind_rows(usAvg %>% mutate(st = "US (avg)")) %>% 
     mutate(st = as.factor(st))
   
   # mgh: note again that we are adding in the average to each row and then again at the bottom

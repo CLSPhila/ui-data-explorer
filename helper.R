@@ -101,12 +101,12 @@ getSMPlot <- function(df, startDate, endDate, measure, yLabel, plotTitle, free_y
   
   # small multiple plot
   smPlot  <- df %>% 
-    filter(!st %in% ("US")) %>% 
+    filter(!st %in% ("US (avg)")) %>% 
     ggplot(aes(x = rptdate, y = value)) +
     geom_line(size = 1.1, color = "gray29") +
     facet_wrap(vars(st), ncol = 5, scales = scales) +
     geom_line(data = df %>% 
-                filter(st == "US") %>% 
+                filter(st == "US (avg)") %>% 
                 select(-st), 
               aes(x = rptdate, y = value), color="tomato3", linetype="dashed") +
     theme_minimal() +
@@ -239,17 +239,27 @@ get_wide_UI_table <- function(df, col_list) {
 }
 
 # gets a DT::datatable for printing
-get_UI_DT_datable <- function(df, col_list, names_list, class = "stripe", lim_a = NULL, lim_b = NULL) {
+get_UI_DT_datable <- function(df, col_list, names_list, class = "stripe", lim_a = NULL, lim_b = NULL, lim_c = NULL) {
  
   # deal with callbacks when we want one to highlight rows that don't comply with a federal standard
   rowCallback <- NA
-  if (!is.null(lim_a) & !is.null(lim_b)) {
-    rowCallback <- DT::JS(paste('function (row,data) { if(parseFloat(data[2]) < ', 
+  if (!is.null(lim_a)) {
+    rowCallback <- paste('function (row,data) { if(parseFloat(data[2]) < ', 
                                 lim_a, 
-                                ') { $("td:eq(2)",row).css("color","red").css("font-weight", "bold"); } if(parseFloat(data[3]) <', 
-                                lim_b,  
-                                ') { $("td:eq(3)",row).css("color","red").css("font-weight", "bold"); }  }'))
+                                ') { $("td:eq(2)",row).css("color","red").css("font-weight", "bold"); }')
   }
+  if (!is.null(lim_b)) {
+    rowCallback <- paste(rowCallback, ' if(parseFloat(data[3]) <', 
+                                lim_b,  
+                                ') { $("td:eq(3)",row).css("color","red").css("font-weight", "bold"); }')
+  }
+  if (!is.null(lim_c)) {
+    rowCallback <- paste(rowCallback, ' if(parseFloat(data[4]) <', 
+                         lim_c,  
+                         ') { $("td:eq(4)",row).css("color","red").css("font-weight", "bold"); }')
+  }
+  if (!all(is.null(lim_a), is.null(lim_b), is.null(lim_c))) rowCallback <- DT::JS(paste(rowCallback, '}'))
+  
   
   DT::datatable(get_wide_UI_table(df, col_list), 
                 options = list(
