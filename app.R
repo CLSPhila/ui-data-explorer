@@ -35,14 +35,14 @@ source("helper.R")
 # input <- list(range = as.Date(c("2008-01-01", "2020-05-30")), state = "PA")
 
 # read in the df of data that we need
-stored_data_location <- file.path(config::get("DATA_DIR"), "unemployment_data.parquet")
+stored_data_location <- file.path(get("DATA_DIR"), "unemployment_data.parquet")
 unemployed_df <- arrow::read_parquet(stored_data_location)
 
 
 maxDate <- max(unemployed_df$rptdate)
 minDate <- min(unemployed_df$rptdate)
 states <- sort(unique(unemployed_df$st))
-
+pua_earliest <- ymd("2020-01-31")
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -169,17 +169,25 @@ server <- function(input, output) {
   makeReactiveBinding("date_filter_start")
   makeReactiveBinding("date_filter_end")
   
-  observeEvent(input$range, { 
+  
+  toListen <- reactive({list(input$range, input$viewData)})
+  
+  observeEvent(toListen(), { 
     date_filter_start <<- get_last_day_of_month_from_range(input$range[1])
     date_filter_end <<- get_last_day_of_month_from_range(input$range[2])
+    
+    # set the start and end date to no earlier than the 1/31/2020 if we selected PUA
+    if(input$viewData %in% c("puaData", "puaClaims", "pucClaims")) {
+      if(date_filter_start < pua_earliest) date_filter_start <<- pua_earliest
+      if(date_filter_end < pua_earliest) date_filter_end <<- date_filter_start + months(4)
+    } 
+    
   })
-  
+
   # render the plot
   output$uiplot <- renderPlot({
 
-#browser()
     # get start and end date filters
-    
     df <- unemployed_df %>%
       filter(st == input$state,
              rptdate >= date_filter_start,
@@ -269,20 +277,18 @@ server <- function(input, output) {
     else if (input$viewData == "basicUI_payment_rate")
     {
       
-      metric_filter = c("monthly_first_payments_as_prop_claims")
+      metric_filter = c("monthly_first_payments_as_prop_claims_12_mo_avg")
       df <- df %>% 
         filter(metric %in% metric_filter)  
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 5129, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
-                            title = glue::glue("{input$state} First Payments as a Proportion of Initial Claims from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            title = glue::glue("{input$state} 12-mo Moving Average of First Payments as a Proportion of Initial Claims\nfrom {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                             breaks= metric_filter,
-                            labels=c("Monthly Payments as a Proportion of Initial Claims")) + 
+                            labels=c("12-mo Moving Average of Monthly Payments as a Proportion of Initial Claims")) + 
         scale_y_continuous(labels = scales::percent)
       
       
-      # adjustment for finding the max height of the graph
-      metric_filter = c("monthly_first_payments_as_prop_claims")
     }
     
     
@@ -475,7 +481,7 @@ server <- function(input, output) {
       df <- df %>% 
         filter(metric %in% metric_filter)
       df_us <- unemployed_df %>% 
-        filter(st == "US",
+        filter(st == "US (avg)",
                rptdate >= date_filter_start,
                rptdate <= date_filter_end,
                metric %in% metric_filter)
@@ -704,20 +710,24 @@ server <- function(input, output) {
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
                             caption = "Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
-                            title = glue::glue("{input$state} Lower Authority Decision Timeliness from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}")) %>% 
+                            title = glue::glue("{input$state} Lower Authority Decision Timeliness from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks= metric_filter,
+                            labels= c("Decisions Within 30 Days", "Decisions Within 45 Days")) %>% 
         add_line_with_label(x = min(df$rptdate), y = .6, label = "30-day threshold") %>% 
         add_line_with_label(x = min(df$rptdate), y = .8, label = "45-day threshold") 
 
       
     } else if(input$viewData == "firstPay") {
-      metric_filter = c("first_time_payment_Within15Days", "first_time_payment_Within35Days")
+      metric_filter = c("first_time_payment_Within15Days", "first_time_payment_Within21Days", "first_time_payment_Within35Days")
       df <- df %>% 
         filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
                             caption = "Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
-                            title = glue::glue("{input$state} First Payment Timeliness from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}")) %>% 
-        add_line_with_label(x = min(df$rptdate), y = .87, label = "15-day threshold") %>% 
+                            title = glue::glue("{input$state} First Payment Timeliness from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks= metric_filter,
+                            labels= c("Payments Within 15 Days", "Payments Within 21 Days", "Payments Within 35 Days")) %>% 
+        add_line_with_label(x = min(df$rptdate), y = .87, label = "15/21-day threshold") %>% 
         add_line_with_label(x = min(df$rptdate), y = .93, label = "35-day threshold") 
       
       
@@ -729,7 +739,9 @@ server <- function(input, output) {
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "",
                             caption = "Data courtesy of the USDOL.  Reports used are ETA 5130, 9050, 9054, and 9055.  \nAll can be found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
-                            title = glue::glue("{input$state} Higher Authority Decision Timeliness from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}")) %>% 
+                            title = glue::glue("{input$state} Higher Authority Decision Timeliness from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks= metric_filter,
+                            labels= c("Decisions Within 45 Days", "Decisions Within 75 Days")) %>% 
         add_line_with_label(x = min(df$rptdate), y = .4, label = "45-day threshold") %>% 
         add_line_with_label(x = min(df$rptdate), y = .8, label = "75-day threshold") 
       
@@ -998,15 +1010,16 @@ server <- function(input, output) {
       col_list <- c("total_lower_appeals", "lower_Within30Days", "lower_Within45Days", "lower_filed", "lower_appeals_total_disposed", "lower_appeals_total_outstanding")
       names_list <- c("State", "Date", "Total Lower Authority Appeals", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending")#, "US 30 Day Avg" ,"US 45 Day Avg")
       uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .6, lim_b = .8) %>% 
-        formatRound(columns = c(5:7), digits = 0)
+        formatRound(columns = c(3, 6:8), digits = 0)
       
       
     } else if (input$viewData == "firstPay") {
       # mgh: need to think about how to add in US averages
-      col_list <- c("first_time_payment_total", "first_time_payment_Within15Days", "first_time_payment_Within35Days")
-      names_list <- c("State", "Date", "First Time Payments", "Within 15 Days", "Within 35 Days") #, "US 15 Day Avg", "US 35 Day Avg")
-      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .87, lim_b = .93) %>% 
-        formatRound(columns = c(5), digits = 0)
+      col_list <- c("first_time_payment_total", "first_time_payment_Within15Days", "first_time_payment_Within21Days", "first_time_payment_Within35Days")
+      names_list <- c("State", "Date", "First Time Payments", "Within 15 Days", "Within 21 Days", "Within 35 Days") #, "US 15 Day Avg", "US 35 Day Avg")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .87, lim_b = .87, lim_c = .93) %>% 
+        formatRound(columns = c(3), digits = 0) %>% 
+        formatRound(columns = c(4:6), digits = 3)
       
       
     } else if (input$viewData == "higherAuthority") {
@@ -1014,7 +1027,7 @@ server <- function(input, output) {
       col_list <- c("total_higher_appeals", "higher_Within45Days", "higher_Within75Days", "higher_filed", "higher_appeals_total_disposed", "higher_appeals_total_outstanding")
       names_list <- c("State", "Date", "Total Higher Authority Appeals", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending") #, "US 45 Day Avg", "US 75 Day Avg")
       uiDT <- get_UI_DT_datable(df, col_list, names_list, class="nowrap stripe", lim_a = .4, lim_b = .8) %>% 
-        formatRound(columns = c(5:7), digits = 0)
+        formatRound(columns = c(3, 6:8), digits = 0)
       
     }
       
@@ -1114,7 +1127,7 @@ server <- function(input, output) {
                        "recipRate" = c("recipiency_annual_reg","recipiency_annual_total"),
                        "recipBreakdown" = c("total_week_mov_avg","unemployed_avg","recipiency_annual_total"),
                        "lowerAuthority" = c("total_lower_appeals", "lower_Within30Days", "lower_Within45Days", "lower_filed", "lower_appeals_total_disposed", "lower_appeals_total_outstanding"),
-                       "firstPay" = c("first_time_payment_total", "first_time_payment_Within15Days", "first_time_payment_Within35Days", "first_time_payment_total"),
+                       "firstPay" = c("first_time_payment_total", "first_time_payment_Within15Days", "first_time_payment_Within21Days", "first_time_payment_Within35Days", "first_time_payment_total"),
                        "higherAuthority" = c("total_higher_appeals", "higher_Within45Days", "higher_Within75Days", "higher_filed", "higher_appeals_total_disposed", "higher_appeals_total_outstanding"), 
     )
       
@@ -1171,7 +1184,7 @@ server <- function(input, output) {
                          "recipRate" = c("Annual Recipiency Rate (Regular UI)","Annual Recipiency Rate (Regular + Federal)"),
                          "recipBreakdown" = c("Weekly Continuing Claims (12-mo moving avg)", "Total Unemployed (12-mo moving avg)", "Recipiency Rate (state + federal programs)"),
                          "lowerAuthority" = c("Total Lower Authority Appeals", "Within 30 Days", "Within 45 Days", "Number Filed", "Number Decided", "Number Pending"),
-                         "firstPay" = c("Total First Time Payments", "Within 15 Days", "Within 35 Days", "Total Paid"),
+                         "firstPay" = c("Total First Time Payments", "Within 15 Days", "Within 21 Days", "Within 35 Days", "Total Paid"),
                          "higherAuthority" = c("Total Higher Authority Appeals", "Within 45 Days", "Within 75 Days", "Number Filed", "Number Decided", "Number Pending"))
     names_list <- c("State", "Report Date", names_list)
     
