@@ -1072,7 +1072,7 @@ ucAppealsTimeLapseHigher <- getucAppealsTimeLapseHigher()
 # PUA data (pandemic unemployment 2020)
 message("collecting PUA data")
 pua_claims <- get_pua_data()
-puc_payments <- get_puc_600_data()
+#puc_payments <- get_puc_600_data()
 
 # get UC recipiency and overpayments\
 message("Collecting UC Recipiency")
@@ -1107,7 +1107,7 @@ ucMonetary <- getMonetaryDeterminations()
 # make long-uberdf
 unemployment_df <- 
   map_dfr(list(ucClaimsPaymentsMonthly, ucClaimsWeekly, ucNonMonetary, ucOverpayments, ucRecipiency, ucFirstTimePaymentLapse, 
-             ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher, pua_claims, puc_payments, ucDemographicData, ucMonetary), 
+             ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher, ucDemographicData, ucMonetary), 
         function(x) { 
           x %>% 
             pivot_longer(cols = !one_of(c("rptdate", "st")), names_to = "metric", values_to = "value")}) %>% 
