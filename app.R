@@ -204,7 +204,7 @@ server <- function(input, output) {
       
       uPlot <- getRibbonPlot(df, xlab = "Date", ylab = "Total Paid",
                       caption = "12-month moving average of UI paid per month in both regular and federal UI programs.\nNote that 'regular UI' includes state UI, UFCE, and UCX.  Federal programs include EB, and the various EUC programs that have been enacted.",  
-                      title = glue::glue("{input$state} Monthly UI Payments from {format.Date(date_filter_start, 'm-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                      title = glue::glue("{input$state} Monthly UI Payments from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
                       breaks=c("total_state_compensated_mov_avg","total_federal_compensated_mov_avg"),
                       labels=c("Regular Programs","Federal Programs")) +
         scale_y_continuous(labels = label_number(scale = 1/1000000, prefix = "$", suffix = "M"))

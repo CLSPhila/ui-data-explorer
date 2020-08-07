@@ -153,7 +153,7 @@ getOverpayments <- function() {
   # compute US Averages and add them into the df
   usAvg <- ucOverpayments %>% 
     group_by(rptdate) %>% 
-    summarize(across(where(is.numeric), ~round(mean(., 1))))
+    summarize(across(where(is.numeric), ~round(mean(., 1, na.rm = T))))
   
   ucOverpayments <- ucOverpayments %>%
     bind_rows(usAvg %>% mutate(st = "US (avg)")) %>%
@@ -397,7 +397,10 @@ get_basic_ui_information <- function() {
   ucClaimsPaymentsEUC91 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ac5159.csv") #5159 report
   ucClaimsPaymentsTEUC02 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/at5159.csv") #5159 report
   ucClaimsPaymentsEUC08 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au5159.csv") #5159 report
-  ucClaimsPaymentsWorksharing <- downloadUCData("https://oui.doleta.gov/unemploy/csv/au5159.csv")
+  ucClaimsPaymentsWorksharing <- downloadUCData("https://oui.doleta.gov/unemploy/csv/aw5159.csv")
+  ucClaimsPaymentsPEUC20 <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ap5159.csv") # 5159 report
+  ucClaimsPaymentsPUC20 <- get_puc_600_data()
+  ucClaimsPaymentsPUA20 <- get_pua_data()
 
   # EUC data from the 80s isn't available on the DOL website, but DOL provided a copy of those claims
   ucClaimsPaymentsEUC80s <- read.csv(file.path(config::get("DATA_DIR"), "EUC-1982-1987-USDOLData.csv"))
@@ -489,7 +492,22 @@ get_basic_ui_information <- function() {
            workshare_weeks_compensated = c4,
            workshare_first_payments = c6) %>% 
     select(-starts_with("c"))
-  
+
+  # pandemic EUC  
+  ucClaimsPaymentsPEUC20 <- ucClaimsPaymentsPEUC20 %>% 
+    rename(peuc20_monthly_initial_claims = c1,
+           peuc20_monthly_first_payments = c40,
+           peuc20_monthly_weeks_compensated = c29,
+           peuc20_month_exhuastion = c43,
+           peuc20_state_intrastate = c12, 
+           peuc20_state_liable = c15, 
+           peuc20_ucfe_instrastate = c18, 
+           peuc20_ufce_liable = c21, 
+           peuc20_ucx_intrastate = c24, 
+           peuc20_ucx_liable = c27,
+           peuc20_state_compensated = c35, 
+           peuc20_ucfe_ucx_compensated = c37) %>% 
+    select(-starts_with("c"))
   
   # merge the different datasets together and backfill with 0 if there is no data for a month
   all_cols <- c("st","rptdate")
@@ -499,7 +517,10 @@ get_basic_ui_information <- function() {
     left_join(ucClaimsPaymentsTEUC02, by = all_cols) %>% 
     left_join(ucClaimsPaymentsEUC08, by = all_cols) %>% 
     left_join(ucClaimsPaymentsEUC80s, by = all_cols) %>%
-    left_join(ucClaimsPaymentsWorksharing, by = all_cols) %>% 
+    left_join(ucClaimsPaymentsWorksharing, by = all_cols) %>%
+    left_join(ucClaimsPaymentsPEUC20, by = all_cols) %>% 
+    left_join(ucClaimsPaymentsPUC20, by = all_cols) %>% 
+    left_join(ucClaimsPaymentsPUA20, by = all_cols) %>% 
     #left_join(pua_claims, by = all_cols) %>% 
     replace(is.na(.), 0)
   
@@ -551,7 +572,9 @@ getRecipiency <- function (bls_unemployed, ucClaimsPaymentsMonthly, pua_claims)
              ext_ucx_liable + euc91_state_intrastate + euc91_state_liable + euc91_ucfe_instrastate + euc91_ufce_liable + 
              euc91_ucx_intrastate + euc91_ucx_liable + euc08_state_intrastate + euc08_state_liable + euc08_ucfe_instrastate + 
              euc08_ufce_liable + euc08_ucx_intrastate + euc08_ucx_liable + teuc02_state_intrastate + teuc02_state_liable + 
-             teuc02_ucfe_instrastate + teuc02_ufce_liable + teuc02_ucx_intrastate + teuc02_ucx_liable + euc80s, #+ pua_weeks_claimed,
+             teuc02_ucfe_instrastate + teuc02_ufce_liable + teuc02_ucx_intrastate + teuc02_ucx_liable + euc80s + 
+             pua_weeks_claimed + peuc20_state_intrastate + peuc20_state_liable + peuc20_ucfe_instrastate + 
+             peuc20_ufce_liable + peuc20_ucx_intrastate + peuc20_ucx_liable, #+ pua_weeks_claimed,
            total = reg_total + fed_total, 
            reg_total_week = reg_total / (as.numeric(days_in_month(rptdate)) / 7),
            fed_total_week = fed_total / (as.numeric(days_in_month(rptdate)) / 7),
@@ -559,7 +582,8 @@ getRecipiency <- function (bls_unemployed, ucClaimsPaymentsMonthly, pua_claims)
            
            # this is a measure of the total money paid out per month in all of the various programs.  Note that we are missing EUC80s....
            total_compensated = state_compensated + ucfe_ucx_compensated + euc91_state_compensated + euc91_ucfe_ucx_compensated + 
-             teuc02_state_compensated + euc08_state_compensated + euc08_ucfe_ucx_compensated + ext_state_compensated + ext_ucfe_ucx_compensated, #+ pua_amount_compensated,
+             teuc02_state_compensated + euc08_state_compensated + euc08_ucfe_ucx_compensated + ext_state_compensated + ext_ucfe_ucx_compensated +
+             puc_payments_total + pua_amount_compensated + peuc20_state_compensated + peuc20_ucfe_ucx_compensated, #+ pua_amount_compensated,
            total_state_compensated = state_compensated + ucfe_ucx_compensated,
            total_federal_compensated = total_compensated - total_state_compensated
     ) %>% 
@@ -773,7 +797,7 @@ getNonMonetaryDeterminations <- function(pua_claims)
   # compute US Averages and add them into the df
   usAvg <- ucNonMonetary %>% 
     group_by(rptdate) %>% 
-    summarize(across(where(is.numeric), mean))
+    summarize(across(where(is.numeric), mean, na.rm = T))
   
   ucNonMonetary <- ucNonMonetary %>% 
     bind_rows(usAvg %>% mutate(st = "US (avg)"))
@@ -813,7 +837,7 @@ getUCFirstTimePaymentLapse <- function() {
   # compute US Averages and add them into the df
   usAvg <- ucFirstTimePaymentLapse %>% 
     group_by(rptdate) %>% 
-    summarize(across(where(is.numeric), function(x) round(mean(x), 3))) %>% 
+    summarize(across(where(is.numeric), function(x) round(mean(x, na.rm = T), 3))) %>% 
     mutate(first_time_payment_total = NA) # this is ported from earlier code; I'm not sure why I did this back then
   
   ucFirstTimePaymentLapse <- ucFirstTimePaymentLapse %>% 
@@ -863,7 +887,7 @@ getUCAppealsTimeLapseLower <- function(ucBenefitAppealsRegular) {
   # compute US Averages  
   usAvg <- ucAppealsTimeLapseLower %>% 
     group_by(rptdate) %>% 
-    summarize(across(where(is.numeric), function(x) round(mean(x), 3))) %>% 
+    summarize(across(where(is.numeric), function(x) round(mean(x, na.rm = T), 3))) %>% 
     mutate(total_lower_appeals = NA) # this is ported from earlier code; I'm not sure why I did this back then
   
   ucAppealsTimeLapseLower <- ucAppealsTimeLapseLower %>% 
@@ -909,7 +933,7 @@ getucAppealsTimeLapseHigher <- function() {
   #compute US Averages
   usAvg <- ucAppealsTimeLapseHigher %>% 
     group_by(rptdate) %>% 
-    summarize(across(where(is.numeric), function(x) round(mean(x), 3))) %>% 
+    summarize(across(where(is.numeric), function(x) round(mean(x, na.rm = T), 3))) %>% 
     mutate(total_higher_appeals = NA) # this is ported from earlier code; I'm not sure why I did this back then
   
   ucAppealsTimeLapseHigher <- ucAppealsTimeLapseHigher %>% 
