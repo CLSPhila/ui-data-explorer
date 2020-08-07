@@ -1015,7 +1015,7 @@ write_csv_files <- function(df, save_dir) {
   
   message("Writing Basic Monthly UI Data")
   df %>% 
-    write_data_as_csv(file.path(save_dir, "monthly_claims_and_payments.csv"), "^monthly_|^ucx_|^ext_|^euc91|^teuc02_|^euc08_")
+    write_data_as_csv(file.path(save_dir, "monthly_claims_and_payments.csv"), "^monthly_|^ucx_|^ext_|^euc91|^teuc02_|^euc08_|^peuc20_")
 
 
   message("Writing Basic Weekly UI Data")
