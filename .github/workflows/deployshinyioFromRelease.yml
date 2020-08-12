@@ -5,6 +5,7 @@
 name: Deploy ui-explorer to shinyapps.io using the Released verion of the parquet data.
 on:
   workflow_dispatch: # when complete, run this when the 'release data' workflow completes,  https://docs.github.com/en/actions/reference/events-that-trigger-workflows#release
+  push:  
   workflow_run:
     # run when the release workflow finishes.
     # See https://docs.github.com/en/actions/reference/events-that-trigger-workflows#workflow_run
