@@ -6,7 +6,7 @@ on:
   schedule:
     # update data daily.
     - cron: "0 4 * * *"
-
+  push: 
 env:
   IMAGE_ID: clsphila/ui-data-explorer/uidatadownloader:dockerize-update-2020
   FRED_KEY: ${{secrets.FRED_KEY}}
