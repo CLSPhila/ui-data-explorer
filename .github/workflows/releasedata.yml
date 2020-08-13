@@ -5,8 +5,8 @@ on:
   # to run manually.
   schedule:
     # update data daily.
-    - cron: "0 6 * * *"
-
+    - cron: "0 7 * * *"
+  #push: 
 env:
   FRED_KEY: ${{secrets.FRED_KEY}}
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
