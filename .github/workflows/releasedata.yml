@@ -10,6 +10,7 @@ on:
 env:
   FRED_KEY: ${{secrets.FRED_KEY}}
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+  IMAGE_NAME: uidatadownloader
 jobs:
   build:
     name: Download Data
@@ -17,6 +18,22 @@ jobs:
     steps:
       - name: Set image id
         run: |
+          IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
+          # Change all uppercase to lowercase
+
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "$default-branch" ] && VERSION=latest
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
           echo "::set-env name=IMAGE_ID::$GITHUB_REPOSITORY/uidatadownloader:latest"
           echo "IMAGE ID: $IMAGE_ID"
       - name: Checkout code
