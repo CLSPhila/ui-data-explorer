@@ -36,7 +36,9 @@ jobs:
           SHINYAPPS_TOKEN: ${{secrets.SHINYAPPS_TOKEN}}
           SHINYAPPS_ACCOUNT: ${{secrets.SHINYAPPS_ACCOUNT}}
         run: |
-          IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
+          # I think we want to build the image when we run this, rather than relying on the stored image.
+          #IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
+          IMAGE_ID=${{ github.repository }}/$IMAGE_NAME
           # Change all uppercase to lowercase
 
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
