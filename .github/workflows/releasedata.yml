@@ -8,7 +8,7 @@ on:
     - cron: "0 6 * * *"
 
 env:
-  IMAGE_ID: $GITHUB_REPOSITORY/uidatadownloader:dockerize-update-2020
+  IMAGE_ID: ${{$GITHUB_REPOSITORY}}/uidatadownloader:dockerize-update-2020
   FRED_KEY: ${{secrets.FRED_KEY}}
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 jobs:
