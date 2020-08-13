@@ -33,8 +33,7 @@ jobs:
           [ "$VERSION" == "$default-branch" ] && VERSION=latest
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION
-          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
-          echo "::set-env name=IMAGE_ID::$GITHUB_REPOSITORY/uidatadownloader:latest"
+          echo "::set-env name=IMAGE_ID::$IMAGE_ID"
           echo "IMAGE ID: $IMAGE_ID"
       - name: Checkout code
         uses: actions/checkout@v2
