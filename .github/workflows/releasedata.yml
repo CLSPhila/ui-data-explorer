@@ -33,7 +33,7 @@ jobs:
           [ "$VERSION" == "$default-branch" ] && VERSION=latest
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION
-          echo "::set-env name=IMAGE_ID::$IMAGE_ID"
+          echo "::set-env name=IMAGE_ID::$IMAGE_ID:$VERSION"
           echo "IMAGE ID: $IMAGE_ID"
       - name: Checkout code
         uses: actions/checkout@v2
