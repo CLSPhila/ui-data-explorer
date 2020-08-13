@@ -89,7 +89,7 @@ function replace_asset {
 # get the releases
 releases_complete=$(curl \
   -H "Accept: application/vnd.github.v3+json" \
-  https://api.github.com/repos/clsphila/ui-data-explorer/releases)
+  https://api.github.com/repos/$repository/releases)
 
 
 # find the release we care about with its name.
