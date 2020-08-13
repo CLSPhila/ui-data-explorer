@@ -37,7 +37,7 @@ function upload_asset {
 function create_release {
   echo "Release not found. Creating."
   new_release=$(curl \
-    -u natev:"$GITHUB_TOKEN" \
+    -u "$GITHUB_ACTOR":"$GITHUB_TOKEN" \
     -H "Accept: application/vnd.github.v3+json" \
      "https://api.github.com/repos/$repository/releases" \
     -d "{\"tag_name\":\"$release_name\", \"name\":\"$release_name\"}"
@@ -60,7 +60,7 @@ function clear_assets {
     echo "Delete Asset: $asset_id"
     deleted=$(curl \
     -X DELETE \
-    -u natev:"$GITHUB_TOKEN" \
+    -u "$GITHUB_ACTOR":"$GITHUB_TOKEN" \
     -H "Accept: application/vnd.github.v3+json" \
      "https://api.github.com/repos/$repository/releases/assets/$asset_id"
     )
