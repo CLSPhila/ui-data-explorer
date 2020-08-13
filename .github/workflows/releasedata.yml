@@ -5,27 +5,46 @@ on:
   # to run manually.
   schedule:
     # update data daily.
-    - cron: "0 4 * * *"
+    - cron: "0 7 * * *"
   #push: 
 env:
-  IMAGE_ID: clsphila/ui-data-explorer/uidatadownloader:dockerize-update-2020
   FRED_KEY: ${{secrets.FRED_KEY}}
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+  IMAGE_NAME: uidatadownloader
 jobs:
   build:
     name: Download Data
     runs-on: ubuntu-latest
     steps:
+      - name: Set image id
+        run: |
+          IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
+          # Change all uppercase to lowercase
+
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "$default-branch" ] && VERSION=latest
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+          echo "::set-env name=IMAGE_ID::$IMAGE_ID:$VERSION"
+          echo "IMAGE ID: $IMAGE_ID"
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Download and process data
         run: |
           docker-compose run --rm datadownload
       - name: Create release for the parquet data, or update if necessary.
-        run: . ./updateRelease.sh clsphila ui-data-explorer uiExplorerData unemployment_data.parquet
+        run: . ./updateRelease.sh $GITHUB_REPOSITORY uiExplorerData unemployment_data.parquet
       - name: Zip csv data, to release it.
         run: zip data/unemployment_data.zip data/*.csv
       - name: Create or update release for csv data.
         run: |
           rm data/EUC-1982-1987-USDOLData.csv
-          . ./updateRelease.sh clsphila ui-data-explorer uiExplorerCSV unemployment_data.zip
+          . ./updateRelease.sh $GITHUB_REPOSITORY uiExplorerCSV unemployment_data.zip
