@@ -6,11 +6,10 @@
 # note - to run using env vars in the running shell,run with `. .updateRelease`
 
 # Arguments with defaults.
-owner="${1:-clsphila}" # owner of the repository we're updating.
-repository="${2:-ui-data-explorer}" # the name of the repo we're updating.
-release_name="${3:-uiExplorerData}" # Name of the release we're updating/
-asset_name="${4:-unemployment_data.parquet}" # Name of the asset we're updating. 
-data_dir="${5:-data}" # Directory where the asset exists locally to this script.
+repository="${1:-clsphila/ui-data-explorer}" # the name of the repo we're updating, including owner.
+release_name="${2:-uiExplorerData}" # Name of the release we're updating/
+asset_name="${3:-unemployment_data.parquet}" # Name of the asset we're updating. 
+data_dir="${4:-data}" # Directory where the asset exists locally to this script.
 
 if [ "$GITHUB_TOKEN" == "" ]; then
   echo "Expected github token missing. Have you set up environment variables?"
@@ -18,7 +17,7 @@ if [ "$GITHUB_TOKEN" == "" ]; then
 fi
 
 echo "----------"
-echo "Updating '$owner/$repository', release '$release_name' with the asset '$data_dir/$asset_name'."
+echo "Updating '$repository', release '$release_name' with the asset '$data_dir/$asset_name'."
 function upload_asset {
   release_id=$1
   echo "  Uploading asset to release '$release_id'."
@@ -28,7 +27,7 @@ function upload_asset {
     -H "Accept:application/vnd.github.v3+json" \
     -H "Content-Type:application/octet-stream" \
     --data-binary @"$data_dir/$asset_name" \
-    "https://uploads.github.com/repos/$owner/$repository/releases/$release_id/assets?name=$asset_name"
+    "https://uploads.github.com/repos/$repository/releases/$release_id/assets?name=$asset_name"
     )
   echo "  Finished uploading asset."
   echo "  $uploaded_response"
@@ -40,7 +39,7 @@ function create_release {
   new_release=$(curl \
     -u natev:"$GITHUB_TOKEN" \
     -H "Accept: application/vnd.github.v3+json" \
-     "https://api.github.com/repos/$owner/$repository/releases" \
+     "https://api.github.com/repos/$repository/releases" \
     -d "{\"tag_name\":\"$release_name\", \"name\":\"$release_name\"}"
     )
   echo "new release: $new_release"
@@ -63,7 +62,7 @@ function clear_assets {
     -X DELETE \
     -u natev:"$GITHUB_TOKEN" \
     -H "Accept: application/vnd.github.v3+json" \
-     "https://api.github.com/repos/$owner/$repository/releases/assets/$asset_id"
+     "https://api.github.com/repos/$repository/releases/assets/$asset_id"
     )
   done 
 }
