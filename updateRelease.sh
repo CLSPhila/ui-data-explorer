@@ -23,7 +23,7 @@ function upload_asset {
   echo "  Uploading asset to release '$release_id'."
   uploaded_response=$(curl \
     -X POST \
-    -u natev:"$GITHUB_TOKEN" \
+    -u "$GITHUB_ACTOR":"$GITHUB_TOKEN" \
     -H "Accept:application/vnd.github.v3+json" \
     -H "Content-Type:application/octet-stream" \
     --data-binary @"$data_dir/$asset_name" \
