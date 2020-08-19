@@ -5,7 +5,7 @@ on:
   # to run manually.
   schedule:
     # update data daily.
-    - cron: "0   5 * * *"
+    - cron: "0 5 * * *"
   #push: 
 env:
   FRED_KEY: ${{secrets.FRED_KEY}}
