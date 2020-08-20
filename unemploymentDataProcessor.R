@@ -206,7 +206,7 @@ get_fred_series_with_state_id <- function(series, metric_name, sleep = FALSE, st
     select(rptdate, st, metric, value)
   
   # sleep to avoid a rate limitation, if need be
-  if(sleep) Sys.sleep(1)
+  if(sleep) Sys.sleep(config::get("FRED_SLEEP_TIME"))
   
   return(df)
 }
