@@ -206,7 +206,7 @@ get_fred_series_with_state_id <- function(series, metric_name, sleep = FALSE, st
     select(rptdate, st, metric, value)
   
   # sleep to avoid a rate limitation, if need be
-  if(sleep) Sys.sleep(1)
+  if(sleep) Sys.sleep(config::get("FRED_SLEEP_TIME"))
   
   return(df)
 }
@@ -278,7 +278,8 @@ get_demographic_data <- function() {
 # get 539 information
 get_weekly_claims_data <- function() {
   df <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar539.csv") %>% 
-    select(st, rptdate, weekly_initial_claims = c3, weekly_continued_claims = c8)
+    select(st, rptdate, weekly_initial_claims = c3, weekly_continued_claims = c8,
+           weekly_ebt_eb_claims = c13)
   # weekly claims data 
     
   
@@ -410,35 +411,40 @@ get_basic_ui_information <- function() {
   # name the columns that we care about for later code readability
   ucClaimsPaymentsRegular <- ucClaimsPaymentsRegular %>% 
     rename(monthly_initial_claims = c1,
+           monthly_initial_additional_intrastate = c3,
            monthly_first_payments = c51,
            monthly_weeks_compensated = c38,
            monthly_exhaustion = c56,
-           state_intrastate = c21, 
-           state_liable = c24, 
-           ucfe_instrastate = c27, 
-           ufce_liable = c30, 
-           ucx_intrastate = c33, 
-           ucx_liable = c36, 
-           state_compensated = c45,
-           ucfe_ucx_compensated = c48) %>% 
-    mutate(monthly_weeks_claimed = c22 + state_intrastate,
+           monthly_state_intrastate = c21, 
+           monthly_state_liable = c24, 
+           monthly_ucfe_instrastate = c27, 
+           monthly_ufce_liable = c30,
+           monthly_ufce_compensated = c47,
+           monthly_ucx_intrastate = c33, 
+           monthly_ucx_liable = c36, 
+           monthly_state_compensated = c45,
+           monthly_ucfe_ucx_compensated = c48) %>% 
+    mutate(monthly_weeks_claimed = c22 + monthly_state_intrastate,
            monthly_partial_weeks_compensated = monthly_weeks_compensated - c39,
            monthly_first_payments_as_prop_claims = monthly_first_payments / monthly_initial_claims) %>% 
     select(-starts_with("c"))
   
   ucClaimsPaymentsExtended <- ucClaimsPaymentsExtended %>% 
-    rename(ext_monthly_initial_claims = c1,
-           ext_monthly_first_payments = c40,
-           ext_monthly_weeks_compensated = c29,
-           ext_month_exhuastion = c43,
-           ext_state_intrastate = c12, 
-           ext_state_liable = c15, 
-           ext_ucfe_instrastate = c18, 
-           ext_ufce_liable = c21, 
-           ext_ucx_intrastate = c24, 
-           ext_ucx_liable = c27,
-           ext_state_compensated = c35, 
-           ext_ucfe_ucx_compensated = c37) %>% 
+    rename(eb_monthly_initial_claims = c1,
+           eb_monthly_additional_intrastate = c46,
+           eb_monthly_first_payments = c40,
+           eb_monthly_weeks_compensated = c29,
+           eb_month_exhuastion = c43,
+           eb_state_intrastate = c12, 
+           eb_state_intrastate_filed_from_agent_state = c13, 
+           eb_state_intrastate_received_as_liable_state = c15, 
+           eb_state_liable = c15, 
+           eb_ucfe_instrastate = c18, 
+           eb_ufce_liable = c21, 
+           eb_ucx_intrastate = c24, 
+           eb_ucx_liable = c27,
+           eb_state_compensated = c35, 
+           eb_ucfe_ucx_compensated = c37) %>% 
     select(-starts_with("c"))
   
   ucClaimsPaymentsEUC91 <- ucClaimsPaymentsEUC91 %>% 
@@ -458,6 +464,7 @@ get_basic_ui_information <- function() {
   
   ucClaimsPaymentsTEUC02 <- ucClaimsPaymentsTEUC02 %>% 
     rename(teuc02_monthly_initial_claims = c1,
+           teuc02_monthly_additional_intrastate = c46,
            teuc02_monthly_first_payments = c40,
            teuc02_monthly_weeks_compensated = c29,
            teuc02_month_exhuastion = c43,
@@ -473,6 +480,7 @@ get_basic_ui_information <- function() {
 
   ucClaimsPaymentsEUC08 <- ucClaimsPaymentsEUC08 %>% 
     rename(euc08_monthly_initial_claims = c1,
+           euc08_monthly_additional_intrastate = c46,
            euc08_monthly_first_payments = c40,
            euc08_monthly_weeks_compensated = c29,
            euc08_month_exhuastion = c43,
@@ -496,10 +504,14 @@ get_basic_ui_information <- function() {
   # pandemic EUC  
   ucClaimsPaymentsPEUC20 <- ucClaimsPaymentsPEUC20 %>% 
     rename(peuc20_monthly_initial_claims = c1,
+           peuc20_monthly_interstate_filed_from_agent_state = c2,
+           peuc20_monthly_interstate_received_as_liability = c3,
            peuc20_monthly_first_payments = c40,
            peuc20_monthly_weeks_compensated = c29,
-           peuc20_month_exhuastion = c43,
-           peuc20_state_intrastate = c12, 
+           peuc20_monthly_exhuastion = c43,
+           peuc20_state_intrastate = c12,
+           peuc20_state_intrastate_file_from_agent_state = c13,
+           peuc20_state_intrastate_received_as_liability = c15,
            peuc20_state_liable = c15, 
            peuc20_ucfe_instrastate = c18, 
            peuc20_ufce_liable = c21, 
@@ -567,9 +579,10 @@ getRecipiency <- function (bls_unemployed, ucClaimsPaymentsMonthly, pua_claims)
   # sum the various numbers that we care about and then divide by the number of weeks in the month to get a weekly number rather than a monthly number
   ucRecipiency <- ucClaimsPaymentsMonthly %>% 
     filter(st != "US (avg)") %>% 
-    mutate(reg_total = state_intrastate + state_liable + ucfe_instrastate + ufce_liable + ucx_intrastate + ucx_liable,
-           fed_total = ext_state_intrastate + ext_state_liable + ext_ucfe_instrastate + ext_ufce_liable + ext_ucx_intrastate + 
-             ext_ucx_liable + euc91_state_intrastate + euc91_state_liable + euc91_ucfe_instrastate + euc91_ufce_liable + 
+    mutate(reg_total = monthly_state_intrastate + monthly_state_liable + monthly_ucfe_instrastate + monthly_ufce_liable + 
+             monthly_ucx_intrastate + monthly_ucx_liable,
+           fed_total = eb_state_intrastate + eb_state_liable + eb_ucfe_instrastate + eb_ufce_liable + eb_ucx_intrastate + 
+             eb_ucx_liable + euc91_state_intrastate + euc91_state_liable + euc91_ucfe_instrastate + euc91_ufce_liable + 
              euc91_ucx_intrastate + euc91_ucx_liable + euc08_state_intrastate + euc08_state_liable + euc08_ucfe_instrastate + 
              euc08_ufce_liable + euc08_ucx_intrastate + euc08_ucx_liable + teuc02_state_intrastate + teuc02_state_liable + 
              teuc02_ucfe_instrastate + teuc02_ufce_liable + teuc02_ucx_intrastate + teuc02_ucx_liable + euc80s + 
@@ -581,10 +594,10 @@ getRecipiency <- function (bls_unemployed, ucClaimsPaymentsMonthly, pua_claims)
            total_week = total / (as.numeric(days_in_month(rptdate)) / 7),
            
            # this is a measure of the total money paid out per month in all of the various programs.  Note that we are missing EUC80s....
-           total_compensated = state_compensated + ucfe_ucx_compensated + euc91_state_compensated + euc91_ucfe_ucx_compensated + 
-             teuc02_state_compensated + euc08_state_compensated + euc08_ucfe_ucx_compensated + ext_state_compensated + ext_ucfe_ucx_compensated +
+           total_compensated = monthly_state_compensated + monthly_ucfe_ucx_compensated + euc91_state_compensated + euc91_ucfe_ucx_compensated + 
+             teuc02_state_compensated + euc08_state_compensated + euc08_ucfe_ucx_compensated + eb_state_compensated + eb_ucfe_ucx_compensated +
              puc_payments_total + pua_amount_compensated + peuc20_state_compensated + peuc20_ucfe_ucx_compensated, #+ pua_amount_compensated,
-           total_state_compensated = state_compensated + ucfe_ucx_compensated,
+           total_state_compensated = monthly_state_compensated + monthly_ucfe_ucx_compensated,
            total_federal_compensated = total_compensated - total_state_compensated
     ) %>% 
     arrange(rptdate) %>% 
@@ -677,7 +690,7 @@ getNonMonetaryDeterminations <- function(pua_claims)
   # EUC08 and TEUC appear to have the same structure as extended benefits, not euc91
   all_cols <- c("st","rptdate")
   reg_cols <- c("state_total_determ", "ufce_total_determ", "ucx_total_determ", "state_determ_sep_total", "state_determ_sep_vol", "state_determ_sep_misconduct", "state_determ_sep_other", "state_denial_sep_total", "state_denial_sep_vol", "state_denial_sep_misconduct", "state_denial_sep_other", "ufce_determ_sep_total", "ufce_determ_sep_vol", "ufce_determ_sep_misconduct", "ufce_determ_sep_other", "ufce_denial_sep_total", "ufce_denial_sep_vol", "ufce_denial_sep_misconduct", "ufce_denial_sep_other", "state_determ_non_total", "state_determ_non_aa", "state_determ_non_income","state_determ_non_refusework","state_determ_non_reporting","state_determ_non_referrals","state_determ_non_other",  "state_denial_non_total", "state_denial_non_aa", "state_denial_non_income","state_denial_non_refusework","state_denial_non_reporting","state_denial_non_referrals","state_denial_non_other") 
-  ext_cols <- c("ext_state_total_determ", "ext_ufce_total_determ", "ext_ucx_total_determ", "ext_state_determ_sep_total", "ext_state_determ_sep_vol", "ext_state_determ_sep_misconduct", "ext_state_determ_sep_other", "ext_state_denial_sep_total", "ext_state_denial_sep_vol", "ext_state_denial_sep_misconduct", "ext_state_denial_sep_other", "ext_state_determ_non_total", "ext_state_determ_non_aa", "ext_state_determ_non_refusework","ext_state_determ_non_other",  "ext_state_denial_non_total", "ext_state_denial_non_aa","ext_state_denial_non_refusework","ext_state_denial_non_other")
+  eb_cols <- c("eb_state_total_determ", "eb_ufce_total_determ", "eb_ucx_total_determ", "eb_state_determ_sep_total", "eb_state_determ_sep_vol", "eb_state_determ_sep_misconduct", "eb_state_determ_sep_other", "eb_state_denial_sep_total", "eb_state_denial_sep_vol", "eb_state_denial_sep_misconduct", "eb_state_denial_sep_other", "eb_state_determ_non_total", "eb_state_determ_non_aa", "eb_state_determ_non_refusework","eb_state_determ_non_other",  "eb_state_denial_non_total", "eb_state_denial_non_aa","eb_state_denial_non_refusework","eb_state_denial_non_other")
   euc91_cols <- c("euc91_state_total_determ", "euc91_ufce_total_determ", "euc91_ucx_total_determ", "euc91_state_determ_sep_total", "euc91_state_determ_sep_vol", "euc91_state_determ_sep_misconduct", "euc91_state_determ_sep_other", "euc91_state_denial_sep_total", "euc91_state_denial_sep_vol", "euc91_state_denial_sep_misconduct", "euc91_state_denial_sep_other", "euc91_state_determ_non_total", "euc91_state_determ_non_aa", "euc91_state_determ_non_income","euc91_state_determ_non_refusework", "euc91_state_determ_non_reporting","euc91_state_determ_non_other",  "euc91_state_denial_non_total", "euc91_state_denial_non_aa", "euc91_state_denial_non_income","euc91_state_denial_non_refusework","euc91_state_denial_non_reporting","euc91_state_denial_non_other")  
   euc08_cols <- c("euc08_state_total_determ", "euc08_ufce_total_determ", "euc08_ucx_total_determ", "euc08_state_determ_sep_total", "euc08_state_determ_sep_vol", "euc08_state_determ_sep_misconduct", "euc08_state_determ_sep_other", "euc08_state_denial_sep_total", "euc08_state_denial_sep_vol", "euc08_state_denial_sep_misconduct", "euc08_state_denial_sep_other", "euc08_state_determ_non_total", "euc08_state_determ_non_aa", "euc08_state_determ_non_refusework","euc08_state_determ_non_other",  "euc08_state_denial_non_total", "euc08_state_denial_non_aa","euc08_state_denial_non_refusework","euc08_state_denial_non_other")
   teuc_cols <- c("teuc_state_total_determ", "teuc_ufce_total_determ", "teuc_ucx_total_determ", "teuc_state_determ_sep_total", "teuc_state_determ_sep_vol", "teuc_state_determ_sep_misconduct", "teuc_state_determ_sep_other", "teuc_state_denial_sep_total", "teuc_state_denial_sep_vol", "teuc_state_denial_sep_misconduct", "teuc_state_denial_sep_other", "teuc_state_determ_non_total", "teuc_state_determ_non_aa", "teuc_state_determ_non_refusework","teuc_state_determ_non_other",  "teuc_state_denial_non_total", "teuc_state_denial_non_aa","teuc_state_denial_non_refusework","teuc_state_denial_non_other")
@@ -685,7 +698,7 @@ getNonMonetaryDeterminations <- function(pua_claims)
   ucNonMonetaryRegular <- ucNonMonetaryRegular %>% 
     rename_at(vars(c("c1", "c13", "c15", paste0("c", 17:37), "c45", paste0("c", 38:43), "c46", "c44")), ~reg_cols)
   ucNonMonetaryExtended <- ucNonMonetaryExtended %>% 
-    rename_at(vars(c("c1", "c3", "c5", paste0("c", 7:22))), ~ext_cols)
+    rename_at(vars(c("c1", "c3", "c5", paste0("c", 7:22))), ~eb_cols)
   ucNonMonetaryEUC91 <- ucNonMonetaryEUC91 %>% 
     rename_at(vars(c("c1", "c3", "c5", paste0("c", 7:26))), ~euc91_cols)
   ucNonMonetaryTEUC02 <- ucNonMonetaryTEUC02 %>% 
@@ -696,7 +709,7 @@ getNonMonetaryDeterminations <- function(pua_claims)
   # merge the different datasets together and backfill with 0 if there is no data for a month
   ucNonMonetary <- ucNonMonetaryRegular %>% 
     select(all_of(c(all_cols,reg_cols))) %>% 
-    left_join(ucNonMonetaryExtended %>% select(all_of(c(all_cols,ext_cols))), by = all_cols) %>% 
+    left_join(ucNonMonetaryExtended %>% select(all_of(c(all_cols,eb_cols))), by = all_cols) %>% 
     left_join(ucNonMonetaryEUC91 %>% select(all_of(c(all_cols,euc91_cols))), by = all_cols) %>% 
     left_join(ucNonMonetaryTEUC02 %>% select(all_of(c(all_cols,teuc_cols))), by = all_cols) %>% 
     left_join(ucNonMonetaryEUC08 %>% select(all_of(c(all_cols,euc08_cols))), by = all_cols) %>% 
@@ -710,49 +723,49 @@ getNonMonetaryDeterminations <- function(pua_claims)
   # first just get our aggregate totals with all federal programs integrated with state numbers
   ucNonMonetary <- ucNonMonetary %>% 
     mutate(
-      determ_total = state_total_determ + ufce_total_determ + ucx_total_determ + ext_state_total_determ + 
-        ext_ufce_total_determ + ext_ucx_total_determ + euc08_state_total_determ + euc08_ufce_total_determ + 
+      determ_total = state_total_determ + ufce_total_determ + ucx_total_determ + eb_state_total_determ + 
+        eb_ufce_total_determ + eb_ucx_total_determ + euc08_state_total_determ + euc08_ufce_total_determ + 
         euc08_ucx_total_determ + teuc_state_total_determ + teuc_ucx_total_determ + teuc_ufce_total_determ + 
         euc91_state_total_determ + euc91_ufce_total_determ + euc91_ucx_total_determ + pua_appeals_disposed_state_total + pua_appeals_disposed_ra_total,
-      determ_sep_vol = state_determ_sep_vol + ufce_determ_sep_vol + ext_state_determ_sep_vol + 
+      determ_sep_vol = state_determ_sep_vol + ufce_determ_sep_vol + eb_state_determ_sep_vol + 
         euc08_state_determ_sep_vol + euc91_state_determ_sep_vol + teuc_state_determ_sep_vol,
       determ_sep_misconduct = state_determ_sep_misconduct + ufce_determ_sep_misconduct + 
-        ext_state_determ_sep_misconduct + euc08_state_determ_sep_misconduct + euc91_state_determ_sep_misconduct + 
+        eb_state_determ_sep_misconduct + euc08_state_determ_sep_misconduct + euc91_state_determ_sep_misconduct + 
         teuc_state_determ_sep_misconduct,
-      determ_sep_other = state_determ_sep_other + ufce_determ_sep_other + ext_state_determ_sep_other + 
+      determ_sep_other = state_determ_sep_other + ufce_determ_sep_other + eb_state_determ_sep_other + 
         euc08_state_determ_sep_other + euc91_state_determ_sep_other + teuc_state_determ_sep_other,
-      determ_non_aa = state_determ_non_aa + ext_state_determ_non_aa + euc08_state_determ_non_aa + 
+      determ_non_aa = state_determ_non_aa + eb_state_determ_non_aa + euc08_state_determ_non_aa + 
         euc91_state_determ_non_aa + teuc_state_determ_non_aa,
       determ_non_income = state_determ_non_income + euc91_state_determ_non_income,
-      determ_non_refusework = state_determ_non_refusework + ext_state_determ_non_refusework + 
+      determ_non_refusework = state_determ_non_refusework + eb_state_determ_non_refusework + 
         euc08_state_determ_non_refusework + euc91_state_determ_non_refusework + 
         teuc_state_determ_non_refusework,
       determ_non_reporting = state_determ_non_reporting + euc91_state_determ_non_reporting,
       determ_non_referrals = state_determ_non_referrals,
-      determ_non_other = state_determ_non_other + ext_state_determ_non_other + euc08_state_determ_non_other + 
+      determ_non_other = state_determ_non_other + eb_state_determ_non_other + euc08_state_determ_non_other + 
         euc91_state_determ_non_other + teuc_state_determ_non_other,
-      denial_sep_total = state_denial_sep_total + ufce_denial_sep_total + ext_state_denial_sep_total + 
+      denial_sep_total = state_denial_sep_total + ufce_denial_sep_total + eb_state_denial_sep_total + 
         euc08_state_denial_sep_total + euc91_state_denial_sep_total + teuc_state_denial_sep_total,
-      denial_non_total = state_denial_non_total + ext_state_denial_non_total + euc08_state_denial_non_total + 
+      denial_non_total = state_denial_non_total + eb_state_denial_non_total + euc08_state_denial_non_total + 
         euc91_state_denial_non_total + teuc_state_denial_non_total + 
         (pua_appeals_disposed_state_total + pua_appeals_disposed_ra_total - pua_appeals_successful_state_total - pua_appeals_successful_ra_total), # in theory this is the pua denials
       denial_total = denial_sep_total + denial_non_total,
       denial_sep_misconduct = state_denial_sep_misconduct + ufce_denial_sep_misconduct + 
-        ext_state_denial_sep_misconduct + euc08_state_denial_sep_misconduct + 
+        eb_state_denial_sep_misconduct + euc08_state_denial_sep_misconduct + 
         euc91_state_denial_sep_misconduct + teuc_state_denial_sep_misconduct,
-      denial_sep_vol = state_denial_sep_vol + ufce_denial_sep_vol + ext_state_denial_sep_vol + 
+      denial_sep_vol = state_denial_sep_vol + ufce_denial_sep_vol + eb_state_denial_sep_vol + 
         euc08_state_denial_sep_vol + euc91_state_denial_sep_vol + teuc_state_denial_sep_vol,
-      denial_sep_other = state_denial_sep_other + ufce_denial_sep_other + ext_state_denial_sep_other + 
+      denial_sep_other = state_denial_sep_other + ufce_denial_sep_other + eb_state_denial_sep_other + 
         euc08_state_denial_sep_other + euc91_state_denial_sep_other + teuc_state_denial_sep_other,
-      denial_non_aa = state_denial_non_aa + ext_state_denial_non_aa + euc08_state_denial_non_aa + 
+      denial_non_aa = state_denial_non_aa + eb_state_denial_non_aa + euc08_state_denial_non_aa + 
         euc91_state_denial_non_aa + teuc_state_denial_non_aa,
       denial_non_income = state_denial_non_income + euc91_state_denial_non_income,
-      denial_non_refusework = state_denial_non_refusework + ext_state_denial_non_refusework + 
+      denial_non_refusework = state_denial_non_refusework + eb_state_denial_non_refusework + 
         euc08_state_denial_non_refusework + euc91_state_denial_non_refusework + 
         teuc_state_denial_non_refusework,
       denial_non_reporting = state_denial_non_reporting + euc91_state_denial_non_reporting,
       denial_non_referrals = state_denial_non_referrals,
-      denial_non_other = state_denial_non_other + ext_state_denial_non_other + euc08_state_denial_non_other + 
+      denial_non_other = state_denial_non_other + eb_state_denial_non_other + euc08_state_denial_non_other + 
         euc91_state_denial_non_other + teuc_state_denial_non_other + 
         (pua_appeals_disposed_state_total + pua_appeals_disposed_ra_total - pua_appeals_successful_state_total - pua_appeals_successful_ra_total), # in theory this is the pua denials,
       
@@ -1015,7 +1028,7 @@ write_csv_files <- function(df, save_dir) {
   
   message("Writing Basic Monthly UI Data")
   df %>% 
-    write_data_as_csv(file.path(save_dir, "monthly_claims_and_payments.csv"), "^monthly_|^ucx_|^ext_|^euc91|^teuc02_|^euc08_|^peuc20_")
+    write_data_as_csv(file.path(save_dir, "monthly_claims_and_payments.csv"), "^monthly_|^ucx_|^eb_|^euc91|^teuc02_|^euc08_|^peuc20_")
 
 
   message("Writing Basic Weekly UI Data")
