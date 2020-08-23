@@ -1,6 +1,6 @@
 # Unemployment Insurance Data Explorer
 
-An explorer of Unemployment Insurance data, which can be downlaoded from here: https://ows.doleta.gov/unemploy
+An explorer of Unemployment Insurance data, which can be downlaoded from here: https://oui.doleta.gov/unemploy
 
 This data concerns the administration of the UI program in each state.
 
@@ -10,19 +10,21 @@ Specifically, this focuses on data regarding payment and decision timelapses, to
 
 This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. See the FRED API's terms of use: https://research.stlouisfed.org/docs/api/terms_of_use.html
 
+This project was originally created by [Michael Hollander](mailto:hollander@gmail.com) and [Community Legal Services](https://clsphila.org) in 2017. It has been updated and refreshed through a collaboration between [The Century Foundation](https://tcf.org), Community Legal Services, and Michael Hollander.
+
 ## Viewing the web app.
 
 You can explore the unemployment insurance data we've compiled though an interactive website with an array of charts and maps.
 
-You can view the app here: https://clsphila.shinyapps.io/ui-data-explorer/
+You can view the app here: https://tcf-ui-data.shinyapps.io/ui-data-explorer/ 
 
 ## Getting the data:
 
 You can download the data for your own analysis as well.
 
-Data is released here as a `parquet` file for use with R, python, and other programming languages. https://github.com/CLSPhila/ui-data-explorer/releases/tag/uiExplorerData
+Data is released here as a `parquet` file for use with R, python, and other programming languages. https://github.com/tcf-ui-data/ui-data-explorer/releases/tag/uiExplorerData
 
-You can also download the data as a collection of `csv` tables. You can use these tables in your favorite statistical package as well as Excel, LibreOffice Calc, or other spreadsheet app. https://github.com/CLSPhila/ui-data-explorer/releases/tag/uiExplorerCSV
+You can also download the data as a collection of `csv` tables. You can use these tables in your favorite statistical package as well as Excel, LibreOffice Calc, or other spreadsheet app. https://github.com/tcf-ui-data/ui-data-explorer/releases/tag/uiExplorerCSV
 
 ## Running locally and developing
 
