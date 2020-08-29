@@ -48,6 +48,7 @@ pua_earliest <- ymd("2020-01-31")
 ui <- fluidPage(
   # Application title
   titlePanel("Unemployment Insurance Data Explorer"),
+  h4("Unemployment data, visualized and available for download."),
   
   # Sidebar with a file input 
   sidebarLayout(
