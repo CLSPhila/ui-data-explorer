@@ -56,7 +56,7 @@ ui <- fluidPage(
       selectInput("state", 
                   label = "Choose a state",
                   choices = states,
-                  selected = "PA"),
+                  selected = sample(states, 1)), #select a random state
     
       shinyWidgets::sliderTextInput(
         inputId    = "range",
