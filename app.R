@@ -48,6 +48,7 @@ pua_earliest <- ymd("2020-01-31")
 ui <- fluidPage(
   # Application title
   titlePanel("Unemployment Insurance Data Explorer"),
+  h4("Unemployment data, visualized and available for download."),
   
   # Sidebar with a file input 
   sidebarLayout(
@@ -56,7 +57,7 @@ ui <- fluidPage(
       selectInput("state", 
                   label = "Choose a state",
                   choices = states,
-                  selected = "PA"),
+                  selected = sample(states, 1)), #select a random state
     
       shinyWidgets::sliderTextInput(
         inputId    = "range",
@@ -70,9 +71,10 @@ ui <- fluidPage(
     
       # the list of data to view; shoudl rethink how to easily define new data sets rather than
       # having to handcode each dataset here and in 10 other places
+      tags$style("#viewData {font-size:90%;}"),
       selectInput("viewData",
                   label = 'Select Data to View',
-                  size=33, selectize=FALSE,
+                  size=37, selectize=FALSE,
                   choices = c("Basic UI Data" = "basicUI_claims",
                               "--Weeks Claims/Compensated" = "basicUI_compensated",
                               "--Weekly Initial and Continued Claims" = "basicWeeklyClaims",
@@ -97,11 +99,14 @@ ui <- fluidPage(
                               "--Overpayment Balance/Annual UI Payments" = "overvPayments",
                               "--Fraud vs Non Fraud Overpayents" = "fraudvNon", 
                               "--Tax Program Overpayment Recoveries" = "TOPS",
-                              "Non-Monetary Denials" = "nonMonDen",
+                              "Non-Monetary Denials (Per Determination)" = "nonMonDen",
+                              "--Non-Monetary Denials (Per Initial Claim)" = "nonMonDenInitClaims",
                               "--Separation Denial Breakdown" = "nonMonSep",
-                              "--Separation Denial Rates" = "nonMonSepRate",
+                              "--Separation Denial Rates (Per Determination)" = "nonMonSepRate",
+                              "--Separation Denial Rates (Per Initial Claim)" = "nonMonSepRateInitClaims",
                               "--Non-Separation Denial Breakdown" = "nonMonNonSep",
-                              "--Non-Separation Denial Rates" = "nonMonNonSepRate",
+                              "--Non-Separation Denial Rates (Per Determination)" = "nonMonNonSepRate",
+                              "--Non-Separation Denial Rates (Per Initial Claim)" = "nonMonNonSepRateInitClaims",
                               "Monetary Determinations" = "monetaryDeterminations",
                               "--Percent Receiving Max Weekly Benefit" = "monetaryDeterminations_max_weekly",
                               "--Average Weeks Duration" = "monetaryDeterminations_average_weeks"),
@@ -118,7 +123,7 @@ ui <- fluidPage(
       tags$img(src="https://clsphila.org/wp-content/uploads/2019/02/CLS-Logo_120.png")
       
       # the width of the sidebar panel
-      , width=3),
+      , width=4),
     
     # the main panel
     mainPanel(
@@ -583,18 +588,35 @@ server <- function(input, output) {
     else if (input$viewData == "nonMonDen")
     {
       
-      metric_filter = c("denial_sep_percent", "denial_non_percent", "denial_rate_overall")
+      metric_filter = c("denial_sep_percent_per_determination", "denial_non_percent_per_determination", "denial_rate_overall_per_determination")
       df <- df %>% 
         filter(metric %in% metric_filter)
       
-      uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of non-monetary determinations",
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of Determinations",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
-                            title = glue::glue("{input$state} Proportion of Denials for Separation and Non-Separation Reasons\n in Non-Monetary Decisions {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
-                            breaks=c("denial_sep_percent", "denial_non_percent", "denial_rate_overall"),
+                            title = glue::glue("{input$state} Proportion of Denials for Separation and Non-Separation Reasons\n Per Non-Monetary Decisions {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks= metric_filter,
                             labels=c("Separation Denials", "Non-Separation Denials", "Total Denial Rate"))
   
     }
 
+    
+    # Non-Monetary denials.  Show a graph of separation denial % and non-separation denial %
+    else if (input$viewData == "nonMonDenInitClaims")
+    {
+      
+      metric_filter = c("denial_sep_percent_per_initial_claim", "denial_non_percent_per_initial_claim", "denial_rate_overall_per_initial_claim")
+      df <- df %>% 
+        filter(metric %in% metric_filter)
+      
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of Initial Claims",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Proportion of Denials for Separation and Non-Separation Reasons\n Per Initial Claims {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks= metric_filter,
+                            labels=c("Separation Denials", "Non-Separation Denials", "Total Denial Rate"))
+      
+    }
+    
     else if (input$viewData == "nonMonSep")
     {
       
@@ -613,17 +635,35 @@ server <- function(input, output) {
     else if (input$viewData == "nonMonSepRate")
     {
       
-      metric_filter = c("denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate")
+      metric_filter = c("denial_sep_misconduct_rate_per_determination","denial_sep_vol_rate_per_determination", 
+                        "denial_sep_other_rate_per_determination")
       df <- df %>% 
         filter(metric %in% metric_filter)
       
-      uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of separation denials",
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of Separation\nDetermination of Each Type",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
-                            title = glue::glue("{input$state} Non-Monetary Separation Denial Rate from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
-                            breaks=c("denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate"),
+                            title = glue::glue("{input$state} Non-Monetary Separation Denial Rate Per Determination from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks = metric_filter,
                             labels=c("Misconduct", "Voluntary Quit", "Other")) + 
         scale_y_continuous(labels = scales::percent)
     
+    }
+
+    else if (input$viewData == "nonMonSepRateInitClaims")
+    {
+      
+      metric_filter = c("denial_sep_misconduct_rate_per_initial_claim","denial_sep_vol_rate_per_initial_claim", 
+                        "denial_sep_other_rate_per_initial_claim")
+      df <- df %>% 
+        filter(metric %in% metric_filter)
+      
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of Initial Claims",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Non-Monetary Separation Denial Rate Per Initial Claims from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks = metric_filter,
+                            labels=c("Misconduct", "Voluntary Quit", "Other")) + 
+        scale_y_continuous(labels = scales::percent)
+      
     }
     
     else if (input$viewData == "nonMonNonSep")
@@ -644,18 +684,39 @@ server <- function(input, output) {
     else if (input$viewData == "nonMonNonSepRate")
     {
       
-      metric_filter = c("denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate")
+      metric_filter = c("denial_non_aa_rate_per_determination", "denial_non_income_rate_per_determination", 
+                        "denial_non_refusework_rate_per_determination", "denial_non_reporting_rate_per_determination", 
+                        "denial_non_referrals_rate_per_determination", "denial_non_other_rate_per_determination")
+      df <- df %>% 
+        filter(metric %in% metric_filter)
+      
+      uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of Determinations Of Each Type",
+                            caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
+                            title = glue::glue("{input$state} Denial Rates for Non-Monetary Non-Separation Denials Per Determination from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks = metric_filter,
+                            labels=c("Able and Available", "Disqualifying Income", "Refusal of Suitable Work", "Reporting/Call Ins/Etc...", "Refusal of Referral", "Other")) + 
+        scale_y_continuous(labels = scales::percent)
+      
+    
+    }
+
+    else if (input$viewData == "nonMonNonSepRateInitClaims")
+    {
+      
+      metric_filter = c("denial_non_aa_rate_per_initial_claim", "denial_non_income_rate_per_initial_claim", 
+                        "denial_non_refusework_rate_per_initial_claim", "denial_non_reporting_rate_per_initial_claim", 
+                        "denial_non_referrals_rate_per_initial_claim", "denial_non_other_rate_per_initial_claim")
       df <- df %>% 
         filter(metric %in% metric_filter)
       
       uPlot <- getPointPlot(df, xlab = "Date", ylab = "Proportion of non-separation denials",
                             caption = "Data courtesy of the USDOL.  Report used is ETA 207, found at https://oui.doleta.gov/unemploy/DataDownloads.asp.",
-                            title = glue::glue("{input$state} Denial Rates for Non-Monetary Non-Separation Denials from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
-                            breaks=c("denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate"),
+                            title = glue::glue("{input$state} Denial Rates for Non-Monetary Non-Separation Denials per Initial Claim from {format.Date(date_filter_start, '%m-%Y')} to {format.Date(date_filter_end, '%m-%Y')}"),
+                            breaks = metric_filter,
                             labels=c("Able and Available", "Disqualifying Income", "Refusal of Suitable Work", "Reporting/Call Ins/Etc...", "Refusal of Referral", "Other")) + 
         scale_y_continuous(labels = scales::percent)
       
-    
+      
     }
     
     else if (input$viewData == "monetaryDeterminations")
@@ -924,47 +985,93 @@ server <- function(input, output) {
 
     else if (input$viewData == "nonMonDen")
     { 
-      col_list <- c("determ_total", "denial_sep_total", "denial_non_total", "denial_sep_percent", "denial_non_percent", "denial_rate_overall")
+      col_list <- c("determ_total", "denial_sep_total", "denial_non_total", "denial_sep_percent_per_determination", "denial_non_percent_per_determination", "denial_rate_overall_per_determination")
       names_list <- c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Non-Separation Denials", "Separation Denial Rate", "Non-Separation Denial Rate", "Overall Denial Rate")
       uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
-        formatRound(columns = c(3:5), digits = 0)
+        formatRound(columns = c(3:5), digits = 0) %>% 
+        formatPercentage(columns = c(6:8), digits = 1)
       
     }
     
+    else if (input$viewData == "nonMonDenInitClaims")
+    { 
+      col_list <- c("past_quarter_initial_claims", "denial_sep_total", "denial_non_total", "denial_sep_percent_per_initial_claim", "denial_non_percent_per_initial_claim", "denial_rate_overall_per_initial_claim")
+      names_list <- c("State","Report Date", "Past Quarter Initial Claims", "Separation Denials", "Non-Separation Denials", "Separation Denial Rate", "Non-Separation Denial Rate", "Overall Denial Rate")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
+        formatRound(columns = c(3:5), digits = 0) %>% 
+        formatPercentage(columns = c(6:8), digits = 1)
+      
+    }
+
     else if (input$viewData == "nonMonSep")
     {
-      col_list <- c("determ_total", "denial_sep_total", "denial_sep_misconduct_percent","denial_sep_vol_percent", "denial_sep_other_percent")
+      col_list <- c("determ_total", "denial_sep_total", "denial_sep_misconduct_rate_per_determination","denial_sep_vol_rate_per_determination", "denial_sep_other_percent")
       names_list <- c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Misconduct %", "Voluntary Quit %", "Other %")
       uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
-        formatRound(columns = c(3:4), digits = 0)
+        formatRound(columns = c(3:4), digits = 0) %>% 
+        formatPercentage(columns = c(5:7), digits = 1)
+      
       
     }
 
     else if (input$viewData == "nonMonSepRate")
     {
       
-      col_list <- c("determ_total", "denial_sep_total", "denial_sep_misconduct_rate","denial_sep_vol_rate", "denial_sep_other_rate")
+      col_list <- c("determ_total", "denial_sep_total", "denial_sep_misconduct_rate_per_determination","denial_sep_vol_rate_per_determination", "denial_sep_other_rate_per_determination")
       names_list <- c("State","Report Date", "Total Non-Mon Determinations", "Separation Denials", "Misconduct Denial Rate", "Voluntary Quit Denial Rate", "Other Denial Rate")
       uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
-        formatRound(columns = c(3:4), digits = 0)
+        formatRound(columns = c(3:4), digits = 0) %>% 
+        formatPercentage(columns = c(5:7), digits = 1)
+      
     }
     
+    else if (input$viewData == "nonMonSepRateInitClaims")
+    {
+      
+      col_list <- c("past_quarter_initial_claims", "denial_sep_total", "denial_sep_misconduct_rate_per_initial_claim", 
+                    "denial_sep_vol_rate_per_initial_claim", "denial_sep_other_rate_per_initial_claim")
+      names_list <- c("State","Report Date", "Past Quarter Initial Claims", "Separation Denials", "Misconduct Denial Rate", 
+                      "Voluntary Quit Denial Rate", "Other Denial Rate")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
+        formatRound(columns = c(3:4), digits = 0) %>% 
+        formatPercentage(columns = c(5:7), digits = 1)
+      
+    }
+
     else if (input$viewData == "nonMonNonSep")
     {
       col_list <- c("determ_total", "denial_non_total", "denial_non_aa_percent","denial_non_income_percent", "denial_non_refusework_percent", "denial_non_reporting_percent", "denial_non_referrals_percent", "denial_non_other_percent")
       names_list <- c("State","Report Date", "Total Non-Mon Determinations", "Non-Separation Denials", "A&A %", "Disqualifying Income %", "Refusal of Suitable Work %", "Reporting/call In/etc..", "Refuse Referral", "Other")
-      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
+        formatRound(columns = c(3:4), digits = 0) %>% 
+        formatPercentage(columns = c(5:10), digits = 1)
+      
     }
 
     else if (input$viewData == "nonMonNonSepRate")
     {
       ## mgh: two problems: 1 we are missing lots of data b/c Refuse Referral is NA not 0
       # 2: we are missing a loess line
-      col_list <- c("denial_non_aa_rate","denial_non_income_rate", "denial_non_refusework_rate", "denial_non_reporting_rate", "denial_non_referrals_rate", "denial_non_other_rate")
+      col_list <- c("denial_non_aa_rate_per_determination","denial_non_income_rate_per_determination", "denial_non_refusework_rate_per_determination", 
+                    "denial_non_reporting_rate_per_determination", "denial_non_referrals_rate_per_determination", "denial_non_other_rate_per_determination")
       names_list <- c("State","Report Date", "A&A %", "Disqualifying Income %", "Refusal of Suitable Work %", "Reporting/call In/etc..", "Refuse Referral", "Other")
-      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
+        formatPercentage(columns = c(3:8), digits = 1)
+      
     }
     
+    else if (input$viewData == "nonMonNonSepRateInitClaims")
+    {
+      ## mgh: two problems: 1 we are missing lots of data b/c Refuse Referral is NA not 0
+      # 2: we are missing a loess line
+      col_list <- c("past_quarter_initial_claims", "denial_non_aa_rate_per_initial_claim","denial_non_income_rate_per_initial_claim", "denial_non_refusework_rate_per_initial_claim", "denial_non_reporting_rate_per_initial_claim", "denial_non_referrals_rate_per_initial_claim", "denial_non_other_rate_per_initial_claim")
+      names_list <- c("State","Report Date", "Past Quarter Initial Claims", "A&A %", "Disqualifying Income %", "Refusal of Suitable Work %", "Reporting/call In/etc..", "Refuse Referral", "Other")
+      uiDT <- get_UI_DT_datable(df, col_list, names_list, class = "nowrap stripe") %>% 
+        formatRound(columns = c(3), digits = 0) %>% 
+        formatPercentage(columns = c(4:9), digits = 1)
+      
+    }
+
     else if (startsWith(input$viewData, "monetaryDeterminations"))
     {
       col_list <- c("monetaryDet_total", "monetaryDet_not_eligible", "monetaryDet_num_establish_duration", "monetaryDet_num_max_benefit", "monetaryDet_avg_weeks_duration", "monetaryDet_mon_eligible_prop", "monetaryDet_max_benefit_prop") 
@@ -1056,11 +1163,14 @@ server <- function(input, output) {
                          "fraudvNon" = "Monthly_UI_Fraud_and_Non_Fraud_Overpayments",
                          "TOPS" = "UI_Tax_Offset_Program_Data",
                          "overvRecovery" = "Monthly_UI_Overpayments_v_Overpayment_Recovery",
-                         "nonMonDen" = "Monthly_UI_Non_Monetary_Denials",
+                         "nonMonDen" = "Monthly_UI_Non_Monetary_Denials_Per_Determination",
+                         "nonMonDenInitClaims" = "Monthly_UI_Non_Monetary_Denials_Per_Initial_Claim",
                          "nonMonSep" = "Monthly_UI_Non_Monetary_Separation_Denials",
-                         "nonMonSepRate" = "Monthly_UI_Non_Monetary_Separation_Rates",
+                         "nonMonSepRate" = "Monthly_UI_Non_Monetary_Separation_Rates_Per_Determination",
+                         "nonMonSepRateInitClaims" = "Monthly_UI_Non_Monetary_Separation_Rates_Per_Initial_Claim",
                          "nonMonNonSep" = "Monthly_Non_Monetary_Non_Separation_Denials",
-                         "nonMonNonSepRate" = "Monthly_Non_Monetary_Non_Separation_Rates",
+                         "nonMonNonSepRate" = "Monthly_Non_Monetary_Non_Separation_Rates_Per_Determination",
+                         "nonMonNonSepRateInitClaims" = "Monthly_Non_Monetary_Non_Separation_Rates_Per_Initial_Claim",
                          "monetaryDeterminations" = "Monthly_Monetary_Determinations",
                          "monetaryDeterminations_max_weekly" = "Monthly_Monetary_Determinations",
                          "monetaryDeterminations_average_weeks" = "Monthly_Monetary_Determinations",
@@ -1116,10 +1226,13 @@ server <- function(input, output) {
                        "TOPS" = c("state_tax_recovery", "federal_tax_recovery"),
                        "overvRecovery" = c("outstanding", "recovered", "outstanding_fed_programs", "recovered_fed_programs"),
                        "nonMonDen" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
+                       "nonMonDenInitClaims" = c("past_quarter_initial_claims", "determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
                        "nonMonSep" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
                        "nonMonSepRate" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
+                       "nonMonSepRateInitClaims" = c("past_quarter_initial_claims", "determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
                        "nonMonNonSep" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
-                       "nonMonNonSepRate" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
+                       "nonMonNonSepRate" = c("past_quarter_initial_claims", "determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
+                       "nonMonNonSepRateInitClaims" = c("determ_total", "determ_sep_vol", "determ_sep_misconduct", "determ_sep_other", "determ_non_aa", "determ_non_income", "determ_non_refusework", "determ_non_reporting", "determ_non_referrals", "determ_non_other",  "denial_sep_total", "denial_non_total", "denial_sep_misconduct", "denial_sep_vol", "denial_sep_other", "denial_non_aa", "denial_non_income", "denial_non_refusework", "denial_non_reporting","denial_non_referrals", "denial_non_other"),
                        "monetaryDeterminations" = monetary_determinations_list,
                        "monetaryDeterminations_max_weekly" = monetary_determinations_list,
                        "monetaryDeterminations_average_weeks" = monetary_determinations_list,
@@ -1161,6 +1274,10 @@ server <- function(input, output) {
                                          "Non-monetary Able & Available Determations", "Non-monetary Disqualifying Income Determations", "Non-monetary Refusal of Suitable Work Determations", "Non-monetary Reporting/Call-ins/Etc Determations", "Non-monetary Refusal of Referral Determations", "Non-monetary Other Determations", 
                                          "Total Separation Denials", "Total Non-Separation Denials", "Separation-Misconduct Denials", "Separation-Voluntaray Quit Denials", "Separation-Other Denials", 
                                          "Non-monetary Able & Available Denials", "Non-monetary Disqualifying Income Denials", "Non-monetary Refusal of Suitable Work Denials", "Non-monetary Reporting/Call-ins/Etc Denials", "Non-monetary Refusal of Referral Denials", "Non-monetary Other Denials"),
+                         "nonMonDenInitClaims" = c("Past Quarter Initial Claims", "Total Determinations", "Separation-Voluntary Quit Determinations", "Separation-Misconduct Determinations", "Separation-Other Determinations", 
+                                         "Non-monetary Able & Available Determations", "Non-monetary Disqualifying Income Determations", "Non-monetary Refusal of Suitable Work Determations", "Non-monetary Reporting/Call-ins/Etc Determations", "Non-monetary Refusal of Referral Determations", "Non-monetary Other Determations", 
+                                         "Total Separation Denials", "Total Non-Separation Denials", "Separation-Misconduct Denials", "Separation-Voluntaray Quit Denials", "Separation-Other Denials", 
+                                         "Non-monetary Able & Available Denials", "Non-monetary Disqualifying Income Denials", "Non-monetary Refusal of Suitable Work Denials", "Non-monetary Reporting/Call-ins/Etc Denials", "Non-monetary Refusal of Referral Denials", "Non-monetary Other Denials"),
                          "nonMonSep" = c("Total Determinations", "Separation-Voluntary Quit Determinations", "Separation-Misconduct Determinations", "Separation-Other Determinations", 
                                          "Non-monetary Able & Available Determations", "Non-monetary Disqualifying Income Determations", "Non-monetary Refusal of Suitable Work Determations", "Non-monetary Reporting/Call-ins/Etc Determations", "Non-monetary Refusal of Referral Determations", "Non-monetary Other Determations", 
                                          "Total Separation Denials", "Total Non-Separation Denials", "Separation-Misconduct Denials", "Separation-Voluntaray Quit Denials", "Separation-Other Denials", 
@@ -1169,11 +1286,19 @@ server <- function(input, output) {
                                              "Non-monetary Able & Available Determations", "Non-monetary Disqualifying Income Determations", "Non-monetary Refusal of Suitable Work Determations", "Non-monetary Reporting/Call-ins/Etc Determations", "Non-monetary Refusal of Referral Determations", "Non-monetary Other Determations", 
                                              "Total Separation Denials", "Total Non-Separation Denials", "Separation-Misconduct Denials", "Separation-Voluntaray Quit Denials", "Separation-Other Denials", 
                                              "Non-monetary Able & Available Denials", "Non-monetary Disqualifying Income Denials", "Non-monetary Refusal of Suitable Work Denials", "Non-monetary Reporting/Call-ins/Etc Denials", "Non-monetary Refusal of Referral Denials", "Non-monetary Other Denials"),
+                         "nonMonSepRateInitClaims" = c("Past Quater Initial Claims", "Total Determinations", "Separation-Voluntary Quit Determinations", "Separation-Misconduct Determinations", "Separation-Other Determinations", 
+                                             "Non-monetary Able & Available Determations", "Non-monetary Disqualifying Income Determations", "Non-monetary Refusal of Suitable Work Determations", "Non-monetary Reporting/Call-ins/Etc Determations", "Non-monetary Refusal of Referral Determations", "Non-monetary Other Determations", 
+                                             "Total Separation Denials", "Total Non-Separation Denials", "Separation-Misconduct Denials", "Separation-Voluntaray Quit Denials", "Separation-Other Denials", 
+                                             "Non-monetary Able & Available Denials", "Non-monetary Disqualifying Income Denials", "Non-monetary Refusal of Suitable Work Denials", "Non-monetary Reporting/Call-ins/Etc Denials", "Non-monetary Refusal of Referral Denials", "Non-monetary Other Denials"),
                          "nonMonNonSep" = c("Total Determinations", "Separation-Voluntary Quit Determinations", "Separation-Misconduct Determinations", "Separation-Other Determinations", 
                                             "Non-monetary Able & Available Determations", "Non-monetary Disqualifying Income Determations", "Non-monetary Refusal of Suitable Work Determations", "Non-monetary Reporting/Call-ins/Etc Determations", "Non-monetary Refusal of Referral Determations", "Non-monetary Other Determations", 
                                             "Total Separation Denials", "Total Non-Separation Denials", "Separation-Misconduct Denials", "Separation-Voluntaray Quit Denials", "Separation-Other Denials", 
                                             "Non-monetary Able & Available Denials", "Non-monetary Disqualifying Income Denials", "Non-monetary Refusal of Suitable Work Denials", "Non-monetary Reporting/Call-ins/Etc Denials", "Non-monetary Refusal of Referral Denials", "Non-monetary Other Denials"),
                          "nonMonNonSepRate" = c("Total Determinations", "Separation-Voluntary Quit Determinations", "Separation-Misconduct Determinations", "Separation-Other Determinations", 
+                                                "Non-monetary Able & Available Determations", "Non-monetary Disqualifying Income Determations", "Non-monetary Refusal of Suitable Work Determations", "Non-monetary Reporting/Call-ins/Etc Determations", "Non-monetary Refusal of Referral Determations", "Non-monetary Other Determations", 
+                                                "Total Separation Denials", "Total Non-Separation Denials", "Separation-Misconduct Denials", "Separation-Voluntaray Quit Denials", "Separation-Other Denials", 
+                                                "Non-monetary Able & Available Denials", "Non-monetary Disqualifying Income Denials", "Non-monetary Refusal of Suitable Work Denials", "Non-monetary Reporting/Call-ins/Etc Denials", "Non-monetary Refusal of Referral Denials", "Non-monetary Other Denials"),
+                         "nonMonNonSepRateInitClaims" = c("Past Quarter Initial Claims", "Total Determinations", "Separation-Voluntary Quit Determinations", "Separation-Misconduct Determinations", "Separation-Other Determinations", 
                                                 "Non-monetary Able & Available Determations", "Non-monetary Disqualifying Income Determations", "Non-monetary Refusal of Suitable Work Determations", "Non-monetary Reporting/Call-ins/Etc Determations", "Non-monetary Refusal of Referral Determations", "Non-monetary Other Determations", 
                                                 "Total Separation Denials", "Total Non-Separation Denials", "Separation-Misconduct Denials", "Separation-Voluntaray Quit Denials", "Separation-Other Denials", 
                                                 "Non-monetary Able & Available Denials", "Non-monetary Disqualifying Income Denials", "Non-monetary Refusal of Suitable Work Denials", "Non-monetary Reporting/Call-ins/Etc Denials", "Non-monetary Refusal of Referral Denials", "Non-monetary Other Denials"),
@@ -1225,11 +1350,14 @@ server <- function(input, output) {
                     "overvPayments" = getUIMap(unemployed_df, date_filter_end, "outstanding_proportion", paste("Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually in ", date_filter_end), FALSE),
                     "fraudvNon" = getUIMap(unemployed_df, date_filter_end,"fraud_num_percent", paste("Fraud vs Non-Fraud Overpayments in ",date_filter_end),FALSE),
                     "overvRecovery" = getUIMap(unemployed_df, date_filter_end,"outstanding", paste("Outstanding Overpayments Balance in ",date_filter_end), FALSE, scale = 1/1000000, prefix = "$", suffix = "M", round_digits = 0),
-                    "nonMonDen" = getUIMap(unemployed_df, date_filter_end,"denial_rate_overall", paste("Non-Monetary Denial Rate in ",date_filter_end),FALSE),
+                    "nonMonDen" = getUIMap(unemployed_df, date_filter_end,"denial_rate_overall_per_determination", paste("Non-Monetary Denial Per Determination in ",date_filter_end),FALSE),
+                    "nonMonDenInitClaims" = getUIMap(unemployed_df, date_filter_end,"denial_rate_overall_per_initial_claim", paste("Non-Monetary Denial per Initial Claim in ",date_filter_end),FALSE),
                     "nonMonSep" = getUIMap(unemployed_df, date_filter_end,"denial_sep_percent", paste("Proportion of Non-Monetary Denials that are Separation Related in ",date_filter_end),FALSE),
-                    "nonMonSepRate" = getUIMap(unemployed_df, date_filter_end,"denial_sep_rate", paste("Non-Monetary Denial Rate in ",date_filter_end),FALSE),
-                    "nonMonNonSep" = getUIMap(unemployed_df, date_filter_end,"denial_non_percent", paste("Proportion of Non-Monetary Denials that are Non-Separation Related in ",date_filter_end),FALSE),
-                    "nonMonNonSepRate" = getUIMap(unemployed_df, date_filter_end,"denial_non_rate", paste("Non-Monetary Non-Separation Denial Rate in ",date_filter_end),FALSE),
+                    "nonMonSepRate" = getUIMap(unemployed_df, date_filter_end,"denial_sep_rate_per_determination", paste("Non-Monetary Denial Per Determination in ",date_filter_end),FALSE),
+                    "nonMonSepRateInitClaims" = getUIMap(unemployed_df, date_filter_end,"denial_sep_rate_per_initial_claim", paste("Non-Monetary Denial Per Initial Claim in ",date_filter_end),FALSE),
+                    "nonMonNonSep" = getUIMap(unemployed_df, date_filter_end,"denial_non_percent_per_determination", paste("Proportion of Non-Monetary Denials that are Non-Separation Related in ",date_filter_end),FALSE),
+                    "nonMonNonSepRate" = getUIMap(unemployed_df, date_filter_end,"denial_non_rate_per_determination", paste("Non-Monetary Non-Separation Denial Per Determination in ",date_filter_end),FALSE),
+                    "nonMonNonSepRateInitClaims" = getUIMap(unemployed_df, date_filter_end,"denial_non_rate_per_initial_claim", paste("Non-Monetary Non-Separation Denial Per Initial Claim in ",date_filter_end),FALSE),
                     "monetaryDeterminations" = getUIMap(unemployed_df, date_filter_end,"monetaryDet_mon_eligible_prop", paste("Proportion Monetarily Eligible in ",date_filter_end),FALSE),
                     "monetaryDeterminations_max_weekly" = getUIMap(unemployed_df, date_filter_end,"monetaryDet_max_benefit_prop", paste("Proportion Eligible for Max Weekly Benefit in ",date_filter_end),FALSE),
                     "monetaryDeterminations_average_weeks" = getUIMap(unemployed_df, date_filter_end,"monetaryDet_avg_weeks_duration", paste("Average Weeks Duration in ",date_filter_end),FALSE),
@@ -1269,11 +1397,14 @@ server <- function(input, output) {
                     "overvPayments" = getSMPlot(unemployed_df, date_filter_start, date_filter_end, "outstanding_proportion", "Overpayment Balance/Annual UI Payments","50-state Comparison of Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually", free_y),
                     "fraudvNon" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "fraud_num_percent", "Fraud/Non-Fraud","50-state Comparison of Fraud vs Non-Fraud UI Overpayemnts", free_y),
                     "overvRecovery" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "outstanding", "Overpayment Balance","50-state Comparison of Outstanding State UI Overpayment Balance", free_y, scale = 1/1000000, prefix = "$", suffix = "M"),
-                    "nonMonDen" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "denial_rate_overall", "Non-Monetary Denial Rate","50-state Comparison of Denial Rates for Non-Monetary Reasons", free_y),
+                    "nonMonDen" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "denial_rate_overall_per_determination", "Non-Monetary Denial Per Determination","50-state Comparison of Denial Rates for Non-Monetary Reasons Per Determination", free_y),
+                    "nonMonDenInitClaims" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "denial_rate_overall_per_initial_claim", "Non-Monetary Denial Per Initial Claim","50-state Comparison of Denial Rates for Non-Monetary Reasons Per Initial Claim", free_y),
                     "nonMonSep" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "denial_sep_percent", "Proportion of all Non-Monetary Determinations","50-state Comparison of Denials for Separation Reasons", free_y),
-                    "nonMonSepRate" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "denial_sep_rate", "Non-Monetary Separation Denial Rate","50-state Comparison of Denial Rate for Separation Reasons", free_y),
-                    "nonMonNonSep" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "denial_non_percent", "Proportion of all Non-Monetary Determinations","50-state Comparison of Denials for Non-Separation Reasons", free_y),
-                    "nonMonNonSepRate" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "denial_non_rate", "Non-Monetary Non-Separation Denial Rate","50-state Comparison of Denial Rate for Non-Separation Reasons", free_y),
+                    "nonMonSepRate" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "denial_sep_rate_per_determination", "Non-Monetary Separation Denial Per Determination","50-state Comparison of Denial Rate for Separation Reasons Per Determination", free_y),
+                    "nonMonSepRateInitClaims" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "denial_sep_rate_per_initial_claim", "Non-Monetary Separation Denial Per Initial Claim","50-state Comparison of Denial Rate for Separation Reasons Per Initial Claim", free_y),
+                    "nonMonNonSep" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "denial_non_percent_per_determination", "Proportion of all Non-Monetary Determinations","50-state Comparison of Denials for Non-Separation Reasons", free_y),
+                    "nonMonNonSepRate" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "denial_non_rate_per_determination", "Non-Monetary Non-Separation Denial Per Determination","50-state Comparison of Denial Rate for Non-Separation Reasons Per Determination", free_y),
+                    "nonMonNonSepRateInitClaims" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "denial_non_rate_per_initial_claim", "Non-Monetary Non-Separation Denial Per Initial Claim","50-state Comparison of Denial Rate for Non-Separation Reasons Per Initial Claim", free_y),
                     "monetaryDeterminations" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "monetaryDet_mon_eligible_prop", "Proportion Monetarily Eligible","50-state Comparison of Monetary Eligibility Rates", free_y),
                     "monetaryDeterminations_max_weekly" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "monetaryDet_max_benefit_prop", "Proportion Receiving Max Weekly Benefit","50-state Comparison of Max Weekly Benefit Rates", free_y),
                     "monetaryDeterminations_average_weeks" = getSMPlot(unemployed_df,date_filter_start, date_filter_end, "monetaryDet_avg_weeks_duration", "Average Weeks Duration","50-state Comparison of the Average Weeks Duration of Final Payments", free_y),
@@ -1308,11 +1439,14 @@ server <- function(input, output) {
                      "overvPayments" = get50StateComparisonPlot(unemployed_df, date_filter_start, date_filter_end, "outstanding_proportion", input$state, "Overpayment Balance/Annual UI Payments",paste(input$state, "vs. US: Outstanding Overpayment Balance as a Proportion of Total UI Paid Annually")),
                      "fraudvNon" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "fraud_num_percent", input$state, "Fraud/Non-Fraud",paste(input$state, "vs. US: Fraud / Non-Fraud UI Overpayemnts")),
                      "overvRecovery" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "outstanding", input$state, "Overpayment Balance",paste(input$state, "vs. US: Outstanding UI Overpayment Balance"), scale = 1/1000000, prefix = "$", suffix = "M"),
-                     "nonMonDen" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "denial_rate_overall", input$state, "Non-Monetary Denial Rate",paste(input$state, "vs. US: Denial Rates for Non-Monetary Reasons")),
+                     "nonMonDen" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "denial_rate_overall_per_determination", input$state, "Non-Monetary Denial Per Determination",paste(input$state, "vs. US: Denial Rates for Non-Monetary Reasons Per Determination")),
+                     "nonMonDenInitClaims" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "denial_rate_overall_per_initial_claim", input$state, "Non-Monetary Denial Per Initial Claim",paste(input$state, "vs. US: Denial Rates for Non-Monetary Reasons Per Initial Claim")),
                      "nonMonSep" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "denial_sep_percent", input$state, "Proportion of all Non-Monetary Determinations",paste(input$state, "vs. US: Denials for Separation Reasons")),
-                     "nonMonSepRate" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "denial_sep_rate", input$state, "Non-Monetary Separation Denial Rate",paste(input$state, "vs. US: Denial Rate for Separation Reasons")),
-                     "nonMonNonSep" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "denial_non_percent", input$state, "Proportion of all Non-Monetary Determinations",paste(input$state, "vs. US: Denials for Non-Separation Reasons")),
-                     "nonMonNonSepRate" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "denial_non_rate", input$state, "Non-Monetary Non-Separation Denial Rate",paste(input$state, "vs. US: Denial Rate for Non-Separation Reasons")),
+                     "nonMonSepRate" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "denial_sep_rate_per_determination", input$state, "Non-Monetary Separation Denial Per Determination",paste(input$state, "vs. US: Denial Rate for Separation Reasons Per Determination")),
+                     "nonMonSepRateInitClaims" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "denial_sep_rate_per_initial_claim", input$state, "Non-Monetary Separation Denial Per Initial Claim",paste(input$state, "vs. US: Denial Rate for Separation Reasons Per Initial Claim")),
+                     "nonMonNonSep" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "denial_non_percent_per_determination", input$state, "Proportion of all Non-Monetary Determinations",paste(input$state, "vs. US: Denials for Non-Separation Reasons")),
+                     "nonMonNonSepRate" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "denial_non_rate_per_determination", input$state, "Non-Monetary Non-Separation Denial Per Determination",paste(input$state, "vs. US: Denial Rate for Non-Separation Reasons Per Determination")),
+                     "nonMonNonSepRateInitClaims" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "denial_non_rate_per_initial_claim", input$state, "Non-Monetary Non-Separation Denial Per Initial Claim",paste(input$state, "vs. US: Denial Rate for Non-Separation Reasons Per Initial Claim")),
                      "monetaryDeterminations" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "monetaryDet_mon_eligible_prop", input$state, "Monetary Eligibility Rate",paste(input$state, "vs. US: Monetary Eligibility Rate")),
                      "monetaryDeterminations_max_weekly" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "monetaryDet_max_benefit_prop", input$state, "Max Weekly Benefit Eligibility Rate",paste(input$state, "vs. US: Max Weekly Benefit Eligibility Rate")),
                      "monetaryDeterminations_average_weeks" = get50StateComparisonPlot(unemployed_df,date_filter_start, date_filter_end, "monetaryDet_avg_weeks_duration", input$state, "Average Weeks Duration",paste(input$state, "vs. US: Average Weeks Duration")),

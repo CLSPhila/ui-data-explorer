@@ -547,7 +547,10 @@ get_basic_ui_information <- function() {
     mutate(monthly_initial_claims_12_mo_avg = rollmean(monthly_initial_claims, 12, align = "right", na.pad = T),
            monthly_first_payments_12_mo_avg = rollmean(monthly_first_payments, 12, align = "right", na.pad = T),
            monthly_exhaustion_12_mo_avg = rollmean(monthly_exhaustion, 12, align = "right", na.pad = T),
-           monthly_first_payments_as_prop_claims_12_mo_avg = monthly_first_payments_12_mo_avg / monthly_initial_claims_12_mo_avg) %>% 
+           monthly_first_payments_as_prop_claims_12_mo_avg = monthly_first_payments_12_mo_avg / monthly_initial_claims_12_mo_avg,
+           # some data is quarterly, so create a quarterly number
+           past_quarter_initial_claims = rollapply(monthly_initial_claims, width = 3, FUN = sum, partial = F, fill = NA, align = "right", na.rm = T)
+    ) %>% 
     ungroup()
     
   return(ucClaimsPayments)
@@ -674,7 +677,7 @@ getMonetaryDeterminations <- function() {
 }
 
 # sort through the non monetary determinations to get information about separation and non-separation issues
-getNonMonetaryDeterminations <- function(pua_claims)
+getNonMonetaryDeterminations <- function(ucClaimsPaymentsMonthly, pua_claims)
 {
   ucNonMonetaryRegular <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar207.csv") #207 report
   ucNonMonetaryExtended <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ae207.csv") #207 report
@@ -714,6 +717,7 @@ getNonMonetaryDeterminations <- function(pua_claims)
     left_join(ucNonMonetaryTEUC02 %>% select(all_of(c(all_cols,teuc_cols))), by = all_cols) %>% 
     left_join(ucNonMonetaryEUC08 %>% select(all_of(c(all_cols,euc08_cols))), by = all_cols) %>% 
     left_join(pua_claims, by = all_cols) %>% 
+    left_join(ucClaimsPaymentsMonthly %>% select(all_cols, ends_with("initial_claims")), by = all_cols) %>% 
     replace(is.na(.), 0)
   
   # do some math to get some interesting information for graphing purposes
@@ -771,32 +775,48 @@ getNonMonetaryDeterminations <- function(pua_claims)
       
       # now calculate our actual statistics that we care about
       # mgh: I don't feel like PUA is properly captured; it is in the determinations total and denials_non and in non-other, but is that right?
-      denial_rate_overall = round(denial_total / determ_total, 3),
-      denial_sep_percent = round(denial_sep_total / determ_total,3),
-      denial_sep_rate = round(denial_sep_total / (determ_sep_misconduct + determ_sep_vol + 
+      denial_rate_overall_per_determination = round(denial_total / determ_total, 3),
+      denial_sep_percent_per_determination = round(denial_sep_total / determ_total,3),
+      denial_sep_rate_per_determination = round(denial_sep_total / (determ_sep_misconduct + determ_sep_vol + 
                                                     determ_sep_other),3),
-      denial_non_percent = round(denial_non_total / determ_total,3),
-      denial_non_rate = round(denial_non_total / 
+      denial_non_percent_per_determination = round(denial_non_total / determ_total,3),
+      denial_non_rate_per_determination = round(denial_non_total / 
                                 (determ_non_aa + determ_non_income + determ_non_refusework + 
                                    determ_non_reporting + determ_non_referrals + determ_non_other),3),
       denial_sep_misconduct_percent = round(denial_sep_misconduct / denial_sep_total,3),
-      denial_sep_misconduct_rate = round(denial_sep_misconduct / determ_sep_misconduct, 3),
+      denial_sep_misconduct_rate_per_determination = round(denial_sep_misconduct / determ_sep_misconduct, 3),
       denial_sep_vol_percent = round(denial_sep_vol / denial_sep_total,3),
-      denial_sep_vol_rate = round(denial_sep_vol / determ_sep_vol,3),
+      denial_sep_vol_rate_per_determination  = round(denial_sep_vol / determ_sep_vol,3),
       denial_sep_other_percent = round(denial_sep_other / denial_sep_total,3),
-      denial_sep_other_rate = round(denial_sep_other / determ_sep_other, 3),
+      denial_sep_other_rate_per_determination = round(denial_sep_other / determ_sep_other, 3),
       denial_non_aa_percent = round(denial_non_aa / denial_non_total, 3),
       denial_non_income_percent = round(denial_non_income / denial_non_total, 3),
       denial_non_refusework_percent = round(denial_non_refusework / denial_non_total, 3),
       denial_non_reporting_percent = round(denial_non_reporting / denial_non_total, 3),
       denial_non_referrals_percent = round(denial_non_referrals / denial_non_total, 3),
       denial_non_other_percent = round(denial_non_other / denial_non_total, 3),
-      denial_non_aa_rate = round(denial_non_aa / determ_non_aa, 3),
-      denial_non_income_rate = round(denial_non_income / determ_non_income, 3),
-      denial_non_refusework_rate = round(denial_non_refusework / determ_non_refusework, 3),
-      denial_non_reporting_rate = round(denial_non_reporting / determ_non_reporting, 3),
-      denial_non_referrals_rate = round(denial_non_referrals / determ_non_referrals, 3),
-      denial_non_other_rate = round(denial_non_other / determ_non_other, 3)) %>% 
+      denial_non_aa_rate_per_determination = round(denial_non_aa / determ_non_aa, 3),
+      denial_non_income_rate_per_determination = round(denial_non_income / determ_non_income, 3),
+      denial_non_refusework_rate_per_determination = round(denial_non_refusework / determ_non_refusework, 3),
+      denial_non_reporting_rate_per_determination = round(denial_non_reporting / determ_non_reporting, 3),
+      denial_non_referrals_rate_per_determination = round(denial_non_referrals / determ_non_referrals, 3),
+      denial_non_other_rate_per_determination = round(denial_non_other / determ_non_other, 3),
+      
+      # denials per initial claims
+      denial_rate_overall_per_initial_claim = round(denial_total / past_quarter_initial_claims, 3),
+      denial_sep_percent_per_initial_claim = round(denial_sep_total / past_quarter_initial_claims,3),
+      denial_non_percent_per_initial_claim = round(denial_non_total / past_quarter_initial_claims,3),
+      denial_sep_rate_per_initial_claim = round(denial_sep_total / past_quarter_initial_claims,3),
+      denial_non_rate_per_initial_claim = round(denial_non_total / past_quarter_initial_claims,3),
+      denial_sep_misconduct_rate_per_initial_claim = round(denial_sep_misconduct / past_quarter_initial_claims, 3),
+      denial_sep_vol_rate_per_initial_claim = round(denial_sep_vol / past_quarter_initial_claims,3),
+      denial_sep_other_rate_per_initial_claim = round(denial_sep_other / past_quarter_initial_claims, 3),
+      denial_non_aa_rate_per_initial_claim = round(denial_non_aa / past_quarter_initial_claims, 3),
+      denial_non_income_rate_per_initial_claim = round(denial_non_income / past_quarter_initial_claims, 3),
+      denial_non_refusework_rate_per_initial_claim = round(denial_non_refusework / past_quarter_initial_claims, 3),
+      denial_non_reporting_rate_per_initial_claim = round(denial_non_reporting / past_quarter_initial_claims, 3),
+      denial_non_referrals_rate_per_initial_claim = round(denial_non_referrals / past_quarter_initial_claims, 3),
+      denial_non_other_rate_per_initial_claim = round(denial_non_other / past_quarter_initial_claims, 3)) %>% 
     select(all_of(all_cols), starts_with(c("denial_", "determ_"))) %>% 
     # there seems to be some bad data in the dataset--every once in a while, a state will misreport total denials by a factor of 10
     # This makes the proportions > 1, which obviously doesn't makes much sense.  
@@ -1028,7 +1048,7 @@ write_csv_files <- function(df, save_dir) {
   
   message("Writing Basic Monthly UI Data")
   df %>% 
-    write_data_as_csv(file.path(save_dir, "monthly_claims_and_payments.csv"), "^monthly_|^ucx_|^eb_|^euc91|^teuc02_|^euc08_|^peuc20_")
+    write_data_as_csv(file.path(save_dir, "monthly_claims_and_payments.csv"), "^monthly_|^past_quarter|^ucx_|^eb_|^euc91|^teuc02_|^euc08_|^peuc20_")
 
 
   message("Writing Basic Weekly UI Data")
@@ -1111,7 +1131,7 @@ ucOverpayments$outstanding_proportion <- round(ucOverpayments$outstanding / ucOv
 
 # get determination data
 message("Collecting NonMonetary Information")
-ucNonMonetary <- getNonMonetaryDeterminations(pua_claims)
+ucNonMonetary <- getNonMonetaryDeterminations(ucClaimsPaymentsMonthly, pua_claims)
 message("Collecting Monetary Information")
 ucMonetary <- getMonetaryDeterminations()
 
