@@ -120,7 +120,7 @@ ui <- fluidPage(
                     label="Constant y axis? (makes comparisons easier)",
                     value=FALSE),
       
-      tags$img(src="https://clsphila.org/wp-content/uploads/2019/02/CLS-Logo_120.png")
+      tags$img(src="CLS-Logo_TCF.png", width="100%")
       
       # the width of the sidebar panel
       , width=4),
@@ -161,7 +161,7 @@ ui <- fluidPage(
   # a row at the bottom with links, etc...
   fluidRow(
     hr(),
-    HTML("This page is maintained by <a href=mailto:hollander@gmail.com>Michael Hollander</a>, formerly of <a href='clsphila.org' target=_blank>Community Legal Services</a>.  You can find the code for this page on github here:<a href='https://github.com/CLSPhila/ui-data-explorer' target=_blank>Github</a>.  All of the data for this website comes from <a href=https://oui.doleta.gov/unemploy/DataDownloads.asp target=_blank>the US Department of Labor</a> and U.S. Bureau of Labor Statistics, through <a href='https://fred.stlouisfed.org/'>FRED/the Federal Reserve Bank of St. Louis.</a>")
+    HTML("This application was created by <a href='mailto:hollander@gmail.com'>Michael Hollander</a>, formerly of <a href='https://clsphila.org' target='_blank'>Community Legal Services</a> and is maintained by <a href='https://tcf.org' target='_blank'>The Century Foundation</a>.You can find the <a href='https://github.com/tcf-ui-data/ui-data-explorer' target='_blank'>code for this page on Github</a>. All of the data for this website comes from <a href='https://oui.doleta.gov/unemploy/DataDownloads.asp' target='_blank'>the US Department of Labor</a> and the U.S. Bureau of Labor Statistics, through <a href='https://fred.stlouisfed.org/' target='blank'>FRED/the Federal Reserve Bank of St. Louis</a>.")
   )
 )
 
