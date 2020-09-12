@@ -12,6 +12,8 @@ This product uses the FRED® API but is not endorsed or certified by the Federal
 
 This project was originally created by [Michael Hollander](mailto:hollander@gmail.com) and [Community Legal Services](https://clsphila.org) in 2017. It has been updated and refreshed through a collaboration between [The Century Foundation](https://tcf.org), Community Legal Services, and Michael Hollander.
 
+![CLS/TCF Logo](https://raw.githubusercontent.com/tcf-ui-data/ui-data-explorer/main/www/CLS-Logo_TCF.png)
+
 ## Viewing the web app.
 
 You can explore the unemployment insurance data we've compiled though an interactive website with an array of charts and maps.
