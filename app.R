@@ -115,10 +115,10 @@ ui <- fluidPage(
                     label="Constant y axis? (makes comparisons easier)",
                     value=FALSE),
       
-      tags$img(src="https://clsphila.org/wp-content/uploads/2019/02/CLS-Logo_120.png")
+      tags$img(src="CLS-Logo_120.png"),
       
       # the width of the sidebar panel
-      , width=3),
+      width=3),
     
     # the main panel
     mainPanel(
@@ -183,7 +183,7 @@ server <- function(input, output) {
     } 
     
   })
-
+  
   # render the plot
   output$uiplot <- renderPlot({
 
