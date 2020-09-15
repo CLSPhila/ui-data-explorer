@@ -147,10 +147,24 @@ ui <- fluidPage(
         
         # the about page, which may need to be rewritten
         tabPanel("About/Terms", br(), 
-                 p("This page was created by ", a(href="https://www.clsphila.org" ,"Community Legal Services"), " to visualize the unemployment data made avaialble by the US Department of Labor and Bureau of Labor Statistics."),
-                 p("The DOL Data can be found here: https://oui.doleta.gov/unemploy/DataDownloads.asp and the BLS data can be found ", a(href="https://www.bls.gov/web/laus/ststdsadata.txt", "here"), "and ", a(href="https://www.bls.gov/web/laus/ststdnsadata.txt", "here.")),
-                 p("If you have any suggestions for any further measures to put on the page, please email ", a(href="mailto:mhollander@clsphila.org", "Michael Hollander"), "(mhollander@clsphila.org, the creator and maintainer of this page."),
-                 p("You can find the code for this page on github here: ", a(href='https://github.com/CLSPhila/ui-data-explorer', target="_blank", "https://github.com/CLSPhila/ui-data-explorer"), "."),
+                 h3("About This Page"),
+                 p("The goal of the website is to make the wealth of unemployment related data provided by the US Department of Labor and the Bureau of Labor Statistics more accessible to the general public.  Much of the information on the website is simply a visualization of the data available from the USDOL for a specific state and time period, however other metrics involve calculations combining multiple data points. If you have suggestions for  further measures to put on this page, please email ", a(href="mailto:hollander@gmail.com", "Michael Hollander (hollander@gmail.com.")),
+                 h3("Using The Website"),
+                 p("On the left-hand side of the page one can choose:", 
+                    tags$ul(
+                      tags$li(tags$b("A metric to view")), 
+                      tags$li(tags$b("A state to view data on")), 
+                      tags$li(tags$b("The years of data to view"), glue::glue("(overall data ranges from {format(minDate, '%b/%Y')} to {format(maxDate, '%b/%Y')}, however some metrics are only avaible for subsets of that time (e.g. Pandemic Unemployment Assistance is only available starting in 2020)")),
+                      tags$li(tags$b("Whether to maintain a 'constant y axis.'"), "A constant y axis means that whether you view California or Montana, the scale of the y-axis will maintain the same range for each chart.  This makes it easier to compare states to each other, but may may certain measures difficult to view for some states.  For example, it would not be easy to view Montana's initial claims numbers with a constant y-axis because the volume of claims in Montana is so far below the largest states' claims.")
+                    )),
+                 p("The main part of the page displays the metric selected for the state in question in one of four different formats depending on the selection made at the top of the screen.  The latter three data representations are only able to show one piece of each metric (e.g. weekly initial claims) rather than the entire metric (e.g. first payments and exhaustions are left out):",
+                   tags$ul(
+                     tags$li(tags$b("A direct look at the UI Data."), "The direct look at the UI data shows a graph at the top (with recession shading), a link to download the requested data in csv (excel) format, and a sortable/filterable table at the bottom."), 
+                     tags$li(tags$b("A single-plot 50-state overlay."), "The single-plot comparison shows a single graph with a line for each state on the graph.  The state selected on the left is highlighted to allow for a comparison versus the rest of the US."), 
+                     tags$li(tags$b("A multi-plot 50-state comparison."), "The multi-plot comparison, also called a 'small multiple' chart shows the same metric for each state, but in 50 separate graphs.  Each graph shows both the metric being measured as well as the US average (the dotted line).  Trends across states can be easily spotted with this graph.  By checking and unchecking the 'constant y-axis' box, absolute and relative comparisons can be more easily made."),
+                     tags$li(tags$b("A map."), "A choropleth map distinguishing the states by color-coding them based on the value of the metric in question in the most recent month selected in the left-hand side."))),
+                 h3("Technical Stuff"),
+                 p("This application was created by", a(href='mailto:hollander@gmail.com', "Michael Hollander"), "formerly of", a(href='https://clsphila.org', "Community Legal Services"), "and is maintained by", a(href='https://tcf.org', "The Century Foundation."), "You can find the", a(href='https://github.com/tcf-ui-data/ui-data-explorer', "code for this page on Github."), "The DOL Data can be found", a(href = "https://oui.doleta.gov/unemploy/DataDownloads.asp", "on the Downloads Page"), "for the DOL's Employment and Training Administration. BLS data is accessible through", a(href='https://fred.stlouisfed.org/', "FRED/the Federal Reserve Bank of St. Louis.")),
                  p("This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis."),
                  p("By using this application, you are also bound by FRED® API ", a(href="https://research.stlouisfed.org/docs/api/terms_of_use.html", target="_blank", "terms of use."))
         )
