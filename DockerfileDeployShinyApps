@@ -3,10 +3,9 @@
 FROM rocker/tidyverse
 RUN apt update && apt install -y libjq-dev libv8-dev libgdal-dev libgeos-c1v5 libproj-dev libudunits2-dev
 RUN mkdir /data
-RUN mkdir /Rscripts/data
-
 
 COPY unemploymentDataProcessor.R app.R filemanifest.txt config.yml helper.R deployShinyApps.R /Rscripts/
+RUN mkdir /Rscripts/www
 COPY www /Rscripts/www/
 COPY data /data/
 
