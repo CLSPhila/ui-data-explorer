@@ -115,7 +115,7 @@ ui <- fluidPage(
                     label="Constant y axis? (makes comparisons easier)",
                     value=FALSE),
       
-      tags$img(src="CLS-Logo_120.png"),
+      tags$img(src="CLS-Logo_TCF.png"),
       
       # the width of the sidebar panel
       width=3),
