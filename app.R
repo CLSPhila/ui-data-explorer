@@ -42,6 +42,7 @@ unemployed_df <- arrow::read_parquet(stored_data_location)
 maxDate <- max(unemployed_df$rptdate)
 minDate <- min(unemployed_df$rptdate)
 states <- sort(unique(unemployed_df$st))
+states <- states[states != "US"]
 pua_earliest <- ymd("2020-01-31")
 
 # Define UI for application that draws a histogram
@@ -945,7 +946,8 @@ server <- function(input, output) {
       
       col_list = c("pua_initial_applications_total", "pua_eligible_total", "pua_first_payments", "pua_weeks_compensated")
       names_list <- c("State","Report Date", "PUA Initial Applications", "PUA Eligible", "PUA First Payments", "PUA Weeks Compensated")
-      uiDT <- get_UI_DT_datable(df, col_list, names_list)
+      uiDT <- get_UI_DT_datable(df, col_list, names_list) %>% 
+        formatRound(columns=c(3:6), digits=0)
     }
     
     if (input$viewData == "pucClaims")
