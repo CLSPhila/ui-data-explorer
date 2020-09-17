@@ -6,7 +6,7 @@ RUN mkdir /data
 
 COPY unemploymentDataProcessor.R app.R filemanifest.txt config.yml helper.R deployShinyApps.R /Rscripts/
 RUN mdkir /Rscripts/www
-COPY CLS-Logo_120.png /Rscripts/www
+COPY CLS-Logo_120.png /Rscripts/www/
 COPY data /data/
 
 # /data should be a volume mount, where the dataprocessor will write.
