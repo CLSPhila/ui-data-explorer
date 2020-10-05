@@ -7,16 +7,16 @@ on:
   workflow_dispatch: # when complete, run this when the 'release data' workflow completes,  https://docs.github.com/en/actions/reference/events-that-trigger-workflows#release
 
   #push:  
-  workflow_run:
-    # run when the release workflow finishes.
-    # See https://docs.github.com/en/actions/reference/events-that-trigger-workflows#workflow_run
-    workflows:
-      [
-        "Process and publish unemployment data as a parquet file and a collection of csv files",
-      ]
-    branches: [main]
-    types:
-      - completed
+#   workflow_run:
+#     # run when the release workflow finishes.
+#     # See https://docs.github.com/en/actions/reference/events-that-trigger-workflows#workflow_run
+#     workflows:
+#       [
+#         "Process and publish unemployment data as a parquet file and a collection of csv files",
+#       ]
+#     branches: [main]
+#     types:
+#       - completed
 
 
 env:
