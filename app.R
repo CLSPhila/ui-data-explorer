@@ -147,7 +147,7 @@ ui <- fluidPage(
         tabPanel("Map",withSpinner(leafletOutput("uimap"))),
         
         # the about page, which may need to be rewritten
-        tabPanel("About/Terms", br(), 
+        tabPanel("About", br(), 
                  h3("About This Page"),
                  p("The goal of the website is to make the wealth of unemployment related data provided by the US Department of Labor and the Bureau of Labor Statistics more accessible to the general public.  Much of the information on the website is simply a visualization of the data available from the USDOL for a specific state and time period, however other metrics involve calculations combining multiple data points. If you have suggestions for  further measures to put on this page, please email ", a(href="mailto:hollander@gmail.com", "Michael Hollander (hollander@gmail.com.")),
                  h3("Using The Website"),
@@ -168,7 +168,29 @@ ui <- fluidPage(
                  p("This application was created by", a(href='mailto:hollander@gmail.com', "Michael Hollander"), "formerly of", a(href='https://clsphila.org', "Community Legal Services"), "and is maintained by", a(href='https://tcf.org', "The Century Foundation."), "You can find the", a(href='https://github.com/tcf-ui-data/ui-data-explorer', "code for this page on Github."), "The DOL Data can be found", a(href = "https://oui.doleta.gov/unemploy/DataDownloads.asp", "on the Downloads Page"), "for the DOL's Employment and Training Administration. BLS data is accessible through", a(href='https://fred.stlouisfed.org/', "FRED/the Federal Reserve Bank of St. Louis.")),
                  p("This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis."),
                  p("By using this application, you are also bound by FRED® API ", a(href="https://research.stlouisfed.org/docs/api/terms_of_use.html", target="_blank", "terms of use."))
+        ),
+        tabPanel("Glossary", br(), 
+                 h3("Glossary"),
+                    tags$ul(
+                     tags$li(tags$b("Weeks Compensated:"), 'An unemployment payment to a worker for a week of partial or total unemployment is considered a “compensated week.”'),
+                     tags$li(tags$b("Initial Claims:"), 'New application for unemployment benefits or to restart unemployment benefits after a subsequent period of unemployment benefits within a benefit year.'),
+                     tags$li(tags$b("Continued Claims or Insured Employment:"), 'Ongoing claims for unemployment benefits including weeks that are paid, and weeks that are pending or serving a disqualification.'),
+                     tags$li(tags$b("Worksharing:"), 'Worksharing, also known as short-time compensation (STC), allows employers to reduce hours of work for employees rather than laying off workers.'),
+                     tags$li(tags$b("Demographics:"), 'Percent of all continuing claims dispersed to members of different demographic groups.'),
+                     tags$li(tags$b("Recipiency Rate:"), 'The proportion of jobless workers receiving benefits from state and federal programs.'),
+                     tags$li(tags$b("Pandemic Unemployment Assistance (PUA):"), 'CARES Act program that expanded states’ ability to provide unemployment insurance for many workers impacted by the COVID-19 pandemic, including for workers who are not ordinarily eligible for unemployment benefits, including independent contractors, self-employed, students and youth, and others who may be unable to prove prior-year income.', a(href='https://oui.doleta.gov/unemploy/pdf/PUA_FactSheet.pdf', "Read more.")),
+                     tags$li(tags$b("Federal Pandemic Unemployment Compensation (FPUC, or PUC):"), 'CARES Act program that automatically provides an additional $600 in federally funded benefits per week for the weeks ending April 4, 2020 through the week ending July 25, 2020.'),
+                     tags$li(tags$b("Timeliness of First Payments:"), 'Percent of all 1st payments made within 14/21/35 days after the week ending date of the first compensable week in the benefit year.'),
+                     tags$li(tags$b("Timeliness of Lower Authority Appeals:"), 'The sum of the ages, in days from filing, of all pending Lower Authority Appeals divided by the number of Lower Authority Appeals.'),
+                     tags$li(tags$b("Timeliness of Higher Authority Appeals:"), 'The sum of the ages, in days from filing, of all pending Higher Authority Appeals divided by the number of Higher Authority Appeals.'),
+                     tags$li(tags$b("Overpayment Balance:"), 'The amount of benefits required to return due to error, fraud, or ineligibility.'),
+                     tags$li(tags$b("Tax Program Overpayment Recoveries:"), 'Unemployment insurance overpayments recovered by a reduction of tax refunds.'),
+                     tags$li(tags$b("Non-Monetary Denials:"), 'Denials due to eligibility issues other than the amount earned.'),
+                     tags$li(tags$b("Separation Denials:"), 'Denials due to eligibility related to the reason that an individual lost a job'),
+                     tags$li(tags$b("Non-Separation Denials:"), 'Denials due to eligibility issues including whether an applicant is available for work, refused a job offer, or failed to search for work.')
+                    )
         )
+        
       )
     )
   ),
