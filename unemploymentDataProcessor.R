@@ -11,9 +11,12 @@ library(lubridate)
 library(tidyverse)
 library(zoo)
 library(fredr)
+library(googlesheets4)
 message("Libraries loaded.")
 message(Sys.getenv("FRED_KEY"))
 fredr_set_key(Sys.getenv("FRED_KEY"))
+
+sheet_name <- "10n_ByzRODXUKOc_a9iPOGjJwexw1UOvvMofHBTRQepc"
 
 #library(data.table)
 #library(dplyr)
@@ -1060,6 +1063,26 @@ write_csv_files <- function(df, save_dir) {
     write_data_as_csv(file.path(save_dir, "ui_demographics.csv"), "^demographic_")
   
 }
+
+# writes to a google sheet called "sheet_name" into the tab specified  all columns in the DF prefixed by prefix
+write_data_as_sheet <- function(df, sheet_name, tab, metric_filter) {
+  df %>% 
+    filter(grepl(metric_filter, metric)) %>% 
+    pivot_wider(names_from = metric, values_from = value) %>% 
+    write_sheet(sheet_name, tab)
+  
+}
+
+# write a series of dfs to a google sheet
+write_to_google_sheets <- function(df, sheet_name) {
+  
+  message("Writing First Time Payments to Google Sheets")
+  df %>% 
+    write_data_as_sheet(sheet_name, "Test", "^first_time")
+  
+}
+
+write_to_google_sheets(unemployment_df, sheet_name)
 
 
 # gets the unemployment rate and total unemployed for all 50 states + DC + the US;
