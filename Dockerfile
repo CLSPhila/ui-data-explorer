@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y libsodium-dev pkg-config
 RUN mkdir /data
 
 COPY unemploymentDataProcessor.R config.yml /Rscripts/
+COPY inst /Rscripts/inst
 
 # /data should be a volume mount, where the dataprocessor will write.
 
