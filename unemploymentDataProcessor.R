@@ -15,11 +15,11 @@ library(googlesheets4)
 library(googledrive)
 library(sodium,verbose = TRUE)
 message("Libraries loaded.")
-message(Sys.getenv("FRED_KEY"))
 fredr_set_key(Sys.getenv("FRED_KEY"))
 
 sheet_name <- "1Wz98hOMQpYBUH8gt6udNv4xKExc66ioD_H1SP9-9J6k"
 pw <- sodium::sha256(charToRaw(Sys.getenv("UI_EXPLORER_GOOGLE_PASSWORD")))
+message(paste("key:",Sys.getenv("UI_EXPLORER_GOOGLE_PASSWORD")))
 
 secret_read <- function(location, name, pw) {
   path <- file.path(location, name)
