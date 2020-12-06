@@ -12,6 +12,7 @@ services:
     environment:
       R_CONFIG_ACTIVE: docker
       FRED_KEY: ${FRED_KEY}
+      UI_EXPLORER_GOOGLE_PASSWORD: ${UI_EXPLORER_GOOGLE_PASSWORD}
   shinyappsdeploy:
     # deploy the app to shinyapps and download and process the data.
     build:

@@ -11,13 +11,18 @@ library(lubridate)
 library(tidyverse)
 library(zoo)
 library(fredr)
-message("Libraries loaded.")
-message(Sys.getenv("FRED_KEY"))
-fredr_set_key(Sys.getenv("FRED_KEY"))
+library(googlesheets4)
+library(googledrive)
+library(sodium,verbose = TRUE)
+library(dplyr)
 
-#library(data.table)
-#library(dplyr)
-#require(bit64)
+message("Libraries loaded.")
+# fredr key
+fredr_set_key(Sys.getenv("FRED_KEY"))
+# google sheet name
+sheet_name <- "1Wz98hOMQpYBUH8gt6udNv4xKExc66ioD_H1SP9-9J6k"
+
+
 
 downloadUCData <- function (URL) {
   
@@ -1061,6 +1066,38 @@ write_csv_files <- function(df, save_dir) {
   
 }
 
+# writes to a google sheet called "sheet_name" into the tab specified  all columns in the DF prefixed by prefix
+write_data_as_sheet <- function(df, sheet_name, tab, metric_filter) {
+  df %>% 
+    filter(grepl(metric_filter, metric)) %>% 
+    pivot_wider(names_from = metric, values_from = value) %>% 
+    write_sheet(sheet_name, tab)
+  
+}
+
+# write a series of dfs to a google sheet
+write_to_google_sheets <- function(df, sheet_name) {
+  
+  message("Writing First Time Payments to Google Sheets")
+  df %>% 
+    write_data_as_sheet(sheet_name, "GIT_First Time Payments", "^first_time")
+  
+}
+
+# a function to decrypt a json file with a google auth token that has been
+# previously encrypted
+secret_read <- function(location, name) {
+  pw <- sodium::sha256(charToRaw(Sys.getenv("UI_EXPLORER_GOOGLE_PASSWORD")))
+  path <- file.path(location, name)
+  raw <- readBin(path, "raw", file.size(path))
+  
+  sodium::data_decrypt(
+    bin = raw,
+    key = pw,
+    nonce = sodium::hex2bin("cb36bab652dec6ae9b1827c684a7b6d21d2ea31cd9f766ac")
+  )
+}
+
 
 # gets the unemployment rate and total unemployed for all 50 states + DC + the US;
 # uses a sleep within each request (1sec) so it takes on the order of 5 minutes to retrieve all of the data that we want
@@ -1155,4 +1192,13 @@ arrow::write_parquet(unemployment_df, file.path(config::get("DATA_DIR"), "unempl
 # Writing All Files to CSV
 write_csv_files(unemployment_df, file.path(config::get("DATA_DIR")))
 
+# write to google sheets
+# first login
+json <- secret_read("inst/secret", "ui-dashboard-297602-0a6c1eafc3d7.json")
+drive_auth(path = rawToChar(json))
+gs4_auth(path = rawToChar(json))
+
+# then write to the sheet
+message("Writing to Google Sheets")
+write_to_google_sheets(unemployment_df, sheet_name)
 
