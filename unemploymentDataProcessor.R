@@ -34,7 +34,7 @@ secret_read <- function(location, name, pw) {
 
 json <- secret_read("inst/secret", "ui-dashboard-297602-0a6c1eafc3d7.json", pw)
 drive_auth(path = rawToChar(json))
-
+gs4_auth(path = rawToChar(json))
 message("Writing to Google Sheets")
 data.frame(a = c(1,2,3),
            b = c("asdf", "123", "qwe")) %>% 
@@ -42,7 +42,7 @@ data.frame(a = c(1,2,3),
 
 
 #library(data.table)
-#library(dplyr)
+library(dplyr)
 #require(bit64)
 
 downloadUCData <- function (URL) {
