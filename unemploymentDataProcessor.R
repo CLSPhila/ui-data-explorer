@@ -12,11 +12,27 @@ library(tidyverse)
 library(zoo)
 library(fredr)
 library(googlesheets4)
+library(googledrive)
 message("Libraries loaded.")
 message(Sys.getenv("FRED_KEY"))
 fredr_set_key(Sys.getenv("FRED_KEY"))
 
-sheet_name <- "10n_ByzRODXUKOc_a9iPOGjJwexw1UOvvMofHBTRQepc"
+sheet_name <- "1Wz98hOMQpYBUH8gt6udNv4xKExc66ioD_H1SP9-9J6k"
+pw <- sodium::sha256(charToRaw(Sys.getenv("UI_EXPLORER_GOOGLE_PASSWORD")))
+
+secret_read <- function(location, name, pw) {
+  path <- file.path(location, name)
+  raw <- readBin(path, "raw", file.size(path))
+  
+  sodium::data_decrypt(
+    bin = raw,
+    key = pw,
+    nonce = sodium::hex2bin("cb36bab652dec6ae9b1827c684a7b6d21d2ea31cd9f766ac")
+  )
+}
+
+json <- secret_read("inst/secret", "ui-dashboard-297602-0a6c1eafc3d7.json", pw)
+drive_auth(path = rawToChar(json))
 
 #library(data.table)
 #library(dplyr)
