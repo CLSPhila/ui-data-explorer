@@ -34,6 +34,12 @@ secret_read <- function(location, name, pw) {
 json <- secret_read("inst/secret", "ui-dashboard-297602-0a6c1eafc3d7.json", pw)
 drive_auth(path = rawToChar(json))
 
+message("Writing to Google Sheets")
+data.frame(a = c(1,2,3),
+           b = c("asdf", "123", "qwe")) %>% 
+  write_sheet(sheet_name, "test_write")
+
+
 #library(data.table)
 #library(dplyr)
 #require(bit64)
@@ -1098,9 +1104,6 @@ write_to_google_sheets <- function(df, sheet_name) {
   
 }
 
-write_to_google_sheets(unemployment_df, sheet_name)
-
-
 # gets the unemployment rate and total unemployed for all 50 states + DC + the US;
 # uses a sleep within each request (1sec) so it takes on the order of 5 minutes to retrieve all of the data that we want
 # without hitting a rate limit
@@ -1194,4 +1197,7 @@ arrow::write_parquet(unemployment_df, file.path(config::get("DATA_DIR"), "unempl
 # Writing All Files to CSV
 write_csv_files(unemployment_df, file.path(config::get("DATA_DIR")))
 
+# write to google sheets
+message("Writing to Google Sheets")
+write_to_google_sheets(unemployment_df, sheet_name)
 
