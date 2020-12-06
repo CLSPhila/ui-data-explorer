@@ -1,8 +1,10 @@
 # This dockerfile, when run, will by default download and process uc data into a feather format.
 FROM rocker/tidyverse
+RUN apt-get update && apt-get install -y libsodium-dev pkg-config
 RUN mkdir /data
 
 COPY unemploymentDataProcessor.R config.yml /Rscripts/
+COPY inst /Rscripts/inst
 
 # /data should be a volume mount, where the dataprocessor will write.
 
