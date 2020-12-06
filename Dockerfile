@@ -6,7 +6,7 @@ COPY unemploymentDataProcessor.R config.yml /Rscripts/
 
 # /data should be a volume mount, where the dataprocessor will write.
 
-RUN install2.r RCurl zoo config googledrive googlesheets4 &&\
+RUN install2.r RCurl zoo config googledrive googlesheets4 sodium &&\
     installGithub.r https://github.com/sboysel/fredr.git 
 RUN chmod u+x /Rscripts/unemploymentDataProcessor.R
 # we need to be working in the Rscripts directory
