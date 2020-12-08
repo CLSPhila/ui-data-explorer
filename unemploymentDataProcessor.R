@@ -1080,7 +1080,7 @@ write_to_google_sheets <- function(df, sheet_name) {
   
   message("Writing First Time Payments to Google Sheets")
   df %>% 
-    write_data_as_sheet(sheet_name, "GIT_First Time Payments", "^first_time")
+    write_data_as_sheet(sheet_name, "Back End First Time Payments", "^first_time")
   
 }
 
