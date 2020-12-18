@@ -1089,7 +1089,7 @@ write_data_as_sheet <- function(df, sheet_name, tab, metric_filter) {
   df %>% 
     filter(grepl(metric_filter, metric)) %>% 
     pivot_wider(names_from = metric, values_from = value) %>%
-    arrange(desc(rptdate), -st) %>% 
+    arrange(desc(rptdate), desc(st)) %>% 
     write_sheet(sheet_name, tab)
   
 }
