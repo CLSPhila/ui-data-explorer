@@ -1098,11 +1098,11 @@ write_data_as_sheet <- function(df, sheet_name, tab, metric_filter) {
 write_to_google_sheets <- function(df_all, df_total_payments, sheet_name) {
   
   message("Writing First Time Payments to Google Sheets")
-  df %>% 
+  df_all %>% 
     write_data_as_sheet(sheet_name, "Back End First Time Payments", "^first_time")
   
   message("Writing Benefit Exaustions to Google Sheets")
-  df %>% 
+  df_all %>% 
     write_data_as_sheet(sheet_name, "Back End 4.4 Benefit Exhaustions", "^monthly_exhaustion_total")
 
   message("Writing Total Payments to Google Sheets")
