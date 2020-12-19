@@ -232,6 +232,33 @@ get_state_from_series_id <- function(series) {
   
 }
 
+get_nonmonetary_determination_time_lapse <- function() {
+  df <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9052.csv") %>% 
+    mutate(total = c1 + c5,
+           nonmon_det_21_days = c9+c17+c25+c29+c21+c13,
+           nonmon_det_28_days = c33 + c37,
+           nonmon_det_35_days = c41 + c45,
+           nonmon_det_42_days = c49 + c53,
+           nonmon_det_50_plus_days = c65+c69+c73+c77+c81+c85+c89+c93) %>% 
+    mutate(nonmon_det_21_days_prop = nonmon_det_21_days / total,
+           nonmon_det_28_days_prop = nonmon_det_28_days / total,
+           nonmon_det_35_days_prop = nonmon_det_35_days / total,
+           nonmon_det_42_days_prop = nonmon_det_42_days / total,
+           nonmon_det_50_plus_days_prop = nonmon_det_50_plus_days / total) %>% 
+    select(-starts_with("c"))
+  
+  
+  # compute US Averages and add them into the df
+  usAvg <- df %>% 
+    group_by(rptdate) %>% 
+    summarize(across(where(is.numeric), mean, na.rm = T))
+  
+  df <- df %>% 
+    bind_rows(usAvg %>% mutate(st = "US (avg)"))
+
+}
+
+
 # ETA 203 information - characteristics of the unemployed
 get_demographic_data <- function() {
   
@@ -420,6 +447,8 @@ get_basic_ui_information <- function() {
            monthly_first_payments = c51,
            monthly_weeks_compensated = c38,
            monthly_exhaustion = c56,
+           monthly_exhaustion_ufce = c57,
+           monthly_exhaustion_ucx = c58,
            monthly_state_intrastate = c21, 
            monthly_state_liable = c24, 
            monthly_ucfe_instrastate = c27, 
@@ -431,7 +460,8 @@ get_basic_ui_information <- function() {
            monthly_ucfe_ucx_compensated = c48) %>% 
     mutate(monthly_weeks_claimed = c22 + monthly_state_intrastate,
            monthly_partial_weeks_compensated = monthly_weeks_compensated - c39,
-           monthly_first_payments_as_prop_claims = monthly_first_payments / monthly_initial_claims) %>% 
+           monthly_first_payments_as_prop_claims = monthly_first_payments / monthly_initial_claims,
+           monthly_exhaustion_total = monthly_exhaustion + monthly_exhaustion_ucx + monthly_exhaustion_ufce) %>% 
     select(-starts_with("c"))
   
   ucClaimsPaymentsExtended <- ucClaimsPaymentsExtended %>% 
@@ -1003,6 +1033,21 @@ getUCBenefitAppeals <- function(url) {
   return(df)
 }
 
+# gets the total of all PUA and regular first time payments for each state since 
+# march 2020
+get_total_payments_since_march_2020 <- function(basic_ui_data, pua_data) {
+  df <- basic_ui_data %>% 
+    filter(rptdate >= "2020-03-01") %>% 
+    select(st, rptdate, monthly_first_payments) %>% 
+    full_join(pua_data %>% 
+                filter(rptdate >= "2020-03-01") %>% 
+                select(st, rptdate, pua_first_payments), 
+              by = c("st", "rptdate")) %>% 
+    pivot_longer(-c(st, rptdate)) %>% 
+    group_by(st) %>% 
+    summarize("Total Payments Since March 2020" = sum(value, na.rm = T),
+              "Most Recent Data" = max(rptdate))
+}
 
 # writes to a csv file named filename all columns in the DF prefixed by prefix
 write_data_as_csv <- function(df, filename, metric_filter) {
@@ -1070,18 +1115,30 @@ write_csv_files <- function(df, save_dir) {
 write_data_as_sheet <- function(df, sheet_name, tab, metric_filter) {
   df %>% 
     filter(grepl(metric_filter, metric)) %>% 
-    pivot_wider(names_from = metric, values_from = value) %>% 
+    pivot_wider(names_from = metric, values_from = value) %>%
+    arrange(desc(rptdate), desc(st)) %>% 
     write_sheet(sheet_name, tab)
   
 }
 
 # write a series of dfs to a google sheet
-write_to_google_sheets <- function(df, sheet_name) {
+write_to_google_sheets <- function(df_all, df_total_payments, sheet_name) {
   
   message("Writing First Time Payments to Google Sheets")
-  df %>% 
+  df_all %>% 
     write_data_as_sheet(sheet_name, "Back End First Time Payments", "^first_time")
   
+  message("Writing Benefit Exaustions to Google Sheets")
+  df_all %>% 
+    write_data_as_sheet(sheet_name, "Back End 4.4 Benefit Exhaustions", "^monthly_exhaustion_total")
+
+  message("Writing Non-monetary determination time lapse to Google Sheets")
+  df_all %>% 
+    write_data_as_sheet(sheet_name, "Back End 1.2 Nonmonetary Separations", "nonmon_det.*prop")
+  
+  message("Writing Total Payments to Google Sheets")
+  df_total_payments %>% write_sheet(sheet_name, "Back End 3.2 Total Payments Since March 2020")
+
 }
 
 # a function to decrypt a json file with a google auth token that has been
@@ -1169,14 +1226,17 @@ ucOverpayments$outstanding_proportion <- round(ucOverpayments$outstanding / ucOv
 # get determination data
 message("Collecting NonMonetary Information")
 ucNonMonetary <- getNonMonetaryDeterminations(ucClaimsPaymentsMonthly, pua_claims)
+ucNonMonetaryTimeLapse <- get_nonmonetary_determination_time_lapse()
 message("Collecting Monetary Information")
 ucMonetary <- getMonetaryDeterminations()
 
+# data for the google sheet that isn't already above
+total_payments_since_march_2020 <- get_total_payments_since_march_2020(ucClaimsPaymentsMonthly, pua_claims)
 
 
 # make long-uberdf
 unemployment_df <- 
-  map_dfr(list(ucClaimsPaymentsMonthly, ucClaimsWeekly, ucNonMonetary, ucOverpayments, ucRecipiency, ucFirstTimePaymentLapse, 
+  map_dfr(list(ucClaimsPaymentsMonthly, ucClaimsWeekly, ucNonMonetary, ucNonMonetaryTimeLapse, ucOverpayments, ucNonMonetaryTimeLapse, ucRecipiency, ucFirstTimePaymentLapse, 
              ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher, ucDemographicData, ucMonetary), 
         function(x) { 
           x %>% 
@@ -1184,6 +1244,7 @@ unemployment_df <-
   bind_rows(bls_unemployed) %>% 
   # there are a few repeat metrics that get thrown in there by accident; get rid of them:
   distinct()
+
 
 
 message("Writing Parquet File")
@@ -1200,5 +1261,5 @@ gs4_auth(path = rawToChar(json))
 
 # then write to the sheet
 message("Writing to Google Sheets")
-write_to_google_sheets(unemployment_df, sheet_name)
+write_to_google_sheets(unemployment_df, total_payments_since_march_2020, sheet_name)
 
