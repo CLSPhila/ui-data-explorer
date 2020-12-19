@@ -232,6 +232,33 @@ get_state_from_series_id <- function(series) {
   
 }
 
+get_nonmonetary_determination_time_lapse <- function() {
+  df <- downloadUCData("https://oui.doleta.gov/unemploy/csv/ar9052.csv") %>% 
+    mutate(total = c1 + c5,
+           nonmon_det_21_days = c9+c17+c25+c29+c21+c13,
+           nonmon_det_28_days = c33 + c37,
+           nonmon_det_35_days = c41 + c45,
+           nonmon_det_42_days = c49 + c53,
+           nonmon_det_50_plus_days = c65+c69+c73+c77+c81+c85+c89+c93) %>% 
+    mutate(nonmon_det_21_days_prop = nonmon_det_21_days / total,
+           nonmon_det_28_days_prop = nonmon_det_28_days / total,
+           nonmon_det_35_days_prop = nonmon_det_35_days / total,
+           nonmon_det_42_days_prop = nonmon_det_42_days / total,
+           nonmon_det_50_plus_days_prop = nonmon_det_50_plus_days / total) %>% 
+    select(-starts_with("c"))
+  
+  
+  # compute US Averages and add them into the df
+  usAvg <- df %>% 
+    group_by(rptdate) %>% 
+    summarize(across(where(is.numeric), mean, na.rm = T))
+  
+  df <- df %>% 
+    bind_rows(usAvg %>% mutate(st = "US (avg)"))
+
+}
+
+
 # ETA 203 information - characteristics of the unemployed
 get_demographic_data <- function() {
   
@@ -1105,6 +1132,10 @@ write_to_google_sheets <- function(df_all, df_total_payments, sheet_name) {
   df_all %>% 
     write_data_as_sheet(sheet_name, "Back End 4.4 Benefit Exhaustions", "^monthly_exhaustion_total")
 
+  message("Writing Non-monetary determination time lapse to Google Sheets")
+  df_all %>% 
+    write_data_as_sheet(sheet_name, "Back End 1.2 Nonmonetary Separations", "nonmon_det.*prop")
+  
   message("Writing Total Payments to Google Sheets")
   df_total_payments %>% write_sheet(sheet_name, "Back End 3.2 Total Payments Since March 2020")
 
@@ -1195,6 +1226,7 @@ ucOverpayments$outstanding_proportion <- round(ucOverpayments$outstanding / ucOv
 # get determination data
 message("Collecting NonMonetary Information")
 ucNonMonetary <- getNonMonetaryDeterminations(ucClaimsPaymentsMonthly, pua_claims)
+ucNonMonetaryTimeLapse <- get_nonmonetary_determination_time_lapse()
 message("Collecting Monetary Information")
 ucMonetary <- getMonetaryDeterminations()
 
@@ -1204,7 +1236,7 @@ total_payments_since_march_2020 <- get_total_payments_since_march_2020(ucClaimsP
 
 # make long-uberdf
 unemployment_df <- 
-  map_dfr(list(ucClaimsPaymentsMonthly, ucClaimsWeekly, ucNonMonetary, ucOverpayments, ucRecipiency, ucFirstTimePaymentLapse, 
+  map_dfr(list(ucClaimsPaymentsMonthly, ucClaimsWeekly, ucNonMonetary, ucNonMonetaryTimeLapse, ucOverpayments, ucNonMonetaryTimeLapse, ucRecipiency, ucFirstTimePaymentLapse, 
              ucAppealsTimeLapseLower, ucAppealsTimeLapseHigher, ucDemographicData, ucMonetary), 
         function(x) { 
           x %>% 
