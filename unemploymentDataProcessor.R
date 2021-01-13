@@ -239,11 +239,13 @@ get_nonmonetary_determination_time_lapse <- function() {
            nonmon_det_28_days = c33 + c37,
            nonmon_det_35_days = c41 + c45,
            nonmon_det_42_days = c49 + c53,
+           nonmon_det_49_days = c57 + c61,
            nonmon_det_50_plus_days = c65+c69+c73+c77+c81+c85+c89+c93) %>% 
     mutate(nonmon_det_21_days_prop = nonmon_det_21_days / total,
            nonmon_det_28_days_prop = nonmon_det_28_days / total,
            nonmon_det_35_days_prop = nonmon_det_35_days / total,
            nonmon_det_42_days_prop = nonmon_det_42_days / total,
+           nonmon_det_49_days_prop = nonmon_det_49_days / total,
            nonmon_det_50_plus_days_prop = nonmon_det_50_plus_days / total) %>% 
     select(-starts_with("c"))
   
