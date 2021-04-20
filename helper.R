@@ -230,6 +230,7 @@ add_line_with_label <- function(plot, x, y, label) {
 get_wide_UI_table <- function(df, col_list) {
   df %>% 
     filter(metric %in% col_list) %>% 
+    mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
     pivot_wider(names_from = metric, values_from = value) %>% 
     select(st, rptdate, one_of(col_list)) %>%
     # remove rows that don't have complete data; this happens most

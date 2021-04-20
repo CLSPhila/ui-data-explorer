@@ -22,6 +22,7 @@ jobs:
           SHINYAPPS_SECRET: ${{secrets.SHINYAPPS_SECRET}}
           SHINYAPPS_TOKEN: ${{secrets.SHINYAPPS_TOKEN}}
           SHINYAPPS_ACCOUNT: ${{secrets.SHINYAPPS_ACCOUNT}}
+          UI_EXPLORER_GOOGLE_PASSWORD: ${{ secrets.UI_EXPLORER_GOOGLE_PASSWORD }} 
         run: |
           IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
           # Change all uppercase to lowercase
