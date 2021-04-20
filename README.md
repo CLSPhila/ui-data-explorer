@@ -18,7 +18,7 @@ This project was originally created by [Michael Hollander](mailto:hollander@gmai
 
 You can explore the unemployment insurance data we've compiled though an interactive website with an array of charts and maps.
 
-You can view the app here: https://tcf-ui-data.shinyapps.io/ui-data-explorer/ 
+You can view the app here: https://tcf-ui-data.shinyapps.io/ui-data-explorer/
 
 ## Getting the data:
 
@@ -46,7 +46,7 @@ We can publish the data in two ways.
 
 **Locally**
 
-1. Locally clone the repository and run `Rscripts unemploymentDataProcessor.R`.
+1. Locally clone the repository and run `Rscript unemploymentDataProcessor.R`.
 2. Load a github token into your shell's environment. A `.env` file is helpful here.
 3. Run `. ./updateRelease.sh` to update the released data on Github. The script accepts a few command line arguments. See the script for the details.
 
@@ -62,7 +62,7 @@ Once you've managed to download the data, you can use RStudio to run the app. Th
 We can publish the app in three ways.
 
 **Locally in RStudio**
-Once you have the app running locally, use the `rsconnect` library from Shinyapps.io. Set environment variables for `SHINYAPPS_ACCOUNT`, `SHINYAPPS_TOKEN`, and `SHINYAPPS_SECRET`. You can get these values from your shinyapps account. Then run `Rscripts deployShinyApps.R`.
+Once you have the app running locally, use the `rsconnect` library from Shinyapps.io. Set environment variables for `SHINYAPPS_ACCOUNT`, `SHINYAPPS_TOKEN`, and `SHINYAPPS_SECRET`. You can get these values from your shinyapps account. Then run `Rscript deployShinyApps.R`.
 
 **Locally with Docker-Compose**.
 Running `docker-compose run --rm shinyappdeploy` will start a docker service that downloads and processes the data, and publishes the app to Shinyapps. Make sure your `SHINYAPPS_x` environment variables are set up. Docker-compose will automatically load a `.env` file if there is one.
