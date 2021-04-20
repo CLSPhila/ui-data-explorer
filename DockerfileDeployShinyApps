@@ -11,7 +11,7 @@ COPY data /data/
 
 # /data should be a volume mount, where the dataprocessor will write.
 
-RUN install2.r config RCurl zoo rsconnect V8 jqr geojson fastmap leaflet shiny geojsonio shinyWidgets gghighlight shinycssloaders && \
+RUN install2.r config RCurl zoo rsconnect V8 jqr geojson fastmap leaflet shiny geojsonio shinyWidgets gghighlight shinycssloaders DT && \
     installGithub.r https://github.com/sboysel/fredr.git 
 RUN chmod u+x /Rscripts/unemploymentDataProcessor.R && \
     chmod u+x /Rscripts/deployShinyApps.R
