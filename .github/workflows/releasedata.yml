@@ -3,13 +3,14 @@ name: Process and publish unemployment data as a parquet file and a collection o
 on:
   workflow_dispatch:
   # to run manually.
-#   schedule:
-#     # update data daily.
-#     - cron: "0 5 * * *"
-  #push: 
+  schedule:
+    # update data daily.
+    - cron: "45 12 * * *"
+  #push:
 env:
   FRED_KEY: ${{secrets.FRED_KEY}}
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+  UI_EXPLORER_GOOGLE_PASSWORD: ${{secrets.UI_EXPLORER_GOOGLE_PASSWORD}}
   IMAGE_NAME: uidatadownloader
 jobs:
   build:
@@ -33,7 +34,8 @@ jobs:
           [ "$VERSION" == "$default-branch" ] && VERSION=latest
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION
-          echo "::set-env name=IMAGE_ID::$IMAGE_ID:$VERSION"
+          echo "IMAGE_ID=$IMAGE_ID:$VERSION" >> $GITHUB_ENV
+          # echo "::set-env name=IMAGE_ID::$IMAGE_ID:$VERSION"
           echo "IMAGE ID: $IMAGE_ID"
       - name: Checkout code
         uses: actions/checkout@v2
