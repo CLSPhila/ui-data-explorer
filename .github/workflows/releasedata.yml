@@ -3,9 +3,9 @@ name: Process and publish unemployment data as a parquet file and a collection o
 on:
   workflow_dispatch:
   # to run manually.
-  schedule:
+  #schedule:
     # update data daily.
-    - cron: "45 12 * * *"
+    #- cron: "45 12 * * *"
   #push:
 env:
   FRED_KEY: ${{secrets.FRED_KEY}}
